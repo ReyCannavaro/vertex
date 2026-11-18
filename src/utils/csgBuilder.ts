@@ -175,6 +175,7 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
     standoffSpacingZ,
     hasSideVents,
     hasFan40,
+    fanPlacement,
     fanSize,
     throughAirflow,
     hasUsbCable,
@@ -276,7 +277,11 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
   // 4. Batched Subtractions: Pilot holes, Side Louver Vents, USB/Cable Ports, Rear Acrylic Mounts
   const cutters: THREE.BufferGeometry[] = [...pilotCutters];
 
-  // Side Louver Ventilation Grills along Left (-X) & Right (+X) walls (signature look from photo!)
+  const hasSideFan = hasFan40 && fanPlacement === 'side';
+
+  // Side Louver Ventilation Grills:
+  // - When Side Cross-Flow Fan is active (Opsi D): cut intake louvers ONLY on Left (-X) wall!
+  // - Otherwise: cut passive louver slots symmetrically on both Left (-X) and Right (+X) walls.
   if (hasSideVents) {
     const usableH = H - r * 2 - 8;
     const slotH = 3.2;
@@ -287,13 +292,60 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
 
     for (let i = 0; i < count; i++) {
       const y = startY + i * slotPitch;
-      // Cut clean horizontal louver slot through both left and right walls
-      cutters.push(
-        makeTransformedGeo(
-          new THREE.BoxGeometry(L + 8, slotH, slotDepthZ),
-          [0, y, bodyCenterZ]
-        )
-      );
+      if (hasSideFan) {
+        // Intake louvers strictly on Left Wall (-X) opposite the Right Wall 40mm Fan
+        cutters.push(
+          makeTransformedGeo(
+            new THREE.BoxGeometry(t + 10, slotH, slotDepthZ),
+            [-L / 2 + t / 2, y, bodyCenterZ]
+          )
+        );
+      } else {
+        // Passive louvers across both Left & Right walls
+        cutters.push(
+          makeTransformedGeo(
+            new THREE.BoxGeometry(L + 8, slotH, slotDepthZ),
+            [0, y, bodyCenterZ]
+          )
+        );
+      }
+    }
+  }
+
+  // Right-Side Cross-Flow Cooling Fan Cutout (+X wall) — Opsi D!
+  if (hasSideFan) {
+    const { airDia, pitchHalf, mountHoleR } = getFanSpecs(fanSize);
+    const rightX = L / 2 - t / 2;
+    const cutDepth = t + 10;
+    const maxAllowedDia = Math.min(innerH - 6, bodyDepth - t - 6);
+    const dia = Math.max(18, Math.min(airDia, maxAllowedDia));
+
+    // Main circular fan cutout on Right Wall (+X)
+    cutters.push(
+      makeTransformedGeo(
+        new THREE.CylinderGeometry(dia / 2, dia / 2, cutDepth, 32),
+        [rightX, centerY, bodyCenterZ],
+        [0, 0, Math.PI / 2]
+      )
+    );
+
+    // 4x Fan mounting screw holes if pitch fits cleanly on the side wall
+    if (pitchHalf * 2 < innerH - 6 && pitchHalf * 2 < bodyDepth - t - 4) {
+      const fanMounts: [number, number][] = [
+        [-pitchHalf, -pitchHalf],
+        [pitchHalf, -pitchHalf],
+        [pitchHalf, pitchHalf],
+        [-pitchHalf, pitchHalf],
+      ];
+      for (const [oy, oz] of fanMounts) {
+        cutters.push(
+          makeTransformedGeo(
+            new THREE.CylinderGeometry(mountHoleR, mountHoleR, cutDepth, 14),
+            [rightX, centerY + oy, bodyCenterZ + oz],
+            [0, 0, Math.PI / 2]
+          )
+        );
+      }
     }
   }
 
@@ -317,8 +369,8 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
     );
   }
 
-  // Through-Airflow Rear Wall Cutout (for Slim 120mm / 140mm / 80mm Fan Shroud Housings)
-  if (throughAirflow && hasFan40) {
+  // Through-Airflow Rear Wall Cutout (only for Front-Mounted Slim Fan Shrouds 120mm / 140mm)
+  if (throughAirflow && hasFan40 && fanPlacement === 'front') {
     const rearZ = bodyCenterZ - bodyDepth / 2 + t / 2;
     const cutDepth = t + 8;
     const { airDia, pitchHalf, mountHoleR } = getFanSpecs(fanSize);
@@ -406,6 +458,7 @@ export function buildIoTBoxLidGeometry(params: IoTBoxParams): THREE.BufferGeomet
     cornerRadius: r,
     hasOled,
     hasFan40,
+    fanPlacement,
     fanSize,
   } = params;
 
@@ -464,8 +517,8 @@ export function buildIoTBoxLidGeometry(params: IoTBoxParams): THREE.BufferGeomet
     }
   }
 
-  // 3. Optional Cooling Fan Cutout on Front Faceplate (40 / 80 / 120 / 140mm)
-  if (hasFan40) {
+  // 3. Optional Cooling Fan Cutout on Front Faceplate (only when fanPlacement === 'front')
+  if (hasFan40 && fanPlacement === 'front') {
     const { airDia, pitchHalf, mountHoleR } = getFanSpecs(fanSize);
     const maxAllowedDia = Math.min(L, H) - t * 2 - 8;
     const dia = Math.max(24, Math.min(airDia, maxAllowedDia));

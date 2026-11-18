@@ -59,66 +59,55 @@ export const IoTBoxSidebar: React.FC = () => {
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
         </div>
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="space-y-1.5">
           <button
             onClick={() => applyIoTPreset('controller-pod')}
-            className={`px-2.5 py-2 rounded-lg border text-left transition ${
-              iotBox.hasOled && !iotBox.hasFan40
+            className={`w-full px-2.5 py-2 rounded-lg border text-left transition ${
+              iotBox.hasOled && iotBox.fanPlacement === 'side'
                 ? 'bg-sky-500/15 border-sky-500/50 text-sky-100'
                 : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
             }`}
           >
             <div className="font-semibold flex items-center gap-1.5">
               <Monitor className="w-3.5 h-3.5 text-sky-400" />
-              <span>ESP32 Pod</span>
+              <span>ESP32 IoT Box (Opsi D • Cross-Flow)</span>
             </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">OLED + Louver</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">
+              Depan OLED 0.96" • Kiri Louver Masuk • Kanan Kipas 40mm
+            </div>
           </button>
 
-          <button
-            onClick={() => applyIoTPreset('fan-pod')}
-            className={`px-2.5 py-2 rounded-lg border text-left transition ${
-              iotBox.hasFan40 && iotBox.fanSize === 80
-                ? 'bg-sky-500/15 border-sky-500/50 text-sky-100'
-                : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
-            }`}
-          >
-            <div className="font-semibold flex items-center gap-1.5">
-              <Fan className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Side Fan 80</span>
-            </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Pod Samping 80mm</div>
-          </button>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              onClick={() => applyIoTPreset('fan-shroud-120')}
+              className={`px-2.5 py-2 rounded-lg border text-left transition ${
+                iotBox.hasFan40 && iotBox.fanPlacement === 'front' && iotBox.fanSize === 120
+                  ? 'bg-sky-500/15 border-sky-500/50 text-sky-100'
+                  : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+              }`}
+            >
+              <div className="font-semibold flex items-center gap-1.5">
+                <Fan className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Shroud 120mm</span>
+              </div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Tipis 28mm (Laptop)</div>
+            </button>
 
-          <button
-            onClick={() => applyIoTPreset('fan-shroud-120')}
-            className={`px-2.5 py-2 rounded-lg border text-left transition ${
-              iotBox.hasFan40 && iotBox.fanSize === 120
-                ? 'bg-sky-500/15 border-sky-500/50 text-sky-100'
-                : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
-            }`}
-          >
-            <div className="font-semibold flex items-center gap-1.5">
-              <Fan className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Shroud 120mm</span>
-            </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Tipis 28mm (Laptop)</div>
-          </button>
-
-          <button
-            onClick={() => applyIoTPreset('fan-shroud-140')}
-            className={`px-2.5 py-2 rounded-lg border text-left transition ${
-              iotBox.hasFan40 && iotBox.fanSize === 140
-                ? 'bg-sky-500/15 border-sky-500/50 text-sky-100'
-                : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
-            }`}
-          >
-            <div className="font-semibold flex items-center gap-1.5">
-              <Fan className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Shroud 140mm</span>
-            </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Tipis 28mm (PC Bay)</div>
-          </button>
+            <button
+              onClick={() => applyIoTPreset('fan-shroud-140')}
+              className={`px-2.5 py-2 rounded-lg border text-left transition ${
+                iotBox.hasFan40 && iotBox.fanPlacement === 'front' && iotBox.fanSize === 140
+                  ? 'bg-sky-500/15 border-sky-500/50 text-sky-100'
+                  : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+              }`}
+            >
+              <div className="font-semibold flex items-center gap-1.5">
+                <Fan className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Shroud 140mm</span>
+              </div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Tipis 28mm (PC Bay)</div>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -254,15 +243,21 @@ export const IoTBoxSidebar: React.FC = () => {
           <div className="min-w-0">
             <div className="font-medium text-slate-100 flex items-center gap-1.5">
               <Wind className="w-3.5 h-3.5 text-cyan-300" />
-              <span>Kisi Ventilasi Samping (Louvers)</span>
+              <span>
+                {iotBox.hasFan40 && iotBox.fanPlacement === 'side'
+                  ? 'Kisi Angin Masuk (Sisi Kiri)'
+                  : 'Kisi Ventilasi Samping (Louvers)'}
+              </span>
             </div>
             <div className="text-[10px] text-slate-400 mt-0.5">
-              Slot sirip udara presisi di dinding kiri & kanan
+              {iotBox.hasFan40 && iotBox.fanPlacement === 'side'
+                ? 'Intake udara segar di sisi kiri -> melintang ke kipas kanan'
+                : 'Slot sirip udara presisi di dinding kiri & kanan'}
             </div>
           </div>
         </label>
 
-        {/* Cooling Fan Cutout Toggle (40mm / 80mm) */}
+        {/* Cooling Fan Cutout Toggle (Side Cross-Flow or Front Shroud) */}
         <div className="p-2.5 rounded-lg bg-slate-900/70 border border-slate-800 space-y-2">
           <label className="flex items-start gap-2.5 cursor-pointer">
             <input
@@ -274,15 +269,42 @@ export const IoTBoxSidebar: React.FC = () => {
             <div className="min-w-0">
               <div className="font-medium text-slate-100 flex items-center gap-1.5">
                 <Fan className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Lubang Kipas ({iotBox.fanSize}mm)</span>
+                <span>
+                  Lubang Kipas {iotBox.fanSize}mm (
+                  {iotBox.fanPlacement === 'side' ? 'Samping Kanan' : 'Depan'})
+                </span>
               </div>
               <div className="text-[10px] text-slate-400 mt-0.5">
-                Potongan kipas + 4× baut mounting di faceplate
+                {iotBox.fanPlacement === 'side'
+                  ? 'Cross-flow mendinginkan ESP32 & modul power di dalam box'
+                  : 'Potongan kipas + 4× baut mounting di faceplate depan'}
               </div>
             </div>
           </label>
           {iotBox.hasFan40 && (
             <div className="space-y-2 pl-5">
+              <div className="grid grid-cols-2 gap-1">
+                <button
+                  onClick={() => updateIoTBox({ fanPlacement: 'side', fanSize: 40 })}
+                  className={`px-2 py-0.5 rounded text-[11px] border transition ${
+                    iotBox.fanPlacement === 'side'
+                      ? 'bg-sky-500 text-slate-950 border-sky-400 font-semibold'
+                      : 'bg-slate-950 text-slate-300 border-slate-700 hover:bg-slate-800'
+                  }`}
+                >
+                  Samping Kanan
+                </button>
+                <button
+                  onClick={() => updateIoTBox({ fanPlacement: 'front' })}
+                  className={`px-2 py-0.5 rounded text-[11px] border transition ${
+                    iotBox.fanPlacement === 'front'
+                      ? 'bg-sky-500 text-slate-950 border-sky-400 font-semibold'
+                      : 'bg-slate-950 text-slate-300 border-slate-700 hover:bg-slate-800'
+                  }`}
+                >
+                  Depan (Shroud)
+                </button>
+              </div>
               <div className="flex flex-wrap items-center gap-1.5">
                 {([40, 80, 120, 140] as const).map((sz) => (
                   <button
@@ -298,15 +320,17 @@ export const IoTBoxSidebar: React.FC = () => {
                   </button>
                 ))}
               </div>
-              <label className="flex items-center justify-between cursor-pointer text-[11px] text-slate-300">
-                <span>Lubang Udara Tembus Belakang</span>
-                <input
-                  type="checkbox"
-                  checked={iotBox.throughAirflow}
-                  onChange={(e) => updateIoTBox({ throughAirflow: e.target.checked })}
-                  className="accent-sky-400"
-                />
-              </label>
+              {iotBox.fanPlacement === 'front' && (
+                <label className="flex items-center justify-between cursor-pointer text-[11px] text-slate-300">
+                  <span>Lubang Udara Tembus Belakang</span>
+                  <input
+                    type="checkbox"
+                    checked={iotBox.throughAirflow}
+                    onChange={(e) => updateIoTBox({ throughAirflow: e.target.checked })}
+                    className="accent-sky-400"
+                  />
+                </label>
+              )}
             </div>
           )}
         </div>

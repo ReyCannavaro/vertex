@@ -222,8 +222,8 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
     },
     {
       id: 'right',
-      name: 'Right Wall + Kaki (IoT/Fan)',
-      description: 'Dinding Kanan + kaki chamfer + mounting Fan & IoT Pod',
+      name: 'Right Wall + Kaki (IoT Box)',
+      description: 'Dinding Kanan + kaki chamfer + mounting 1 unit IoT Box',
       enabled: true,
     },
     {
@@ -306,28 +306,27 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
     }
 
     if (spec.id === 'right') {
-      // On Right wall (rotated +90 deg Y), Konva x=0 is Front (+Z), x=totalW is Rear (-Z)
+      // Single unified IoT Controller Box mounting pattern (centered on Right Wall main area)
       const mainCenterX = Math.round(W * 0.5);
       const mainH = height - legHeight;
-      holes.push({
-        id: 'right-fan-pod',
-        type: 'fan120',
-        label: 'Upper Fan Pod Exhaust',
-        x: mainCenterX,
-        y: Math.round(mainH * 0.27),
-        diameter: 82,
-        includeMountHoles: false,
-      });
-      holes.push({
-        id: 'right-iot-cable',
-        type: 'vent',
-        label: 'IoT Box Cable Pass',
-        x: mainCenterX,
-        y: Math.round(mainH * 0.72),
-        width: 34,
-        height: 18,
-        cornerRadius: 4,
-      });
+      const mountY = Math.round(mainH * 0.5);
+      holes.push(
+        {
+          id: 'right-iot-cable',
+          type: 'vent',
+          label: 'IoT Box Cable Pass-Through',
+          x: mainCenterX,
+          y: mountY,
+          width: 30,
+          height: 20,
+          cornerRadius: 6,
+        },
+        // 4x M3 rear wall mounting holes matching the IoT Box rear mounting pitch (±38mm x ±22mm)
+        { id: 'right-iot-m3-1', type: 'm3', label: 'IoT Mount TL', x: mainCenterX - 38, y: mountY - 22, diameter: 3 },
+        { id: 'right-iot-m3-2', type: 'm3', label: 'IoT Mount TR', x: mainCenterX + 38, y: mountY - 22, diameter: 3 },
+        { id: 'right-iot-m3-3', type: 'm3', label: 'IoT Mount BR', x: mainCenterX + 38, y: mountY + 22, diameter: 3 },
+        { id: 'right-iot-m3-4', type: 'm3', label: 'IoT Mount BL', x: mainCenterX - 38, y: mountY + 22, diameter: 3 }
+      );
     } else if (spec.id === 'divider') {
       holes.push({
         id: 'divider-cable-upper',
@@ -546,8 +545,9 @@ const DEFAULT_CASE_DIMS: CaseDimensions = {
 
 export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
   'controller-pod': {
-    length: 120,
-    width: 48,
+    // Opsi D: Minimalist Front OLED 0.96" + Right-Side 40mm Cross-Flow Fan + Left-Side Intake Louvers
+    length: 124,
+    width: 56,
     height: 76,
     wallThickness: 2.6,
     cornerRadius: 9,
@@ -556,29 +556,10 @@ export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
     standoffSpacingX: 76,
     standoffSpacingZ: 48,
     hasSideVents: true,
-    hasFan40: false,
+    hasFan40: true,
+    fanPlacement: 'side',
     fanSize: 40,
     throughAirflow: false,
-    hasUsbCable: true,
-    hasWallMount: true,
-    hasLid: true,
-    lidExploded: false,
-    showVisualHardware: true,
-  },
-  'fan-pod': {
-    length: 108,
-    width: 48,
-    height: 108,
-    wallThickness: 2.8,
-    cornerRadius: 10,
-    hasOled: false,
-    hasStandoffs: false,
-    standoffSpacingX: 70,
-    standoffSpacingZ: 70,
-    hasSideVents: true,
-    hasFan40: true,
-    fanSize: 80,
-    throughAirflow: true,
     hasUsbCable: true,
     hasWallMount: true,
     hasLid: true,
@@ -597,6 +578,7 @@ export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
     standoffSpacingZ: 90,
     hasSideVents: false,
     hasFan40: true,
+    fanPlacement: 'front',
     fanSize: 120,
     throughAirflow: true,
     hasUsbCable: true,
@@ -617,6 +599,7 @@ export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
     standoffSpacingZ: 105,
     hasSideVents: false,
     hasFan40: true,
+    fanPlacement: 'front',
     fanSize: 140,
     throughAirflow: true,
     hasUsbCable: true,

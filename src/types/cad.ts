@@ -75,9 +75,10 @@ export interface CaseDimensions {
 
 export type IoTBoxPreset =
   | 'controller-pod'
-  | 'fan-pod'
   | 'fan-shroud-120'
   | 'fan-shroud-140';
+
+export type FanPlacement = 'side' | 'front';
 
 export interface IoTBoxParams {
   /** Outer length (X) in mm */
@@ -92,28 +93,30 @@ export interface IoTBoxParams {
   cornerRadius: number;
   /** 0.96" I2C OLED display cutout on front faceplate */
   hasOled: boolean;
-  /** 4x Screw terminal ESP32 standoffs on inner floor/backplate */
+  /** 4x Screw terminal ESP32 standoffs on inner rear wall */
   hasStandoffs: boolean;
   /** X spacing between standoffs in mm */
   standoffSpacingX: number;
-  /** Z spacing between standoffs in mm */
+  /** Y spacing between standoffs in mm */
   standoffSpacingZ: number;
-  /** Side louver ventilation slots along left & right walls */
+  /** Intake louver ventilation slots (Left wall when side-fan active, or both sides) */
   hasSideVents: boolean;
-  /** Cooling fan cutout on faceplate (40 / 80 / 120 / 140mm) */
+  /** Cooling fan cutout enabled */
   hasFan40: boolean;
+  /** Fan placement: 'side' (Right wall cross-flow, Opsi D) or 'front' (Faceplate fan shroud) */
+  fanPlacement: FanPlacement;
   /** Fan diameter preset (40, 80, 120, or 140mm) */
   fanSize: 40 | 80 | 120 | 140;
   /** Cut matching circular airflow pass-through on rear wall (for slim top/bottom fan shrouds) */
   throughAirflow: boolean;
   /** USB / sensor cable pass-through ports */
   hasUsbCable: boolean;
-  /** Rear/Bottom M3 mounting holes to bolt pod onto the acrylic case wall */
+  /** Rear M3 mounting holes to bolt box onto the acrylic case wall */
   hasWallMount: boolean;
   /** Generate matching rounded faceplate/lid with 4 corner M3 screw recesses */
   hasLid: boolean;
   /** Elevate/separate faceplate in 3D view to inspect interior */
   lidExploded: boolean;
-  /** Show simulated glowing Ice Blue OLED telemetry & corner screws in 3D preview */
+  /** Show simulated glowing Ice Blue OLED telemetry, fan & corner screws in 3D preview */
   showVisualHardware: boolean;
 }

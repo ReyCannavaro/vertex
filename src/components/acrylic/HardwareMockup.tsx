@@ -631,24 +631,6 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
     return () => oledTex.dispose();
   }, [oledTex]);
 
-  // Curved black braided interconnect cable from Upper Fan Pod down to Lower IoT Box
-  const cableGeometry = useMemo(() => {
-    const xOut = halfL + 18;
-    const upperY = legH + H * 0.72;
-    const lowerY = legH + H * 0.28;
-    const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(xOut, upperY - 46, 12),
-      new THREE.Vector3(xOut + 8, (upperY + lowerY) / 2 + 12, 26),
-      new THREE.Vector3(xOut + 6, (upperY + lowerY) / 2 - 12, 24),
-      new THREE.Vector3(xOut, lowerY + 34, 10),
-    ]);
-    return new THREE.TubeGeometry(curve, 24, 3.2, 10, false);
-  }, [halfL, H, legH]);
-
-  useEffect(() => {
-    return () => cableGeometry.dispose();
-  }, [cableGeometry]);
-
   return (
     <group>
       {/* ================= SLIDE-IN BOTTOM DUST FILTER TRAY ================= */}
@@ -767,71 +749,81 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
         </mesh>
       </group>
 
-      {/* ================= RIGHT EXTERIOR WALL: FAN POD + IOT BOX ================= */}
-      <group>
-        <group position={[halfL + 22, legH + H * 0.72, 0]}>
-          <mesh>
-            <boxGeometry args={[42, 104, 104]} />
-            <meshStandardMaterial color="#181c24" roughness={0.5} metalness={0.22} />
-          </mesh>
-          {[-30, -18, -6, 6, 18, 30].map((ly, i) => (
-            <mesh key={i} position={[0, ly, 52.5]}>
-              <boxGeometry args={[28, 4.5, 1.2]} />
-              <meshStandardMaterial color="#090b10" roughness={0.9} />
-            </mesh>
-          ))}
-          <group position={[21.5, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
-            <mesh>
-              <cylinderGeometry args={[40, 40, 2, 32]} />
-              <meshStandardMaterial color="#050810" roughness={0.8} />
-            </mesh>
-            <SpinningFanBlades
-              radius={36}
-              ledColor={ledEnabled ? ledColor : '#38bdf8'}
-            />
-          </group>
-        </group>
+      {/* ================= RIGHT EXTERIOR WALL: SINGLE UNIFIED IOT BOX (OPSI D) ================= */}
+      {/* Minimalist Front OLED 0.96" + Front-Side Intake Louvers + Rear-Side 40mm Cross-Flow Fan */}
+      <group position={[halfL + 28, legH + H * 0.5, 0]}>
+        {/* Matte-Black Midnight Unified IoT Enclosure (56mm depth x 76mm height x 124mm width) */}
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[56, 76, 124]} />
+          <meshStandardMaterial color="#171b23" roughness={0.46} metalness={0.22} />
+          <Edges threshold={26} color="#475569" scale={1.001} opacity={0.45} transparent />
+        </mesh>
 
-        <group position={[halfL + 22, legH + H * 0.28, 0]}>
-          <mesh>
-            <boxGeometry args={[42, 74, 118]} />
-            <meshStandardMaterial color="#181c24" roughness={0.5} metalness={0.22} />
+        {/* Left Side of IoT Box (+Z facing viewer front): Intake Louver Ventilation Slots */}
+        {[-22, -14, -6, 2, 10, 18, 26].map((ly, i) => (
+          <mesh key={`louver-${i}`} position={[-2, ly, 62.4]}>
+            <boxGeometry args={[36, 3.4, 1.2]} />
+            <meshStandardMaterial color="#090b10" roughness={0.92} />
           </mesh>
-          {[-20, -10, 0, 10, 20].map((ly, i) => (
-            <mesh key={i} position={[0, ly, 59.5]}>
-              <boxGeometry args={[26, 4, 1.2]} />
-              <meshStandardMaterial color="#090b10" roughness={0.9} />
-            </mesh>
-          ))}
+        ))}
+
+        {/* Right Side of IoT Box (-Z facing rear): 40mm Cross-Flow Cooling Fan */}
+        <group position={[-2, 0, -62.5]} rotation={[0, Math.PI, 0]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[18.5, 18.5, 1.8, 28]} />
+            <meshStandardMaterial color="#050810" roughness={0.85} />
+          </mesh>
+          <SpinningFanBlades
+            radius={17}
+            ledColor={ledEnabled ? ledColor : '#38bdf8'}
+          />
+          {/* 4x M3 Fan Mount Screws (32mm pitch) */}
           {[
-            [-28, -50],
-            [28, -50],
-            [28, 50],
-            [-28, 50],
-          ].map(([sy, sz], idx) => (
-            <mesh
-              key={idx}
-              position={[21.6, sy, sz]}
-              rotation={[0, 0, Math.PI / 2]}
-            >
-              <cylinderGeometry args={[2.2, 2.2, 1.5, 12]} />
+            [-16, -16],
+            [16, -16],
+            [16, 16],
+            [-16, 16],
+          ].map(([fx, fy], idx) => (
+            <mesh key={`f40s-${idx}`} position={[fx, fy, 1.0]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[1.6, 1.6, 1.2, 10]} />
               <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
             </mesh>
           ))}
-          <mesh position={[21.6, 2, 0]} rotation={[0, Math.PI / 2, 0]}>
-            <planeGeometry args={[52, 26]} />
-            <meshStandardMaterial
-              map={oledTex}
-              emissiveMap={oledTex}
-              emissive="#A0E6FF"
-              emissiveIntensity={1.6}
-              roughness={0.2}
-            />
-          </mesh>
         </group>
 
-        <mesh geometry={cableGeometry}>
-          <meshStandardMaterial color="#111318" roughness={0.75} metalness={0.15} />
+        {/* Minimalist Outer Faceplate (+X): 4 Silver M3 Corner Bolts + Glowing 0.96" OLED */}
+        {[
+          [-28, -52],
+          [28, -52],
+          [28, 52],
+          [-28, 52],
+        ].map(([sy, sz], idx) => (
+          <mesh
+            key={`iots-${idx}`}
+            position={[28.5, sy, sz]}
+            rotation={[0, 0, Math.PI / 2]}
+          >
+            <cylinderGeometry args={[2.2, 2.2, 1.5, 12]} />
+            <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.2} />
+          </mesh>
+        ))}
+
+        {/* Recessed OLED Bezel Frame */}
+        <mesh position={[28.2, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <boxGeometry args={[48, 26, 1.2]} />
+          <meshStandardMaterial color="#0d1118" roughness={0.7} />
+        </mesh>
+
+        {/* Live Glowing Ice-Blue 0.96" OLED Telemetry Display */}
+        <mesh position={[28.9, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <planeGeometry args={[42, 21]} />
+          <meshStandardMaterial
+            map={oledTex}
+            emissiveMap={oledTex}
+            emissive="#A0E6FF"
+            emissiveIntensity={1.65}
+            roughness={0.2}
+          />
         </mesh>
       </group>
     </group>

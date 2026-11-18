@@ -11,10 +11,11 @@ import {
 } from '../../utils/csgBuilder';
 import { createOledScreenTexture } from '../acrylic/HardwareMockup';
 
-const GlowingPodFan: React.FC<{ radius: number; position: [number, number, number] }> = ({
-  radius,
-  position,
-}) => {
+const GlowingPodFan: React.FC<{
+  radius: number;
+  position: [number, number, number];
+  rotation?: [number, number, number];
+}> = ({ radius, position, rotation = [0, 0, 0] }) => {
   const ref = useRef<THREE.Group>(null);
   useFrame((_, delta) => {
     if (ref.current) {
@@ -23,7 +24,7 @@ const GlowingPodFan: React.FC<{ radius: number; position: [number, number, numbe
   });
 
   return (
-    <group position={position}>
+    <group position={position} rotation={rotation}>
       {/* Subtle cyan interior fan backlight */}
       <pointLight color="#38bdf8" intensity={1800} distance={110} decay={2} />
       <group ref={ref}>
@@ -95,6 +96,10 @@ const ParametricIoTBoxMesh: React.FC = () => {
           : 17.5;
   const fanRadius = Math.max(11, Math.min(targetFanR, fanMaxDia / 2 - 1));
 
+  const bodyCenterZ = -(iotBox.hasLid ? iotBox.wallThickness : 0) / 2;
+  const sideFanMaxDia = Math.min(iotBox.height - iotBox.wallThickness * 2 - 6, iotBox.width - iotBox.wallThickness * 2 - 6);
+  const sideFanRadius = Math.max(9, Math.min(targetFanR, sideFanMaxDia / 2 - 0.5));
+
   return (
     <group>
       {/* Main Midnight Matte-Black Rounded Pod Housing */}
@@ -106,6 +111,15 @@ const ParametricIoTBoxMesh: React.FC = () => {
         />
         <Edges threshold={28} color="#475569" scale={1.001} opacity={0.45} transparent />
       </mesh>
+
+      {/* Visual-Only Glowing Cross-Flow Fan mounted on Right Side Wall (+X) for Opsi D */}
+      {iotBox.showVisualHardware && iotBox.hasFan40 && iotBox.fanPlacement === 'side' && (
+        <GlowingPodFan
+          radius={sideFanRadius}
+          position={[iotBox.length / 2 - iotBox.wallThickness - 4.5, centerY, bodyCenterZ]}
+          rotation={[0, Math.PI / 2, 0]}
+        />
+      )}
 
       {/* Matching Rounded Front Faceplate + Visual Hardware */}
       {lidGeometry && (
@@ -158,8 +172,8 @@ const ParametricIoTBoxMesh: React.FC = () => {
             </group>
           )}
 
-          {/* Visual-Only Glowing Cyan Fan Rotor inside Fan Pod */}
-          {iotBox.showVisualHardware && iotBox.hasFan40 && (
+          {/* Visual-Only Glowing Cyan Fan Rotor inside Front Fan Shroud */}
+          {iotBox.showVisualHardware && iotBox.hasFan40 && iotBox.fanPlacement === 'front' && (
             <GlowingPodFan
               radius={fanRadius}
               position={[0, centerY, -iotBox.wallThickness / 2 - 8]}
@@ -212,13 +226,22 @@ export const IoTBox3DPreview: React.FC = () => {
       {/* Bottom Orientation Guide */}
       <div className="absolute bottom-3 left-3 z-10 pointer-events-none flex flex-wrap gap-2 text-[11px] font-mono text-slate-400">
         <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800">
-          Depan (+Z): Faceplate + OLED / Fan
+          {iotBox.fanPlacement === 'front'
+            ? `Depan (+Z): Fan Shroud ${iotBox.fanSize}mm`
+            : 'Depan (+Z): OLED 0.96" Minimalis'}
         </span>
+        {iotBox.fanPlacement === 'side' && (
+          <>
+            <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800 text-cyan-300">
+              Kiri (-X): Kisi Louver Angin Masuk
+            </span>
+            <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800 text-sky-300">
+              Kanan (+X): Kipas {iotBox.fanSize}mm Cross-Flow
+            </span>
+          </>
+        )}
         <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800">
-          Kiri/Kanan (±X): Kisi Louver Ventilasi
-        </span>
-        <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800">
-          Belakang (-Z): 4× Baut Dinding Akrilik
+          Belakang (-Z): {iotBox.throughAirflow ? 'Lubang Tembus Udara' : '4× Baut Dinding Akrilik'}
         </span>
       </div>
 
