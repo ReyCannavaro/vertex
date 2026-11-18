@@ -71,14 +71,17 @@ function createDustMeshTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-const SpinningFanBlades: React.FC<{ radius: number; ledColor: string }> = ({
-  radius,
-  ledColor,
-}) => {
+const SpinningFanBlades: React.FC<{
+  radius: number;
+  ledColor: string;
+  active?: boolean;
+}> = ({ radius, ledColor, active = true }) => {
   const rotorRef = useRef<THREE.Group>(null);
+  const speedRef = useRef(active ? 7.5 : 0);
   useFrame((_, delta) => {
+    speedRef.current = THREE.MathUtils.damp(speedRef.current, active ? 7.5 : 0, 3.5, delta);
     if (rotorRef.current) {
-      rotorRef.current.rotation.z -= delta * 7.5;
+      rotorRef.current.rotation.z -= delta * speedRef.current;
     }
   });
 
@@ -95,9 +98,9 @@ const SpinningFanBlades: React.FC<{ radius: number; ledColor: string }> = ({
             <mesh position={[radius * 0.56, 0, 0]} rotation={[0.45, 0, 0]}>
               <boxGeometry args={[radius * 0.65, radius * 0.22, 2]} />
               <meshStandardMaterial
-                color={ledColor}
-                emissive={ledColor}
-                emissiveIntensity={1.6}
+                color={active ? ledColor : '#475569'}
+                emissive={active ? ledColor : '#000000'}
+                emissiveIntensity={active ? 1.6 : 0}
                 roughness={0.2}
                 transparent
                 opacity={0.85}
@@ -165,7 +168,8 @@ const MountedCaseFan3D: React.FC<{
   rearWallZ: number;
   ledColor: string;
   ledEnabled: boolean;
-}> = ({ size, position, mountSide, rearWallZ, ledColor, ledEnabled }) => {
+  fanActive: boolean;
+}> = ({ size, position, mountSide, rearWallZ, ledColor, ledEnabled, fanActive }) => {
   const outerSize = size + 14; // 134mm for 120mm fan, 154mm for 140mm fan
   const shroudH = 22; // slim low-profile housing
   const cornerR = size === 140 ? 12 : 11;
@@ -210,16 +214,16 @@ const MountedCaseFan3D: React.FC<{
       <mesh rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[holeR - 1.2, 2.0, 10, 36]} />
         <meshStandardMaterial
-          color={activeColor}
-          emissive={activeColor}
-          emissiveIntensity={ledEnabled ? 2.4 : 0.4}
+          color={fanActive ? activeColor : '#334155'}
+          emissive={fanActive ? activeColor : '#000000'}
+          emissiveIntensity={fanActive && ledEnabled ? 2.4 : 0.15}
           toneMapped={false}
         />
       </mesh>
 
       {/* Spinning Fan Rotor neatly recessed inside the slim shroud */}
       <group rotation={[-Math.PI / 2, 0, 0]}>
-        <SpinningFanBlades radius={bladeR} ledColor={activeColor} />
+        <SpinningFanBlades radius={bladeR} ledColor={activeColor} active={fanActive} />
       </group>
 
       {/* Slim Protective Concentric Fan Grille Ring + 4 Cross Struts on Interior Face */}
@@ -580,6 +584,13 @@ interface HardwareMockupProps {
   topHoles: PanelHole[];
   dustFilterSlide: number;
   showWiring: boolean;
+  relayPcOn: boolean;
+  relayLapTopOn: boolean;
+  relayLapBotOn: boolean;
+  relayIotOn: boolean;
+  smokeAlarm: boolean;
+  doorPcOpen: boolean;
+  doorLapOpen: boolean;
 }
 
 export const HardwareMockup: React.FC<HardwareMockupProps> = ({
@@ -591,6 +602,13 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
   topHoles,
   dustFilterSlide,
   showWiring,
+  relayPcOn,
+  relayLapTopOn,
+  relayLapBotOn,
+  relayIotOn,
+  smokeAlarm,
+  doorPcOpen,
+  doorLapOpen,
 }) => {
   const {
     length: L,
@@ -698,33 +716,41 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
         </group>
       </group>
 
-      {/* ================= TOP & BOTTOM SLIM-SHROUDED CASE FANS (1x 140mm PC + 2x 120mm LAPTOP) ================= */}
+      {/* ================= TOP & BOTTOM SLIM-SHROUDED CASE FANS (SYNCED TO 4-CH RELAY) ================= */}
       <group>
-        {/* Bottom Intake Fans enclosed in Slim Matte-Black Rounded Shrouds */}
-        {bottomFans.map((hole) => (
-          <MountedCaseFan3D
-            key={`bot-fan-${hole.id}`}
-            size={hole.type === 'fan140' ? 140 : 120}
-            position={[hole.x - innerL / 2, legH + t + 11.5, hole.y - innerW / 2]}
-            mountSide="bottom"
-            rearWallZ={-halfW + t}
-            ledColor={ledColor}
-            ledEnabled={ledEnabled}
-          />
-        ))}
+        {/* Bottom Intake Fans: PC 140mm -> CH1, Laptop 120mm -> CH3 */}
+        {bottomFans.map((hole) => {
+          const isPcFan = hole.type === 'fan140';
+          return (
+            <MountedCaseFan3D
+              key={`bot-fan-${hole.id}`}
+              size={isPcFan ? 140 : 120}
+              position={[hole.x - innerL / 2, legH + t + 11.5, hole.y - innerW / 2]}
+              mountSide="bottom"
+              rearWallZ={-halfW + t}
+              ledColor={ledColor}
+              ledEnabled={ledEnabled}
+              fanActive={isPcFan ? relayPcOn : relayLapBotOn}
+            />
+          );
+        })}
 
-        {/* Top Exhaust Fans enclosed in Slim Matte-Black Rounded Shrouds */}
-        {topFans.map((hole) => (
-          <MountedCaseFan3D
-            key={`top-fan-${hole.id}`}
-            size={hole.type === 'fan140' ? 140 : 120}
-            position={[hole.x - halfL, legH + H - t - 11.5, hole.y - halfW - wiringDepth]}
-            mountSide="top"
-            rearWallZ={-halfW + t}
-            ledColor={ledColor}
-            ledEnabled={ledEnabled}
-          />
-        ))}
+        {/* Top Exhaust Fans: PC 140mm -> CH1, Laptop 120mm -> CH2 */}
+        {topFans.map((hole) => {
+          const isPcFan = hole.type === 'fan140';
+          return (
+            <MountedCaseFan3D
+              key={`top-fan-${hole.id}`}
+              size={isPcFan ? 140 : 120}
+              position={[hole.x - halfL, legH + H - t - 11.5, hole.y - halfW - wiringDepth]}
+              mountSide="top"
+              rearWallZ={-halfW + t}
+              ledColor={ledColor}
+              ledEnabled={ledEnabled}
+              fanActive={isPcFan ? relayPcOn : relayLapTopOn}
+            />
+          );
+        })}
       </group>
 
       {/* ================= RIGHT BAY: DUAL-TIER LAPTOP SERVERS ================= */}
@@ -742,11 +768,92 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
             maxDepth={W - t * 2}
           />
         )}
+      </group>
 
-        <mesh position={[lapBayLeft + 34, legH + H - t - 42, -W / 2 + 24]}>
-          <boxGeometry args={[16, 22, 8]} />
-          <meshStandardMaterial color="#e2e8f0" roughness={0.5} />
-        </mesh>
+      {/* ================= IOT SENSORS (3x DHT22, 1x MQ-2 SMOKE, 2x MC-38 DOOR, 12V ADAPTOR) ================= */}
+      <group>
+        {/* 3x White DHT22 Temperature/Humidity Sensors (PC Bay, Laptop Top, Laptop Bottom) */}
+        {[
+          { key: 'dht-pc', pos: [pcBayLeft + 34, legH + H - t - 42, -halfW + 18] as [number, number, number] },
+          { key: 'dht-lap-top', pos: [lapBayLeft + 34, legH + H - t - 42, -halfW + 18] as [number, number, number] },
+          { key: 'dht-lap-bot', pos: [lapBayLeft + 34, legH + middleTrayY - 36, -halfW + 18] as [number, number, number] },
+        ].map((dht) => (
+          <group key={dht.key} position={dht.pos}>
+            <mesh>
+              <boxGeometry args={[15, 22, 8]} />
+              <meshStandardMaterial color="#f1f5f9" roughness={0.45} />
+            </mesh>
+            <mesh position={[0, -2, 4.3]}>
+              <boxGeometry args={[10, 10, 0.8]} />
+              <meshStandardMaterial color="#94a3b8" roughness={0.8} />
+            </mesh>
+          </group>
+        ))}
+
+        {/* 1x MQ-2 Smoke / Fire Safety Sensor mounted on Inner Ceiling near Center Divider */}
+        <group position={[lapBayLeft + 26, legH + H - t - 9, -20]}>
+          <mesh>
+            <boxGeometry args={[32, 3, 22]} />
+            <meshStandardMaterial color="#1d4ed8" roughness={0.45} />
+          </mesh>
+          {/* Iconic metallic stainless steel mesh sensor cylinder */}
+          <mesh position={[-3, -8, 0]}>
+            <cylinderGeometry args={[8.5, 9.2, 13, 20]} />
+            <meshStandardMaterial color="#cbd5e1" metalness={0.88} roughness={0.3} />
+          </mesh>
+          {/* Live MQ-2 Status LED (Green = Normal, Red = Fire Alarm!) */}
+          <mesh position={[10, -2.2, 0]}>
+            <sphereGeometry args={[2.2, 10, 10]} />
+            <meshStandardMaterial
+              color={smokeAlarm ? '#ef4444' : '#22c55e'}
+              emissive={smokeAlarm ? '#ef4444' : '#22c55e'}
+              emissiveIntensity={3.5}
+              toneMapped={false}
+            />
+          </mesh>
+        </group>
+
+        {/* 2x MC-38 Magnetic Door Reed Switches mounted on Top Front Inner Frame */}
+        {[
+          { key: 'mc38-pc', x: pcBayRight - 28, open: doorPcOpen },
+          { key: 'mc38-lap', x: lapBayLeft + 28, open: doorLapOpen },
+        ].map((reed) => (
+          <group key={reed.key} position={[reed.x, legH + H - t - 7, halfW - 14]}>
+            <mesh>
+              <boxGeometry args={[28, 8, 12]} />
+              <meshStandardMaterial color="#e2e8f0" roughness={0.45} />
+            </mesh>
+            {/* Status Indicator Dot: Emerald = Closed, Amber = Door Opened! */}
+            <mesh position={[0, -4.5, 4]}>
+              <sphereGeometry args={[2.0, 10, 10]} />
+              <meshStandardMaterial
+                color={reed.open ? '#fbbf24' : '#22c55e'}
+                emissive={reed.open ? '#fbbf24' : '#22c55e'}
+                emissiveIntensity={3}
+                toneMapped={false}
+              />
+            </mesh>
+          </group>
+        ))}
+
+        {/* External 12V 5A DC Power Adaptor Brick + Rear Panel Barrel Jack (Independent IoT Power) */}
+        <group position={[-85, 16, -halfW - wiringDepth - 58]}>
+          {/* Matte-Black 12V 5A Adaptor Brick resting on table behind Rear Cover */}
+          <mesh>
+            <boxGeometry args={[112, 32, 52]} />
+            <meshStandardMaterial color="#141820" roughness={0.5} metalness={0.25} />
+          </mesh>
+          {/* Green Power-On LED on Adaptor */}
+          <mesh position={[44, 16.5, 14]}>
+            <sphereGeometry args={[1.8, 10, 10]} />
+            <meshStandardMaterial color="#22c55e" emissive="#22c55e" emissiveIntensity={3} toneMapped={false} />
+          </mesh>
+          {/* DC Cord plugging into Rear Wiring Cover */}
+          <mesh position={[45, 10, 42]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[3.2, 3.2, 34, 10]} />
+            <meshStandardMaterial color="#0f1218" roughness={0.75} />
+          </mesh>
+        </group>
       </group>
 
       {/* ================= RIGHT EXTERIOR WALL: SINGLE UNIFIED IOT BOX (OPSI D) ================= */}
@@ -776,6 +883,7 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
           <SpinningFanBlades
             radius={17}
             ledColor={ledEnabled ? ledColor : '#38bdf8'}
+            active={relayIotOn}
           />
           {/* 4x M3 Fan Mount Screws (32mm pitch) */}
           {[

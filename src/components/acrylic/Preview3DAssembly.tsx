@@ -7,6 +7,7 @@ import { AcrylicPanel } from '../../types/cad';
 import { AcrylicPanelMesh } from './AcrylicPanelMesh';
 import { HingedAcrylicDoor } from './HingedAcrylicDoor';
 import { HardwareMockup } from './HardwareMockup';
+import { computeEffectiveIoTState } from '../../utils/iotSimulation';
 
 /**
  * Matte-black industrial exterior Corner, T-Joint, and Cross (+) Brackets with M3 screws.
@@ -192,10 +193,10 @@ const StructuralFrameBrackets: React.FC = () => {
  * Continuous diffused WS2812B Ice Blue (#A0E6FF) LED Neon Frame lining the inner perimeter
  * of both PC Bay and Laptop Bay (elevated cleanly above legHeight).
  */
-const PerimeterWs2812Leds: React.FC = () => {
+const PerimeterWs2812Leds: React.FC<{ activeColor: string }> = ({ activeColor }) => {
   const dims = useCadStore((s) => s.caseDims);
   const ledEnabled = useCadStore((s) => s.ledEnabled);
-  const ledColor = useCadStore((s) => s.ledColor);
+  const ledColor = activeColor;
   const dividerEnabled = useCadStore((s) => s.panels.divider.enabled);
 
   if (!ledEnabled) return null;
@@ -301,9 +302,16 @@ export const Preview3DAssembly: React.FC = () => {
   const doorRightAngle = useCadStore((s) => s.doorRightAngle);
   const ledEnabled = useCadStore((s) => s.ledEnabled);
   const ledColor = useCadStore((s) => s.ledColor);
+  const iotSim = useCadStore((s) => s.iotSim);
   const showBrackets = useCadStore((s) => s.showBrackets);
   const showHardwareMockup = useCadStore((s) => s.showHardwareMockup);
   const showWiring = useCadStore((s) => s.showWiring);
+
+  const effectiveIot = useMemo(
+    () => computeEffectiveIoTState(iotSim, doorLeftAngle, doorRightAngle, ledColor),
+    [iotSim, doorLeftAngle, doorRightAngle, ledColor]
+  );
+  const liveLedColor = effectiveIot.effectiveLedColor;
 
   const setActivePanelId = useCadStore((s) => s.setActivePanelId);
   const setExplodeAmount = useCadStore((s) => s.setExplodeAmount);
@@ -474,7 +482,7 @@ export const Preview3DAssembly: React.FC = () => {
         <directionalLight position={[420, 620, 480]} intensity={1.2} color="#f8fafc" />
         <directionalLight position={[-420, 260, -480]} intensity={0.65} color="#7dd3fc" />
 
-        <PerimeterWs2812Leds />
+        <PerimeterWs2812Leds activeColor={liveLedColor} />
 
         {showBrackets && <StructuralFrameBrackets />}
 
@@ -482,12 +490,19 @@ export const Preview3DAssembly: React.FC = () => {
           <HardwareMockup
             dims={caseDims}
             ledEnabled={ledEnabled}
-            ledColor={ledColor}
+            ledColor={liveLedColor}
             middleEnabled={panels.middle.enabled}
             bottomHoles={panels.bottom.holes}
             topHoles={panels.top.holes}
             dustFilterSlide={dustFilterSlide}
             showWiring={showWiring}
+            relayPcOn={effectiveIot.relayPcOn}
+            relayLapTopOn={effectiveIot.relayLapTopOn}
+            relayLapBotOn={effectiveIot.relayLapBotOn}
+            relayIotOn={effectiveIot.relayIotOn}
+            smokeAlarm={effectiveIot.smokeAlarm}
+            doorPcOpen={effectiveIot.doorPcOpen}
+            doorLapOpen={effectiveIot.doorLapOpen}
           />
         )}
 
@@ -500,7 +515,7 @@ export const Preview3DAssembly: React.FC = () => {
               explodeAmount={explodeAmount}
               isActive={panel.id === activePanelId}
               ledEnabled={ledEnabled}
-              ledColor={ledColor}
+              ledColor={liveLedColor}
               onSelect={() => setActivePanelId(panel.id)}
             />
           ))}
@@ -515,7 +530,7 @@ export const Preview3DAssembly: React.FC = () => {
               explodeAmount={explodeAmount}
               isActive={activePanelId === 'front-left'}
               ledEnabled={ledEnabled}
-              ledColor={ledColor}
+              ledColor={liveLedColor}
               onSelect={() => setActivePanelId('front-left')}
               onToggleDoor={() => setDoorLeftAngle(doorLeftAngle > 10 ? 0 : 120)}
             />
@@ -529,7 +544,7 @@ export const Preview3DAssembly: React.FC = () => {
               explodeAmount={explodeAmount}
               isActive={activePanelId === 'front-right'}
               ledEnabled={ledEnabled}
-              ledColor={ledColor}
+              ledColor={liveLedColor}
               onSelect={() => setActivePanelId('front-right')}
               onToggleDoor={() => setDoorRightAngle(doorRightAngle > 10 ? 0 : 120)}
             />
