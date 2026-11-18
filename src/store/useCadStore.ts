@@ -446,21 +446,21 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         { id: 'right-back-m3-b', type: 'm3', label: 'Braket Back Partition Bawah', x: W - 14, y: mainH - 36, diameter: m3 },
         // Cable Comb Side Mount (1x M3)
         { id: 'right-comb-m3', type: 'm3', label: 'Mount Cable Comb', x: Math.round(W + wiringDepth * 0.5), y: Math.round(mainH * 0.48), diameter: m3 },
-        // Single unified IoT Box mounting pattern (cable pass-through + 4x M3 matching IoT Box captive hex nuts!)
+        // Single unified IoT Box (196×126×64mm) mounting pattern: wide cable slot + 4x M3 (±56×±48mm) matching CSG captive hex nuts 1:1!
         {
           id: 'right-iot-cable',
           type: 'vent',
           label: 'IoT Box Cable Pass-Through',
           x: mainCenterX,
           y: mountY,
-          width: 30,
-          height: 20,
+          width: 40,
+          height: 26,
           cornerRadius: 6,
         },
-        { id: 'right-iot-m3-1', type: 'm3', label: 'IoT Box Mount TL (M3)', x: mainCenterX - 38, y: mountY - 22, diameter: m3 },
-        { id: 'right-iot-m3-2', type: 'm3', label: 'IoT Box Mount TR (M3)', x: mainCenterX + 38, y: mountY - 22, diameter: m3 },
-        { id: 'right-iot-m3-3', type: 'm3', label: 'IoT Box Mount BR (M3)', x: mainCenterX + 38, y: mountY + 22, diameter: m3 },
-        { id: 'right-iot-m3-4', type: 'm3', label: 'IoT Box Mount BL (M3)', x: mainCenterX - 38, y: mountY + 22, diameter: m3 }
+        { id: 'right-iot-m3-1', type: 'm3', label: 'IoT Box Mount TL (M3)', x: mainCenterX - 56, y: mountY - 48, diameter: m3 },
+        { id: 'right-iot-m3-2', type: 'm3', label: 'IoT Box Mount TR (M3)', x: mainCenterX + 56, y: mountY - 48, diameter: m3 },
+        { id: 'right-iot-m3-3', type: 'm3', label: 'IoT Box Mount BR (M3)', x: mainCenterX + 56, y: mountY + 48, diameter: m3 },
+        { id: 'right-iot-m3-4', type: 'm3', label: 'IoT Box Mount BL (M3)', x: mainCenterX - 56, y: mountY + 48, diameter: m3 }
       );
     } else if (spec.id === 'divider') {
       const shelfY = Math.round(height - middleTrayY + t);
@@ -774,16 +774,17 @@ const DEFAULT_CASE_DIMS: CaseDimensions = {
 
 export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
   'controller-pod': {
-    // Opsi D: Minimalist Front OLED 0.96" + Right-Side 40mm Cross-Flow Fan + Left-Side Intake Louvers
-    length: 124,
-    width: 56,
-    height: 76,
-    wallThickness: 2.6,
+    // Opsi D (Roomy 1:1 Real-Scale 196×126×64mm): Fits ESP32 38-Pin Extender (78×63) + 4-Ch 5V Relay (73×50)
+    // + Buck XL4015 (54×24) + Buzzer (32×13) + Level Shifter (16×13) + Wago + 40mm 5V Cross-Flow Fan + OLED 0.96"!
+    length: 196,
+    width: 64,
+    height: 126,
+    wallThickness: 3.0,
     cornerRadius: 9,
     hasOled: true,
     hasStandoffs: true,
-    standoffSpacingX: 76,
-    standoffSpacingZ: 48,
+    standoffSpacingX: 72,
+    standoffSpacingZ: 56,
     hasSideVents: true,
     hasFan40: true,
     fanPlacement: 'side',
@@ -1292,8 +1293,8 @@ export const useCadStore = create<CadStoreState>()(
   },
 }),
     {
-      name: 'vertex-cad-project-v4',
-      version: 4,
+      name: 'vertex-cad-project-v5',
+      version: 5,
       partialize: (state) => ({
         caseDims: state.caseDims,
         panels: state.panels,

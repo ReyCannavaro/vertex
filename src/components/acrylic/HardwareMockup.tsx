@@ -1140,26 +1140,26 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
         </group>
       )}
 
-      {/* ================= RIGHT EXTERIOR WALL: SINGLE UNIFIED IOT BOX (OPSI D) ================= */}
-      {/* Minimalist Front OLED 0.96" + Front-Side Intake Louvers + Rear-Side 40mm Cross-Flow Fan */}
-      <group position={[halfL + 28, legH + H * 0.5, 0]}>
-        {/* Matte-Black Midnight Unified IoT Enclosure (56mm depth x 76mm height x 124mm width) */}
+      {/* ================= RIGHT EXTERIOR WALL: SINGLE UNIFIED IOT BOX (OPSI D • 196×126×64mm) ================= */}
+      {/* Roomy 1:1 Real-Scale Box: Front OLED 0.96" + Front-Side Intake Louvers + Rear-Side 40mm Cross-Flow Fan */}
+      <group position={[halfL + 32, legH + H * 0.5, 0]}>
+        {/* Matte-Black Midnight Unified IoT Enclosure (64mm depth x 126mm height x 196mm width) */}
         <mesh castShadow receiveShadow>
-          <boxGeometry args={[56, 76, 124]} />
+          <boxGeometry args={[64, 126, 196]} />
           <meshStandardMaterial color="#171b23" roughness={0.46} metalness={0.22} />
           <Edges threshold={26} color="#475569" scale={1.001} opacity={0.45} transparent />
         </mesh>
 
-        {/* Left Side of IoT Box (+Z facing viewer front): Intake Louver Ventilation Slots */}
-        {[-22, -14, -6, 2, 10, 18, 26].map((ly, i) => (
-          <mesh key={`louver-${i}`} position={[-2, ly, 62.4]}>
-            <boxGeometry args={[36, 3.4, 1.2]} />
+        {/* Left Side of IoT Box (+Z facing viewer front): 9x Intake Louver Ventilation Slots */}
+        {[-36, -27, -18, -9, 0, 9, 18, 27, 36].map((ly, i) => (
+          <mesh key={`louver-${i}`} position={[-2, ly, 98.4]}>
+            <boxGeometry args={[42, 3.6, 1.2]} />
             <meshStandardMaterial color="#090b10" roughness={0.92} />
           </mesh>
         ))}
 
         {/* Right Side of IoT Box (-Z facing rear): 40mm Cross-Flow Cooling Fan */}
-        <group position={[-2, 0, -62.5]} rotation={[0, Math.PI, 0]}>
+        <group position={[-2, 0, -98.5]} rotation={[0, Math.PI, 0]}>
           <mesh rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[18.5, 18.5, 1.8, 28]} />
             <meshStandardMaterial color="#050810" roughness={0.85} />
@@ -1185,14 +1185,14 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
 
         {/* Minimalist Outer Faceplate (+X): 4 Silver M3 Corner Bolts + Glowing 0.96" OLED */}
         {[
-          [-28, -52],
-          [28, -52],
-          [28, 52],
-          [-28, 52],
+          [-53, -88],
+          [53, -88],
+          [53, 88],
+          [-53, 88],
         ].map(([sy, sz], idx) => (
           <mesh
             key={`iots-${idx}`}
-            position={[28.5, sy, sz]}
+            position={[32.5, sy, sz]}
             rotation={[0, 0, Math.PI / 2]}
           >
             <cylinderGeometry args={[2.2, 2.2, 1.5, 12]} />
@@ -1201,13 +1201,13 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
         ))}
 
         {/* Recessed OLED Bezel Frame */}
-        <mesh position={[28.2, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <mesh position={[32.2, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
           <boxGeometry args={[48, 26, 1.2]} />
           <meshStandardMaterial color="#0d1118" roughness={0.7} />
         </mesh>
 
         {/* Live Glowing Ice-Blue 0.96" OLED Telemetry Display */}
-        <mesh position={[28.9, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <mesh position={[32.9, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
           <planeGeometry args={[42, 21]} />
           <meshStandardMaterial
             map={oledTex}

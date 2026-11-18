@@ -204,37 +204,46 @@ const InternalElectronicsScene: React.FC<{
   const bodyDepth = Math.max(18, W - t);
   const bodyCenterZ = -t / 2;
   const backWallInnerZ = bodyCenterZ - bodyDepth / 2 + t;
-  const standoffTopZ = backWallInnerZ + Math.min(9, bodyDepth - t - 8);
+  const standoffTopZ = backWallInnerZ + Math.min(8, bodyDepth - t - 10);
 
-  // Internal 3D jumper harnesses connecting Buck -> ESP32 -> Level Shifter -> Relay -> OLED -> 5V Fan
+  // True 1:1 mm component coordinates inside 196×126×64mm roomy IoT Box (zero overlap, wide cable lanes!)
+  const espPos: [number, number, number] = [-46, centerY + 19, standoffTopZ + 1.2];
+  const relayPos: [number, number, number] = [40, centerY + 19, standoffTopZ + 1.2];
+  const buckPos: [number, number, number] = [-56, 25, backWallInnerZ + 3];
+  const buzzerPos: [number, number, number] = [-4, 24, backWallInnerZ + 3];
+  const levelPos: [number, number, number] = [28, 24, backWallInnerZ + 2.5];
+  const wagoPos: [number, number, number] = [62, 25, backWallInnerZ + 7];
+
+  // Internal 3D jumper harnesses connecting Buck -> ESP32 -> Level Shifter -> 4-Ch Relay -> OLED -> 5V Fan
   const jumpers = useMemo(() => {
-    const zBase = backWallInnerZ + 6;
-    const zEsp = standoffTopZ + 3;
+    const zBase = backWallInnerZ + 8;
+    const zTop = standoffTopZ + 5;
     const specs: Array<{ pts: [number, number, number][]; color: string }> = [
-      // +5V Buck -> ESP32 VIN
-      { pts: [[-L * 0.3, 18, zBase], [-L * 0.25, 28, zEsp + 4], [-18, centerY + 8, zEsp]], color: '#f97316' },
-      // GND Bus
-      { pts: [[-L * 0.3, 13, zBase], [-L * 0.24, 21, zEsp + 2], [-18, centerY + 1, zEsp]], color: '#64748b' },
-      // 4x Relay Control Signals (ESP32 -> Relay 4-Ch)
-      { pts: [[16, centerY + 10, zEsp], [24, centerY + 8, zEsp + 5], [24, 22, zBase + 3]], color: '#a855f7' },
-      { pts: [[16, centerY + 5, zEsp], [28, centerY + 4, zEsp + 5], [29, 22, zBase + 3]], color: '#c084fc' },
-      // Logic Level Shifter -> ESP32 GPIO35 & GPIO13
-      { pts: [[2, 18, zBase + 2], [2, 28, zEsp + 4], [4, centerY - 6, zEsp]], color: '#06b6d4' },
-      // Relay CH4 5V -> Right-Side 40mm 5V Fan
-      { pts: [[36, 20, zBase + 2], [L / 2 - 14, 26, bodyCenterZ], [L / 2 - 9, centerY, bodyCenterZ]], color: '#f97316' },
-      // ESP32 GPIO5 -> Buzzer
-      { pts: [[-10, centerY - 10, zEsp], [-12, 24, zBase + 5], [-14, 16, zBase + 2]], color: '#ec4899' },
+      // +5V Buck XL4015 -> ESP32 VIN & Relay VCC
+      { pts: [[-34, 28, zBase], [-36, 46, zTop + 4], [-36, centerY - 6, zTop]], color: '#f97316' },
+      { pts: [[-34, 24, zBase], [8, 46, zTop + 5], [22, centerY - 2, zTop]], color: '#f97316' },
+      // Common GND Bus -> Wago Lever Block
+      { pts: [[-34, 20, zBase], [12, 34, zBase + 3], [52, 24, zBase + 3]], color: '#64748b' },
+      // 4x Relay Control Signals (ESP32 Screw Terminal -> Red 4-Ch Relay Optocoupler IN1..IN4)
+      { pts: [[-9, centerY + 28, zTop], [-1, centerY + 26, zTop + 7], [6, centerY + 24, zTop + 2]], color: '#a855f7' },
+      { pts: [[-9, centerY + 20, zTop], [-1, centerY + 18, zTop + 7], [6, centerY + 18, zTop + 2]], color: '#c084fc' },
+      // Logic Level Shifter 4-Ch -> ESP32 GPIO35 & GPIO13
+      { pts: [[28, 30, zBase + 2], [4, 42, zTop + 5], [-18, centerY - 6, zTop]], color: '#06b6d4' },
+      // Relay CH4 5V -> Right-Side 40×40×10mm 5V Fan
+      { pts: [[74, centerY + 14, zTop + 2], [82, centerY + 8, bodyCenterZ + 4], [L / 2 - t - 8, centerY, bodyCenterZ]], color: '#f97316' },
+      // ESP32 GPIO5 -> Active Buzzer 5V
+      { pts: [[-22, centerY - 8, zTop], [-14, 42, zBase + 5], [-6, 28, zBase + 2]], color: '#ec4899' },
     ];
     return specs.map((s) => {
       const curve = new THREE.CatmullRomCurve3(
         s.pts.map(([x, y, z]) => new THREE.Vector3(x, y, z))
       );
       return {
-        geo: new THREE.TubeGeometry(curve, 18, 0.85, 6, false),
+        geo: new THREE.TubeGeometry(curve, 18, 0.9, 6, false),
         color: s.color,
       };
     });
-  }, [L, centerY, backWallInnerZ, standoffTopZ, bodyCenterZ]);
+  }, [L, t, centerY, backWallInnerZ, standoffTopZ, bodyCenterZ]);
 
   useEffect(() => {
     return () => jumpers.forEach((j) => j.geo.dispose());
@@ -242,9 +251,9 @@ const InternalElectronicsScene: React.FC<{
 
   return (
     <group>
-      {/* ================= EXACT 3D-PRINT CSG HOUSING (IDENTICAL TO MODULE 2 STL!) ================= */}
+      {/* ================= EXACT 3D-PRINT CSG HOUSING (IDENTICAL TO MODULE 2 STL • 196×126×64mm!) ================= */}
       {/* Includes rounded corners, left intake louvers, right 40mm fan cutout, 4x corner bosses,
-          4x ESP32 standoffs, bottom USB/cable ports, and 4x rear captive M3 hex-nut bosses! */}
+          8x internal standoffs (4x ESP32 + 4x Relay), wide rear cable slot, and 4x rear captive M3 hex-nut bosses! */}
       <mesh geometry={housingGeo} castShadow receiveShadow>
         <meshPhysicalMaterial
           color="#171b23"
@@ -263,86 +272,81 @@ const InternalElectronicsScene: React.FC<{
         />
       </mesh>
 
-      {/* ================= 1. ESP32 38-PIN + SCREW TERMINAL (SEATED ON ACTUAL CSG STANDOFFS) ================= */}
-      <group position={[-4, centerY + 10, standoffTopZ + 1.2]}>
+      {/* ================= 1. ESP32 38-PIN + SCREW TERMINAL EXTENDER (TRUE 1:1 • 78×63×22mm) ================= */}
+      <group position={espPos}>
+        {/* Green 38-Pin Expansion Carrier Board (78 × 63 × 2 mm) */}
         <mesh>
-          <boxGeometry args={[66, 44, 2.2]} />
+          <boxGeometry args={[78, 63, 2.0]} />
           <meshStandardMaterial color="#15803d" roughness={0.55} metalness={0.18} />
         </mesh>
-        {/* 38-Pin Screw Terminal Rails */}
-        <mesh position={[0, 18.5, 4]}>
-          <boxGeometry args={[60, 5.5, 6.5]} />
+        {/* Top & Bottom 19-Pin Blue/Green Screw Terminal Rails */}
+        <mesh position={[0, 26, 4.5]}>
+          <boxGeometry args={[68, 7.5, 7.5]} />
           <meshStandardMaterial color="#16a34a" roughness={0.45} />
         </mesh>
-        <mesh position={[0, -18.5, 4]}>
-          <boxGeometry args={[60, 5.5, 6.5]} />
+        <mesh position={[0, -26, 4.5]}>
+          <boxGeometry args={[68, 7.5, 7.5]} />
           <meshStandardMaterial color="#16a34a" roughness={0.45} />
         </mesh>
-        {/* ESP32 DevKitC 38-Pin Dark PCB */}
-        <mesh position={[0, 0, 5.2]}>
-          <boxGeometry args={[52, 26, 2]} />
+        {/* ESP32 DevKitC 38-Pin Dark PCB (55 × 28 mm) mounted in female headers */}
+        <mesh position={[0, 0, 8.5]}>
+          <boxGeometry args={[55, 28, 2.0]} />
           <meshStandardMaterial color="#111827" roughness={0.45} metalness={0.3} />
         </mesh>
         {/* Metallic ESP-WROOM-32 WiFi RF Shield */}
-        <mesh position={[-12, 0, 7.8]}>
-          <boxGeometry args={[18, 15, 3]} />
+        <mesh position={[-13, 0, 11.2]}>
+          <boxGeometry args={[18, 16, 3.2]} />
           <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.22} />
         </mesh>
         {/* USB-C Port */}
-        <mesh position={[24, 0, 6.8]}>
-          <boxGeometry args={[7, 8, 3]} />
+        <mesh position={[25, 0, 10.2]}>
+          <boxGeometry args={[7, 9, 3.2]} />
           <meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.25} />
         </mesh>
         {/* Power Red LED + WiFi Blue LED */}
-        <mesh position={[14, 6.5, 6.8]}>
-          <sphereGeometry args={[1.1, 10, 10]} />
+        <mesh position={[15, 7.5, 10.2]}>
+          <sphereGeometry args={[1.2, 10, 10]} />
           <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={3} toneMapped={false} />
         </mesh>
-        <mesh position={[14, -6.5, 6.8]}>
-          <sphereGeometry args={[1.1, 10, 10]} />
+        <mesh position={[15, -7.5, 10.2]}>
+          <sphereGeometry args={[1.2, 10, 10]} />
           <meshStandardMaterial color="#38bdf8" emissive="#38bdf8" emissiveIntensity={3} toneMapped={false} />
         </mesh>
       </group>
 
-      {/* ================= 2. BUCK CONVERTER 12V -> 5V (XL4015 5A) ================= */}
-      <group position={[-L * 0.31, 17, backWallInnerZ + 3]}>
+      {/* ================= 2. RED PCB RELAY MODULE 4-CHANNEL 5V OPTOCOUPLER (TRUE 1:1 • 73×50×20mm) ================= */}
+      <group position={relayPos}>
+        {/* Red PCB Board matching High/Low Level Optocoupler 4-Ch 5V module (73 × 50 × 2 mm) */}
         <mesh>
-          <boxGeometry args={[26, 17, 2]} />
-          <meshStandardMaterial color="#1d4ed8" roughness={0.5} />
+          <boxGeometry args={[73, 50, 2.0]} />
+          <meshStandardMaterial color="#b91c1c" roughness={0.48} metalness={0.18} />
         </mesh>
-        <mesh position={[-5, 0, 5]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[4.2, 2.0, 10, 20]} />
-          <meshStandardMaterial color="#d97706" metalness={0.85} roughness={0.28} />
-        </mesh>
-        <mesh position={[6.5, 3.8, 4.2]}>
-          <boxGeometry args={[5.5, 4.2, 5.5]} />
-          <meshStandardMaterial color="#2563eb" roughness={0.4} />
-        </mesh>
-        <mesh position={[6.5, -3.8, 5]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[3.0, 3.0, 7.5, 16]} />
-          <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.3} />
-        </mesh>
-      </group>
-
-      {/* ================= 3. RELAY MODULE 4-CHANNEL 5V (LIVE STATUS LEDS) ================= */}
-      <group position={[L * 0.23, 18, backWallInnerZ + 3]}>
-        <mesh>
-          <boxGeometry args={[44, 24, 2]} />
-          <meshStandardMaterial color="#0f172a" roughness={0.5} />
-        </mesh>
+        {/* 4x Iconic Blue Songle 5V 10A Relay Cubes + Blue Screw Terminal Blocks + Yellow H/L Jumpers */}
         {[
-          { x: -15, on: eff.relayPcOn },
-          { x: -5, on: eff.relayLapTopOn },
-          { x: 5, on: eff.relayLapBotOn },
-          { x: 15, on: eff.relayIotOn },
+          { x: -24, on: eff.relayPcOn },
+          { x: -8, on: eff.relayLapTopOn },
+          { x: 8, on: eff.relayLapBotOn },
+          { x: 24, on: eff.relayIotOn },
         ].map((ch, idx) => (
-          <group key={idx} position={[ch.x, 1, 7]}>
+          <group key={idx} position={[ch.x, 2, 8.5]}>
+            {/* Blue Relay Cube (15 × 19 × 15 mm) */}
             <mesh>
-              <boxGeometry args={[8.8, 13, 12]} />
+              <boxGeometry args={[14.5, 19, 15]} />
               <meshStandardMaterial color="#1d4ed8" roughness={0.38} metalness={0.12} />
             </mesh>
-            <mesh position={[0, -8.8, -4.8]}>
-              <sphereGeometry args={[1.3, 10, 10]} />
+            {/* 3-Pin Blue Output Screw Terminal Block (NO / COM / NC) */}
+            <mesh position={[0, 16, -2.5]}>
+              <boxGeometry args={[14.5, 8.5, 10]} />
+              <meshStandardMaterial color="#0284c7" roughness={0.45} />
+            </mesh>
+            {/* Yellow High/Low Level Trigger Jumper Cap */}
+            <mesh position={[0, -14.5, -4.5]}>
+              <boxGeometry args={[4.5, 6.5, 5.5]} />
+              <meshStandardMaterial color="#eab308" roughness={0.4} />
+            </mesh>
+            {/* Live Channel Trigger LED */}
+            <mesh position={[0, -20.5, -6.8]}>
+              <sphereGeometry args={[1.4, 10, 10]} />
               <meshStandardMaterial
                 color={ch.on ? '#22c55e' : '#334155'}
                 emissive={ch.on ? '#22c55e' : '#000000'}
@@ -354,18 +358,57 @@ const InternalElectronicsScene: React.FC<{
         ))}
       </group>
 
-      {/* ================= 4. ACTIVE BUZZER 5V + LOGIC LEVEL SHIFTER 4-CH ================= */}
-      <BuzzerModule3D active={eff.buzzerActive} position={[-14, 15, backWallInnerZ + 3]} />
-
-      <group position={[2, 15, backWallInnerZ + 2.5]}>
+      {/* ================= 3. BUCK CONVERTER 12V -> 5V XL4015 5A (TRUE 1:1 • 54×24×16mm) ================= */}
+      <group position={buckPos}>
         <mesh>
-          <boxGeometry args={[14, 15, 2]} />
+          <boxGeometry args={[54, 24, 2.0]} />
+          <meshStandardMaterial color="#1d4ed8" roughness={0.5} />
+        </mesh>
+        {/* Copper Toroid Inductor */}
+        <mesh position={[-8, 0, 6.5]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[6.2, 2.8, 10, 20]} />
+          <meshStandardMaterial color="#d97706" metalness={0.85} roughness={0.28} />
+        </mesh>
+        {/* Blue Trimpot Voltage Adjuster */}
+        <mesh position={[12, 5.5, 5.2]}>
+          <boxGeometry args={[9.5, 5.0, 9.0]} />
+          <meshStandardMaterial color="#2563eb" roughness={0.4} />
+        </mesh>
+        {/* 2x Electrolytic Capacitors */}
+        {[-21, 21].map((cx, ci) => (
+          <mesh key={ci} position={[cx, 0, 6.5]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[4.2, 4.2, 10.5, 16]} />
+            <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.3} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* ================= 4. ACTIVE BUZZER 5V (32×13mm) + LOGIC LEVEL SHIFTER (16×13mm) + WAGO 221 ================= */}
+      <BuzzerModule3D active={eff.buzzerActive} position={buzzerPos} />
+
+      <group position={levelPos}>
+        <mesh>
+          <boxGeometry args={[16, 13, 2.0]} />
           <meshStandardMaterial color="#0284c7" roughness={0.45} metalness={0.2} />
         </mesh>
         {[-4.2, -1.4, 1.4, 4.2].map((my, i) => (
           <mesh key={i} position={[0, my, 1.4]}>
             <boxGeometry args={[3.2, 1.9, 1.1]} />
             <meshStandardMaterial color="#0f172a" roughness={0.6} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* 2x Wago 221 Lever Power Distribution Blocks (12V/5V/GND Zero-Solder Splitters!) */}
+      <group position={wagoPos}>
+        <mesh>
+          <boxGeometry args={[24, 18, 12]} />
+          <meshStandardMaterial color="#94a3b8" transparent opacity={0.65} roughness={0.3} />
+        </mesh>
+        {[-7, 0, 7].map((wx, wi) => (
+          <mesh key={wi} position={[wx, 4, 6.5]}>
+            <boxGeometry args={[5.2, 8.5, 2.2]} />
+            <meshStandardMaterial color="#f97316" roughness={0.4} />
           </mesh>
         ))}
       </group>
@@ -493,12 +536,12 @@ export const IoTInternal3DPreview: React.FC = () => {
 
       {/* Bottom Legend */}
       <div className="absolute bottom-3 left-3 z-10 pointer-events-none text-[11px] font-mono text-slate-400 px-2.5 py-1 rounded bg-slate-900/85 border border-slate-800">
-        1:1 CSG Modul 2 • Slot Mur Hex M3 Belakang • Standoff ESP32 • Louver Kiri • Kipas 40mm 5V Kanan
+        1:1 Real-Scale 196×126×64mm • ESP32 Extender (78×63) • Relay 4-Ch 5V (73×50) • XL4015 • Buzzer • Wago • Fan 40mm
       </div>
 
       <Canvas
         shadows
-        camera={{ position: [128, 96, 178], fov: 35, near: 1, far: 2000 }}
+        camera={{ position: [185, 135, 265], fov: 35, near: 1, far: 2000 }}
         dpr={[1, 2]}
         gl={{ antialias: true }}
       >

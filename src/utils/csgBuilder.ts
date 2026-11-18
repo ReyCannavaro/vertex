@@ -257,34 +257,52 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
     }
   }
 
-  // Optional 4x ESP32 Screw Terminal Standoffs protruding from rear wall inside
+  // Optional 4x ESP32 Screw Terminal Standoffs (+ 4x Relay 4-Ch Standoffs when roomy 196×126mm box!)
   if (hasStandoffs) {
-    const standoffH = Math.min(9, bodyDepth - t - 8);
+    const standoffH = Math.min(8, bodyDepth - t - 10);
     if (standoffH >= 4) {
+      const isRoomyUnified = L >= 165 && H >= 105;
       const maxSX = Math.max(12, innerL - 22);
       const maxSY = Math.max(12, innerH - 22);
       const sx = Math.min(standoffSpacingX, maxSX) / 2;
       const sy = Math.min(standoffSpacingZ, maxSY) / 2;
 
+      const espCenterX = isRoomyUnified ? -46 : 0;
+      const espCenterY = isRoomyUnified ? centerY + 19 : centerY;
+
       const standoffPts: [number, number][] = [
-        [-sx, -sy],
-        [sx, -sy],
-        [sx, sy],
-        [-sx, sy],
+        [espCenterX - sx, espCenterY - sy],
+        [espCenterX + sx, espCenterY - sy],
+        [espCenterX + sx, espCenterY + sy],
+        [espCenterX - sx, espCenterY + sy],
       ];
+
+      // Add 4x dedicated standoffs for 4-Channel 5V Optocoupler Relay (66×43mm pitch) in Top-Right zone
+      if (isRoomyUnified) {
+        const relCX = 40;
+        const relCY = centerY + 19;
+        const rx = 33;
+        const ry = 21.5;
+        standoffPts.push(
+          [relCX - rx, relCY - ry],
+          [relCX + rx, relCY - ry],
+          [relCX + rx, relCY + ry],
+          [relCX - rx, relCY + ry]
+        );
+      }
 
       for (const [ox, oy] of standoffPts) {
         additions.push(
           makeTransformedGeo(
             new THREE.CylinderGeometry(3.1, 3.5, standoffH + 0.8, 16),
-            [ox, centerY + oy, backWallInnerZ + standoffH / 2 - 0.4],
+            [ox, oy, backWallInnerZ + standoffH / 2 - 0.4],
             [Math.PI / 2, 0, 0]
           )
         );
         pilotCutters.push(
           makeTransformedGeo(
             new THREE.CylinderGeometry(1.3, 1.3, standoffH + 1, 14),
-            [ox, centerY + oy, backWallInnerZ + standoffH / 2 + 1.5],
+            [ox, oy, backWallInnerZ + standoffH / 2 + 1.5],
             [Math.PI / 2, 0, 0]
           )
         );
@@ -292,10 +310,10 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
     }
   }
 
-  // Raised Internal M3 Captive Hex-Nut Boss Pads on Rear Acrylic-Wall Mounts (so thin 2.6mm walls hold full M3 hex nuts!)
+  // Raised Internal M3 Captive Hex-Nut Boss Pads on Rear Acrylic-Wall Mounts (1:1 aligned with Right Wall DXF!)
   if (hasWallMount && !(throughAirflow && hasFan40 && fanPlacement === 'front')) {
-    const mx = Math.min(innerL * 0.34, 42);
-    const my = Math.min(innerH * 0.32, 32);
+    const mx = Math.round(Math.min(innerL * 0.34, 56));
+    const my = Math.round(Math.min(innerH * 0.4, 48));
     const bossH = 3.2;
     const mountPts: [number, number][] = [
       [-mx, -my],
@@ -453,11 +471,11 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
       }
     }
   } else if (hasWallMount) {
-    // Rear Acrylic-Wall M3 Mounting Holes + Central Wire Pass-Through on Rear Wall (-Z)
+    // Rear Acrylic-Wall M3 Mounting Holes + Generous Cable Pass-Through Slot on Rear Wall (-Z)
     const rearZ = bodyCenterZ - bodyDepth / 2 + t / 2;
     const cutDepth = t + 8;
-    const mx = Math.min(innerL * 0.34, 42);
-    const my = Math.min(innerH * 0.32, 32);
+    const mx = Math.round(Math.min(innerL * 0.34, 56));
+    const my = Math.round(Math.min(innerH * 0.4, 48));
 
     const mountPts: [number, number][] = [
       [-mx, -my],
@@ -474,12 +492,13 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
         )
       );
     }
-    // Central cable pass-through hole into the acrylic case
+    // Generous cable pass-through slot matching Right Wall acrylic cutout (for fan + sensor + LED bundle)
+    const slotW = Math.min(36, innerL * 0.28);
+    const slotH = Math.min(22, innerH * 0.24);
     cutters.push(
       makeTransformedGeo(
-        new THREE.CylinderGeometry(8, 8, cutDepth, 20),
-        [0, centerY, rearZ],
-        [Math.PI / 2, 0, 0]
+        createRoundedBlockGeo(slotW, slotH, cutDepth, 5, 0),
+        [0, centerY, rearZ]
       )
     );
   }

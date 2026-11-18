@@ -388,10 +388,10 @@ export const IoTBoxSidebar: React.FC = () => {
           >
             <div className="font-semibold flex items-center gap-1.5">
               <Monitor className="w-3.5 h-3.5 text-sky-400" />
-              <span>ESP32 IoT Box (Opsi D • Cross-Flow)</span>
+              <span>ESP32 IoT Box (196×126×64mm • Lega 1:1)</span>
             </div>
             <div className="text-[10px] text-slate-400 mt-0.5">
-              Depan OLED 0.96" • Kiri Louver Masuk • Kanan Kipas 40mm
+              Muat ESP32 Extender + Relay 4-Ch + XL4015 + Buzzer + Wago + Fan 40mm
             </div>
           </button>
 
@@ -446,7 +446,7 @@ export const IoTBoxSidebar: React.FC = () => {
           <input
             type="range"
             min={70}
-            max={200}
+            max={240}
             step={2}
             value={iotBox.length}
             onChange={(e) => updateIoTBox({ length: Number(e.target.value) })}
@@ -463,7 +463,7 @@ export const IoTBoxSidebar: React.FC = () => {
           <input
             type="range"
             min={55}
-            max={160}
+            max={180}
             step={2}
             value={iotBox.height}
             onChange={(e) => updateIoTBox({ height: Number(e.target.value) })}
