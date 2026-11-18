@@ -1,6 +1,6 @@
 export type ActiveModule = 'acrylic' | 'iot-box' | 'iot-visualizer';
 export type AcrylicViewMode = '2d' | 'split' | '3d';
-export type WireCategory = 'all' | 'power' | 'sensors' | 'fans' | 'ui';
+export type WireCategory = 'all' | 'power' | 'sensors' | 'relays' | 'ui';
 
 export interface IoTSimState {
   /** Simulated DHT22 #1 temperature in PC Bay (°C) */
@@ -13,22 +13,16 @@ export interface IoTSimState {
   humidity: number;
   /** Simulated MQ-2 Smoke/Gas sensor reading (ppm, alarm >= 450) */
   smokePpm: number;
-  /** Automatic thermal PWM curve + fire cut-off mode */
+  /** Automatic thermal ON/OFF + fire cut-off mode */
   autoMode: boolean;
-  /** Manual Relay CH1: 12V PC Bay 2x140mm Fans */
+  /** Manual Relay CH1: 12V PC Bay 2x140mm Fans (ON/OFF) */
   relayPcFans: boolean;
-  /** Manual Relay CH2: 12V Laptop Bay 4x120mm Fans */
-  relayLapFans: boolean;
-  /** Manual Relay CH3: 5V IoT Box 40mm Fan */
+  /** Manual Relay CH2: 12V Upper Laptop Bay 2x120mm Fans (ON/OFF) */
+  relayLapTopFans: boolean;
+  /** Manual Relay CH3: 12V Lower Laptop Bay 2x120mm Fans (ON/OFF) */
+  relayLapBotFans: boolean;
+  /** Manual Relay CH4: 5V IoT Box 40mm Cooling Fan (ON/OFF) */
   relayIotFan: boolean;
-  /** Manual Relay CH4: 5V WS2812B LED Strip */
-  relayLedPower: boolean;
-  /** Manual PWM speed % for PC Bay 140mm fans (0..100) */
-  pwmPc: number;
-  /** Manual PWM speed % for Laptop Bay 120mm fans (0..100) */
-  pwmLap: number;
-  /** Manual PWM speed % for IoT Box 5V 40mm fan (0..100) */
-  pwmIot: number;
   /** Active wire category filter in 2D schematic */
   wireFilter: WireCategory;
   /** Selected component node ID in 2D schematic */

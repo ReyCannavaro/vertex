@@ -14,33 +14,26 @@ export interface EffectiveIoTState {
   doorLapOpen: boolean;
   buzzerActive: boolean;
 
-  // Effective Relay states (Fire safety automatically forces fan relays OFF!)
-  relayPcOn: boolean;
-  relayLapOn: boolean;
-  relayIotOn: boolean;
-  relayLedOn: boolean;
-
-  // Effective PWM % (0..100)
-  pwmPc: number;
-  pwmLap: number;
-  pwmIot: number;
+  // Effective 4-Channel 5V Relay states (Pure ON/OFF per Zone; Fire Cut-Off kills all 4 fan relays!)
+  relayPcOn: boolean; // CH1: 12V PC Bay 2x140mm
+  relayLapTopOn: boolean; // CH2: 12V Laptop Atas 2x120mm
+  relayLapBotOn: boolean; // CH3: 12V Laptop Bawah 2x120mm
+  relayIotOn: boolean; // CH4: 5V IoT Box 40mm Fan
 
   // Dynamic WS2812B status color
   effectiveLedColor: string;
   alerts: IoTAlert[];
 }
 
-function tempToPwm(temp: number, minT: number, maxT: number): number {
-  if (temp <= minT) return 30;
-  if (temp >= maxT) return 100;
-  return Math.round(30 + ((temp - minT) / (maxT - minT)) * 70);
-}
-
 /**
- * Pure deterministic controller logic mirroring what the ESP32 38-Pin firmware runs:
- * - MQ-2 Smoke >= 450 ppm -> FIRE SAFETY CUT-OFF (kills all fan relays immediately + sounds buzzer + red LED)
- * - Auto Thermal Mode -> computes independent PWM fan curves for PC Bay, Laptop Bay & IoT Box
- * - Door Reed Switches (MC-38) -> triggers real-time dashboard security alerts when either door opens > 4°
+ * Pure deterministic controller logic mirroring ESP32 38-Pin firmware (Skema 2 — Pure 4-Ch Relay ON/OFF):
+ * - MQ-2 Smoke >= 450 ppm -> FIRE SAFETY CUT-OFF (kills Relay CH1–CH4 immediately + sounds Buzzer + Red LED)
+ * - Auto Thermal Mode -> independent ON/OFF thresholds per bay:
+ *     CH1 (PC 12V 2x140mm): ON when PC >= 36°C
+ *     CH2 (Lap Top 12V 2x120mm): ON when LapTop >= 38°C
+ *     CH3 (Lap Bot 12V 2x120mm): ON when LapBot >= 36°C
+ *     CH4 (IoT Box 5V 40mm): ON when avg temp >= 35°C or any relay active
+ * - Door Reed Switches (2x MC-38) -> real-time dashboard security alert when either door opens > 4°
  */
 export function computeEffectiveIoTState(
   sim: IoTSimState,
@@ -51,32 +44,35 @@ export function computeEffectiveIoTState(
   const smokeAlarm = sim.smokePpm >= 450;
   const maxLapTemp = Math.max(sim.tempLapTop, sim.tempLapBot);
   const maxCaseTemp = Math.max(sim.tempPc, maxLapTemp);
+  const avgTemp = (sim.tempPc + sim.tempLapTop + sim.tempLapBot) / 3;
   const overheatAlarm = maxCaseTemp >= 65;
 
   const doorPcOpen = doorLeftAngle > 4;
   const doorLapOpen = doorRightAngle > 4;
 
-  // In Fire Safety Cut-Off, Relay CH1/CH2/CH3 immediately cut power so fans don't feed oxygen to fire!
-  const relayPcOn = smokeAlarm ? false : sim.autoMode ? true : sim.relayPcFans;
-  const relayLapOn = smokeAlarm ? false : sim.autoMode ? true : sim.relayLapFans;
-  const relayIotOn = smokeAlarm ? false : sim.autoMode ? true : sim.relayIotFan;
-  const relayLedOn = smokeAlarm ? true : sim.relayLedPower;
-
-  const targetPwmPc = sim.autoMode ? tempToPwm(sim.tempPc, 32, 62) : sim.pwmPc;
-  const targetPwmLap = sim.autoMode ? tempToPwm(maxLapTemp, 34, 62) : sim.pwmLap;
-  const targetPwmIot = sim.autoMode
-    ? tempToPwm((sim.tempPc + maxLapTemp) * 0.5, 34, 60)
-    : sim.pwmIot;
-
-  const pwmPc = relayPcOn ? targetPwmPc : 0;
-  const pwmLap = relayLapOn ? targetPwmLap : 0;
-  const pwmIot = relayIotOn ? targetPwmIot : 0;
+  // Pure ON/OFF 4-Channel Relay Control (Fire Safety Cut-Off overrides all fan relays to OFF!)
+  const relayPcOn = smokeAlarm ? false : sim.autoMode ? sim.tempPc >= 36 : sim.relayPcFans;
+  const relayLapTopOn = smokeAlarm
+    ? false
+    : sim.autoMode
+      ? sim.tempLapTop >= 38
+      : sim.relayLapTopFans;
+  const relayLapBotOn = smokeAlarm
+    ? false
+    : sim.autoMode
+      ? sim.tempLapBot >= 36
+      : sim.relayLapBotFans;
+  const relayIotOn = smokeAlarm
+    ? false
+    : sim.autoMode
+      ? avgTemp >= 35 || relayPcOn || relayLapTopOn || relayLapBotOn
+      : sim.relayIotFan;
 
   let effectiveLedColor = baseLedColor;
   if (smokeAlarm || overheatAlarm) {
     effectiveLedColor = '#ef4444'; // Emergency Red
   } else if (maxCaseTemp >= 52 || doorPcOpen || doorLapOpen) {
-    effectiveLedColor = '#fbbf24'; // Warm / Door Warning Amber
+    effectiveLedColor = '#fbbf24'; // Warm / Door Open Amber
   }
 
   const alerts: IoTAlert[] = [];
@@ -85,31 +81,31 @@ export function computeEffectiveIoTState(
       id: 'smoke',
       severity: 'critical',
       title: 'FIRE CUT-OFF: Asap Terdeteksi (MQ-2)',
-      detail: `${sim.smokePpm} ppm — Relay CH1–CH3 memutus daya seluruh kipas & Buzzer aktif!`,
+      detail: `${sim.smokePpm} ppm — Relay CH1–CH4 memutus seluruh kipas & Buzzer berbunyi!`,
     });
   }
   if (overheatAlarm) {
     alerts.push({
       id: 'overheat',
       severity: 'critical',
-      title: 'OVERHEAT ALERT (>65°C)',
-      detail: `Suhu puncak ${maxCaseTemp.toFixed(1)}°C — Kipas dipacu 100% & Buzzer aktif.`,
+      title: 'OVERHEAT ALERT (≥65°C)',
+      detail: `Suhu puncak ${maxCaseTemp.toFixed(1)}°C — Semua Relay kipas ON & Buzzer aktif.`,
     });
   }
   if (doorPcOpen) {
     alerts.push({
       id: 'door-pc',
       severity: 'warning',
-      title: 'Pintu PC Bay (Kiri) Terbuka',
-      detail: `MC-38 Reed Switch (GPIO32) OPEN (${Math.round(doorLeftAngle)}°) — Notifikasi web aktif.`,
+      title: 'SECURITY: Pintu PC Bay (Kiri) Dibuka!',
+      detail: `Sensor Magnet MC-38 #1 (GPIO32) OPEN (${Math.round(doorLeftAngle)}°) — Notifikasi web realtime.`,
     });
   }
   if (doorLapOpen) {
     alerts.push({
       id: 'door-lap',
       severity: 'warning',
-      title: 'Pintu Laptop Bay (Kanan) Terbuka',
-      detail: `MC-38 Reed Switch (GPIO33) OPEN (${Math.round(doorRightAngle)}°) — Notifikasi web aktif.`,
+      title: 'SECURITY: Pintu Laptop Bay (Kanan) Dibuka!',
+      detail: `Sensor Magnet MC-38 #2 (GPIO33) OPEN (${Math.round(doorRightAngle)}°) — Notifikasi web realtime.`,
     });
   }
   if (alerts.length === 0) {
@@ -126,14 +122,11 @@ export function computeEffectiveIoTState(
     overheatAlarm,
     doorPcOpen,
     doorLapOpen,
-    buzzerActive: smokeAlarm || overheatAlarm,
+    buzzerActive: smokeAlarm || overheatAlarm || doorPcOpen || doorLapOpen,
     relayPcOn,
-    relayLapOn,
+    relayLapTopOn,
+    relayLapBotOn,
     relayIotOn,
-    relayLedOn,
-    pwmPc,
-    pwmLap,
-    pwmIot,
     effectiveLedColor,
     alerts,
   };
