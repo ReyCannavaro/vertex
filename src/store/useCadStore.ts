@@ -3,6 +3,8 @@ import {
   AcrylicPanel,
   AcrylicViewMode,
   ActiveModule,
+  BracketParams,
+  BracketType,
   CaseDimensions,
   HoleType,
   IoTBoxParams,
@@ -11,6 +13,7 @@ import {
   PanelHole,
   PanelId,
   Point2D,
+  PrintPartCategory,
 } from '../types/cad';
 
 function makeRectOutline(width: number, height: number): Point2D[] {
@@ -671,6 +674,16 @@ export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
   },
 };
 
+const DEFAULT_BRACKET_PARAMS: BracketParams = {
+  type: 'corner-3way',
+  armLength: 28,
+  thickness: 6,
+  armWidth: 15,
+  screwDiameter: 3.4,
+  holeOffset: 16,
+  showPreviewBolts: true,
+};
+
 const DEFAULT_IOT_SIM: IoTSimState = {
   tempPc: 38,
   tempLapTop: 42,
@@ -708,8 +721,10 @@ interface CadStoreState {
   showHardwareMockup: boolean;
   showWiring: boolean;
 
-  // Module 2: Parametric IoT Box Builder
+  // Module 2: Parametric IoT Box & 3D-Printed Hardware Builder
+  printPartCategory: PrintPartCategory;
   iotBox: IoTBoxParams;
+  bracketParams: BracketParams;
 
   // Module 3: Live IoT Electronics & Wiring Visualizer
   iotSim: IoTSimState;
@@ -743,9 +758,13 @@ interface CadStoreState {
   clearPanelHoles: (panelId: PanelId) => void;
   resetAcrylicCase: () => void;
 
+  setPrintPartCategory: (cat: PrintPartCategory) => void;
   updateIoTBox: (patch: Partial<IoTBoxParams>) => void;
   applyIoTPreset: (preset: IoTBoxPreset) => void;
   resetIoTBox: () => void;
+  selectBracketType: (type: BracketType) => void;
+  updateBracketParams: (patch: Partial<BracketParams>) => void;
+  resetBracketParams: () => void;
 
   updateIoTSim: (patch: Partial<IoTSimState>) => void;
   toggleSmokeTest: () => void;
@@ -773,7 +792,9 @@ export const useCadStore = create<CadStoreState>((set) => ({
   showHardwareMockup: true,
   showWiring: true,
 
+  printPartCategory: 'enclosure',
   iotBox: IOT_PRESETS['controller-pod'],
+  bracketParams: DEFAULT_BRACKET_PARAMS,
   iotSim: DEFAULT_IOT_SIM,
 
   setActiveModule: (activeModule) => set({ activeModule }),
@@ -995,6 +1016,8 @@ export const useCadStore = create<CadStoreState>((set) => ({
       doorRightAngle: 0,
     }),
 
+  setPrintPartCategory: (printPartCategory) => set({ printPartCategory }),
+
   updateIoTBox: (patch) =>
     set((state) => ({
       iotBox: {
@@ -1005,10 +1028,30 @@ export const useCadStore = create<CadStoreState>((set) => ({
 
   applyIoTPreset: (preset) =>
     set({
+      printPartCategory: 'enclosure',
       iotBox: { ...IOT_PRESETS[preset] },
     }),
 
   resetIoTBox: () => set({ iotBox: { ...IOT_PRESETS['controller-pod'] } }),
+
+  selectBracketType: (type) =>
+    set((state) => ({
+      printPartCategory: 'bracket',
+      bracketParams: {
+        ...state.bracketParams,
+        type,
+      },
+    })),
+
+  updateBracketParams: (patch) =>
+    set((state) => ({
+      bracketParams: {
+        ...state.bracketParams,
+        ...patch,
+      },
+    })),
+
+  resetBracketParams: () => set({ bracketParams: { ...DEFAULT_BRACKET_PARAMS } }),
 
   updateIoTSim: (patch) =>
     set((state) => ({

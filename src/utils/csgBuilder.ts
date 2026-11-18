@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ADDITION, Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { IoTBoxParams } from '../types/cad';
+import { BracketParams, IoTBoxParams } from '../types/cad';
 
 const evaluator = new Evaluator();
 evaluator.useGroups = false;
@@ -139,6 +139,22 @@ function getFanSpecs(fanSize: 40 | 80 | 120 | 140): {
 }
 
 /**
+ * Standard DIN 934 M3 Hex Nut captive pocket (5.5mm across flats + 0.3mm 3D-print tolerance -> circumradius 3.35mm).
+ * Using a 6-sided CylinderGeometry creates a crisp press-fit hexagonal nut recess so M3 nuts never spin.
+ */
+function makeM3HexPocketGeo(
+  pos: [number, number, number],
+  rot: [number, number, number],
+  depth = 2.6
+): THREE.BufferGeometry {
+  return makeTransformedGeo(
+    new THREE.CylinderGeometry(3.35, 3.35, depth, 6),
+    pos,
+    rot
+  );
+}
+
+/**
  * Computes the 4 corner screw X/Y coordinates (centered around 0,0) shared by both
  * the main pod housing bosses and the front faceplate screw holes.
  */
@@ -269,6 +285,36 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
           )
         );
       }
+    }
+  }
+
+  // Raised Internal M3 Captive Hex-Nut Boss Pads on Rear Acrylic-Wall Mounts (so thin 2.6mm walls hold full M3 hex nuts!)
+  if (hasWallMount && !(throughAirflow && hasFan40 && fanPlacement === 'front')) {
+    const mx = Math.min(innerL * 0.34, 42);
+    const my = Math.min(innerH * 0.32, 32);
+    const bossH = 3.2;
+    const mountPts: [number, number][] = [
+      [-mx, -my],
+      [mx, -my],
+      [mx, my],
+      [-mx, my],
+    ];
+    for (const [ox, oy] of mountPts) {
+      additions.push(
+        makeTransformedGeo(
+          new THREE.CylinderGeometry(5.2, 5.6, bossH + 0.6, 6),
+          [ox, centerY + oy, backWallInnerZ + bossH / 2 - 0.3],
+          [Math.PI / 2, 0, 0]
+        )
+      );
+      // Drop-in hexagonal M3 nut pocket recessed cleanly into the raised inner boss
+      pilotCutters.push(
+        makeM3HexPocketGeo(
+          [ox, centerY + oy, backWallInnerZ + bossH - 1.1],
+          [Math.PI / 2, 0, 0],
+          3.2
+        )
+      );
     }
   }
 
@@ -474,13 +520,18 @@ export function buildIoTBoxLidGeometry(params: IoTBoxParams): THREE.BufferGeomet
   const cutters: THREE.BufferGeometry[] = [];
   const cutDepth = t + 8;
 
-  // 1. 4x Corner M3 Countersunk Through-Holes
+  // 1. 4x Corner M3 Countersunk Through-Holes + Flush Bolt-Head Pockets on Front Face (+Z)
   const screwOffsets = getFaceplateScrewOffsets(params);
   for (const [sx, sy] of screwOffsets) {
     cutters.push(
       makeTransformedGeo(
         new THREE.CylinderGeometry(1.7, 1.7, cutDepth, 14),
         [sx, centerY + sy, 0],
+        [Math.PI / 2, 0, 0]
+      ),
+      makeTransformedGeo(
+        new THREE.CylinderGeometry(3.1, 3.1, 2.0, 16),
+        [sx, centerY + sy, t / 2 - 0.2],
         [Math.PI / 2, 0, 0]
       )
     );
@@ -558,4 +609,302 @@ export function buildIoTBoxLidGeometry(params: IoTBoxParams): THREE.BufferGeomet
   finalGeo.computeVertexNormals();
   lid.geometry.dispose();
   return finalGeo;
+}
+
+export interface BracketBoltSpec {
+  position: [number, number, number];
+  rotation: [number, number, number];
+}
+
+/**
+ * Returns the exact 3D bolt head positions & rotations for visual preview in Module 2
+ * (bolts are visual-only and never exported to STL).
+ */
+export function getBracketBoltPositions(params: BracketParams): BracketBoltSpec[] {
+  const { type, armLength: arm, thickness: t, armWidth: w, holeOffset } = params;
+  const off = Math.min(Math.max(w * 0.65, holeOffset), arm - 4.5);
+
+  if (type === 't-bracket') {
+    const topY = arm + w / 2;
+    const z = t / 2 + 0.7;
+    return [
+      { position: [-off, topY, z], rotation: [Math.PI / 2, 0, 0] },
+      { position: [off, topY, z], rotation: [Math.PI / 2, 0, 0] },
+      { position: [0, topY - off, z], rotation: [Math.PI / 2, 0, 0] },
+    ];
+  }
+
+  if (type === 'cross-bracket') {
+    const cy = arm;
+    const z = t / 2 + 0.7;
+    return [
+      { position: [-off, cy, z], rotation: [Math.PI / 2, 0, 0] },
+      { position: [off, cy, z], rotation: [Math.PI / 2, 0, 0] },
+      { position: [0, cy + off, z], rotation: [Math.PI / 2, 0, 0] },
+      { position: [0, cy - off, z], rotation: [Math.PI / 2, 0, 0] },
+    ];
+  }
+
+  if (type === 'l-bracket') {
+    const x0 = -arm / 2;
+    return [
+      { position: [x0 + off, t + 0.7, 0], rotation: [0, 0, 0] },
+      { position: [x0 + t + 0.7, off, 0], rotation: [0, 0, Math.PI / 2] },
+    ];
+  }
+
+  // corner-3way
+  const half = arm / 2;
+  const off3 = Math.min(Math.max(t + 6, holeOffset), arm - 5);
+  return [
+    // X-arm bolt (front face)
+    { position: [-half + off3, w / 2, -half - 0.7], rotation: [Math.PI / 2, 0, 0] },
+    // Y-arm bolt (front face)
+    { position: [-half + w / 2, off3, -half - 0.7], rotation: [Math.PI / 2, 0, 0] },
+    // Z-arm bolt (left face)
+    { position: [-half - 0.7, w / 2, -half + off3], rotation: [0, 0, Math.PI / 2] },
+  ];
+}
+
+/**
+ * Builds watertight, 3D-printable structural acrylic mounting brackets using three-bvh-csg:
+ * - 'corner-3way'   : 3-axis outer corner armor bracket (8x for case outer corners)
+ * - 't-bracket'     : T-joint clamp plate with 3x M3 countersunk holes (6x for Divider & Middle Shelf)
+ * - 'cross-bracket' : 4-way (+) clamp plate with 4x M3 countersunk holes (2x for Divider x Middle Shelf)
+ * - 'l-bracket'     : Heavy-duty 90° L-bracket with dual reinforcement gussets (10x for rear shelf/foot/comb)
+ *
+ * Units: 1 Three.js unit = 1 mm. Bottom sits cleanly at Y = 0.
+ */
+export function buildBracketGeometry(params: BracketParams): THREE.BufferGeometry {
+  const { type, armLength: arm, thickness: t, armWidth: w, screwDiameter: dia, holeOffset } =
+    params;
+  const rHole = Math.max(1.2, dia / 2);
+  const rHead = rHole + 1.45;
+  const off = Math.min(Math.max(w * 0.65, holeOffset), arm - 4.5);
+
+  if (type === 't-bracket') {
+    const topY = arm + w / 2;
+    const hBar = makeTransformedGeo(
+      createRoundedBlockGeo(arm * 2, w, t, 3, 0.5),
+      [0, topY, 0]
+    );
+    const vStem = makeTransformedGeo(
+      createRoundedBlockGeo(w, arm + w * 0.5, t, 3, 0.5),
+      [0, (arm + w * 0.5) / 2, 0]
+    );
+
+    let body = makeBrushFromGeo(hBar);
+    body = unionMerged(body, [vStem]);
+
+    const holePts: [number, number][] = [
+      [-off, topY],
+      [off, topY],
+      [0, topY - off],
+    ];
+    const cutters: THREE.BufferGeometry[] = [];
+    for (const [hx, hy] of holePts) {
+      cutters.push(
+        // M3 clearance shaft
+        makeTransformedGeo(
+          new THREE.CylinderGeometry(rHole, rHole, t + 6, 18),
+          [hx, hy, 0],
+          [Math.PI / 2, 0, 0]
+        ),
+        // Front countersunk M3 bolt-head recess (+Z)
+        makeTransformedGeo(
+          new THREE.CylinderGeometry(rHead, rHead, 2.2, 18),
+          [hx, hy, t / 2 - 0.4],
+          [Math.PI / 2, 0, 0]
+        ),
+        // Rear hexagonal M3 captive nut pocket (-Z)
+        makeM3HexPocketGeo([hx, hy, -t / 2 + 0.7], [Math.PI / 2, 0, 0], 2.4)
+      );
+    }
+    body = subtractMerged(body, cutters);
+    const out = body.geometry.clone();
+    out.computeVertexNormals();
+    body.geometry.dispose();
+    return out;
+  }
+
+  if (type === 'cross-bracket') {
+    const cy = arm;
+    const hBar = makeTransformedGeo(
+      createRoundedBlockGeo(arm * 2, w, t, 3, 0.5),
+      [0, cy, 0]
+    );
+    const vBar = makeTransformedGeo(
+      createRoundedBlockGeo(w, arm * 2, t, 3, 0.5),
+      [0, cy, 0]
+    );
+
+    let body = makeBrushFromGeo(hBar);
+    body = unionMerged(body, [vBar]);
+
+    const holePts: [number, number][] = [
+      [-off, cy],
+      [off, cy],
+      [0, cy + off],
+      [0, cy - off],
+    ];
+    const cutters: THREE.BufferGeometry[] = [];
+    for (const [hx, hy] of holePts) {
+      cutters.push(
+        // M3 clearance shaft
+        makeTransformedGeo(
+          new THREE.CylinderGeometry(rHole, rHole, t + 6, 18),
+          [hx, hy, 0],
+          [Math.PI / 2, 0, 0]
+        ),
+        // Front countersunk M3 bolt-head recess (+Z)
+        makeTransformedGeo(
+          new THREE.CylinderGeometry(rHead, rHead, 2.2, 18),
+          [hx, hy, t / 2 - 0.4],
+          [Math.PI / 2, 0, 0]
+        ),
+        // Rear hexagonal M3 captive nut pocket (-Z)
+        makeM3HexPocketGeo([hx, hy, -t / 2 + 0.7], [Math.PI / 2, 0, 0], 2.4)
+      );
+    }
+    body = subtractMerged(body, cutters);
+    const out = body.geometry.clone();
+    out.computeVertexNormals();
+    body.geometry.dispose();
+    return out;
+  }
+
+  if (type === 'l-bracket') {
+    const x0 = -arm / 2;
+    const baseLeg = makeTransformedGeo(
+      new THREE.BoxGeometry(arm, t, w),
+      [0, t / 2, 0]
+    );
+    const upLeg = makeTransformedGeo(
+      new THREE.BoxGeometry(t, arm, w),
+      [x0 + t / 2, arm / 2, 0]
+    );
+
+    // Dual triangular side reinforcement gussets (ribs) for high load stiffness
+    const gussetSize = Math.max(8, arm - t - 4);
+    const tri = new THREE.Shape();
+    tri.moveTo(0, 0);
+    tri.lineTo(gussetSize, 0);
+    tri.lineTo(0, gussetSize);
+    tri.closePath();
+    const ribRaw = new THREE.ExtrudeGeometry(tri, {
+      depth: 2.6,
+      bevelEnabled: false,
+    });
+    const ribFront = makeTransformedGeo(
+      ribRaw.clone(),
+      [x0 + t - 0.3, t - 0.3, w / 2 - 2.6]
+    );
+    const ribBack = makeTransformedGeo(
+      ribRaw,
+      [x0 + t - 0.3, t - 0.3, -w / 2]
+    );
+
+    let body = makeBrushFromGeo(baseLeg);
+    body = unionMerged(body, [upLeg, ribFront, ribBack]);
+
+    const cutters: THREE.BufferGeometry[] = [
+      // Bottom leg M3 hole + top captive hex nut pocket
+      makeTransformedGeo(
+        new THREE.CylinderGeometry(rHole, rHole, t + 8, 18),
+        [x0 + off, t / 2, 0]
+      ),
+      makeM3HexPocketGeo([x0 + off, t - 0.7, 0], [0, 0, 0], 2.5),
+      // Vertical leg M3 hole + inner captive hex nut pocket
+      makeTransformedGeo(
+        new THREE.CylinderGeometry(rHole, rHole, t + 8, 18),
+        [x0 + t / 2, off, 0],
+        [0, 0, Math.PI / 2]
+      ),
+      makeM3HexPocketGeo([x0 + t - 0.7, off, 0], [0, 0, Math.PI / 2], 2.5),
+    ];
+
+    body = subtractMerged(body, cutters);
+    const out = body.geometry.clone();
+    out.computeVertexNormals();
+    body.geometry.dispose();
+    return out;
+  }
+
+  // Default: 'corner-3way' — 3-Axis Outer Corner Armor Bracket wrapping X, Y, Z edges
+  const half = arm / 2;
+  const off3 = Math.min(Math.max(t + 6, holeOffset), arm - 5);
+
+  const armX = makeTransformedGeo(
+    new THREE.BoxGeometry(arm, w, t),
+    [0, w / 2, -half + t / 2]
+  );
+  const armY = makeTransformedGeo(
+    new THREE.BoxGeometry(w, arm, t),
+    [-half + w / 2, arm / 2, -half + t / 2]
+  );
+  const armZ = makeTransformedGeo(
+    new THREE.BoxGeometry(t, w, arm),
+    [-half + t / 2, w / 2, 0]
+  );
+  // Bottom flange tying X & Z arms cleanly under the corner
+  const basePlate = makeTransformedGeo(
+    new THREE.BoxGeometry(arm, t, arm),
+    [0, t / 2, 0]
+  );
+  // Trim outer diagonal pocket of basePlate so it stays sleek L-shaped
+  const baseTrim = makeTransformedGeo(
+    new THREE.BoxGeometry(arm - w + 2, t + 6, arm - w + 2),
+    [w / 2 + 1, t / 2, w / 2 + 1]
+  );
+
+  let body = makeBrushFromGeo(armX);
+  body = unionMerged(body, [armY, armZ, basePlate]);
+
+  const cutters: THREE.BufferGeometry[] = [
+    baseTrim,
+    // M3 hole + outer countersunk head + inner hex nut pocket on X-arm
+    makeTransformedGeo(
+      new THREE.CylinderGeometry(rHole, rHole, t + 8, 18),
+      [-half + off3, w / 2, -half + t / 2],
+      [Math.PI / 2, 0, 0]
+    ),
+    makeTransformedGeo(
+      new THREE.CylinderGeometry(rHead, rHead, 2.0, 16),
+      [-half + off3, w / 2, -half + 0.3],
+      [Math.PI / 2, 0, 0]
+    ),
+    makeM3HexPocketGeo([-half + off3, w / 2, -half + t - 0.6], [Math.PI / 2, 0, 0], 2.4),
+
+    // M3 hole + outer countersunk head + inner hex nut pocket on Y-arm
+    makeTransformedGeo(
+      new THREE.CylinderGeometry(rHole, rHole, t + 8, 18),
+      [-half + w / 2, off3, -half + t / 2],
+      [Math.PI / 2, 0, 0]
+    ),
+    makeTransformedGeo(
+      new THREE.CylinderGeometry(rHead, rHead, 2.0, 16),
+      [-half + w / 2, off3, -half + 0.3],
+      [Math.PI / 2, 0, 0]
+    ),
+    makeM3HexPocketGeo([-half + w / 2, off3, -half + t - 0.6], [Math.PI / 2, 0, 0], 2.4),
+
+    // M3 hole + outer countersunk head + inner hex nut pocket on Z-arm
+    makeTransformedGeo(
+      new THREE.CylinderGeometry(rHole, rHole, t + 8, 18),
+      [-half + t / 2, w / 2, -half + off3],
+      [0, 0, Math.PI / 2]
+    ),
+    makeTransformedGeo(
+      new THREE.CylinderGeometry(rHead, rHead, 2.0, 16),
+      [-half + 0.3, w / 2, -half + off3],
+      [0, 0, Math.PI / 2]
+    ),
+    makeM3HexPocketGeo([-half + t - 0.6, w / 2, -half + off3], [0, 0, Math.PI / 2], 2.4),
+  ];
+
+  body = subtractMerged(body, cutters);
+  const out = body.geometry.clone();
+  out.computeVertexNormals();
+  body.geometry.dispose();
+  return out;
 }

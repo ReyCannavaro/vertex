@@ -107,6 +107,30 @@ export type IoTBoxPreset =
   | 'fan-shroud-120'
   | 'fan-shroud-140';
 
+export type PrintPartCategory = 'enclosure' | 'bracket';
+
+export type BracketType =
+  | 'corner-3way'
+  | 't-bracket'
+  | 'cross-bracket'
+  | 'l-bracket';
+
+export interface BracketParams {
+  type: BracketType;
+  /** Arm length from corner/center in mm */
+  armLength: number;
+  /** Bracket body thickness in mm */
+  thickness: number;
+  /** Width of each bracket arm in mm */
+  armWidth: number;
+  /** M3/M4 screw clearance hole diameter in mm (3.4mm recommended for M3) */
+  screwDiameter: number;
+  /** Distance from corner/center to screw hole center in mm (matches 14mm margin in Module 1) */
+  holeOffset: number;
+  /** Show preview M3 silver bolts in 3D viewport (not exported to STL) */
+  showPreviewBolts: boolean;
+}
+
 export type FanPlacement = 'side' | 'front';
 
 export interface IoTBoxParams {

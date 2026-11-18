@@ -1,9 +1,11 @@
 import React from 'react';
 import {
+  Box,
   Cpu,
   Download,
   Fan,
   Monitor,
+  Plus,
   RotateCcw,
   Usb,
   Layers,
@@ -11,19 +13,40 @@ import {
   Wind,
   Wrench,
   Eye,
+  CornerDownRight,
 } from 'lucide-react';
 import { useCadStore } from '../../store/useCadStore';
+import { BracketType } from '../../types/cad';
 import {
+  buildBracketGeometry,
   buildIoTBoxGeometry,
   buildIoTBoxLidGeometry,
 } from '../../utils/csgBuilder';
 import { exportGeometryToStl } from '../../utils/stlExporter';
 
+const BRACKET_SPECS: Array<{
+  id: BracketType;
+  label: string;
+  qty: string;
+  usage: string;
+}> = [
+  { id: 'corner-3way', label: 'Corner 3-Way', qty: 'Cetak 8×', usage: '8 sudut luar rangka utama' },
+  { id: 't-bracket', label: 'T-Bracket', qty: 'Cetak 6×', usage: 'Sekat tengah & tepi rak laptop' },
+  { id: 'cross-bracket', label: 'Cross (+) 4-Way', qty: 'Cetak 2×', usage: 'Pertemuan Divider × Middle Shelf' },
+  { id: 'l-bracket', label: 'L-Bracket Siku', qty: 'Cetak 10×', usage: 'Belakang rak, kaki tengah, comb' },
+];
+
 export const IoTBoxSidebar: React.FC = () => {
+  const printPartCategory = useCadStore((s) => s.printPartCategory);
   const iotBox = useCadStore((s) => s.iotBox);
+  const bracketParams = useCadStore((s) => s.bracketParams);
+  const setPrintPartCategory = useCadStore((s) => s.setPrintPartCategory);
   const updateIoTBox = useCadStore((s) => s.updateIoTBox);
   const applyIoTPreset = useCadStore((s) => s.applyIoTPreset);
   const resetIoTBox = useCadStore((s) => s.resetIoTBox);
+  const selectBracketType = useCadStore((s) => s.selectBracketType);
+  const updateBracketParams = useCadStore((s) => s.updateBracketParams);
+  const resetBracketParams = useCadStore((s) => s.resetBracketParams);
 
   const handleExportBaseStl = () => {
     const geo = buildIoTBoxGeometry(iotBox);
@@ -43,9 +66,226 @@ export const IoTBoxSidebar: React.FC = () => {
     geo.dispose();
   };
 
+  const handleExportBracketStl = (type: BracketType = bracketParams.type) => {
+    const geo = buildBracketGeometry({ ...bracketParams, type });
+    exportGeometryToStl(
+      geo,
+      `vertex-bracket-${type}-arm${bracketParams.armLength}mm-m3.stl`
+    );
+    geo.dispose();
+  };
+
+  const handleExportAllBrackets = () => {
+    BRACKET_SPECS.forEach((b, idx) => {
+      setTimeout(() => handleExportBracketStl(b.id), idx * 180);
+    });
+  };
+
+  const activeBracketSpec =
+    BRACKET_SPECS.find((b) => b.id === bracketParams.type) ?? BRACKET_SPECS[0];
+
   return (
     <div className="flex flex-col h-full overflow-y-auto p-3.5 space-y-5 text-xs">
-      {/* Section 0: Quick Pod Presets matching the reference build */}
+      {/* Category Switcher: Enclosures & Shrouds vs Acrylic Structural Brackets */}
+      <div className="grid grid-cols-2 gap-1 p-1 rounded-lg bg-slate-900 border border-slate-800">
+        <button
+          onClick={() => setPrintPartCategory('enclosure')}
+          className={`flex items-center justify-center gap-1.5 py-1.5 rounded-md font-medium transition ${
+            printPartCategory === 'enclosure'
+              ? 'bg-sky-500 text-slate-950 font-semibold'
+              : 'text-slate-300 hover:bg-slate-800'
+          }`}
+        >
+          <Box className="w-3.5 h-3.5" />
+          <span>Box & Shroud</span>
+        </button>
+        <button
+          onClick={() => setPrintPartCategory('bracket')}
+          className={`flex items-center justify-center gap-1.5 py-1.5 rounded-md font-medium transition ${
+            printPartCategory === 'bracket'
+              ? 'bg-sky-500 text-slate-950 font-semibold'
+              : 'text-slate-300 hover:bg-slate-800'
+          }`}
+        >
+          <CornerDownRight className="w-3.5 h-3.5" />
+          <span>Braket Akrilik</span>
+        </button>
+      </div>
+
+      {/* ================= MODE B: 3D-PRINTABLE ACRYLIC BRACKETS ================= */}
+      {printPartCategory === 'bracket' && (
+        <>
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                4 Jenis Braket Casing (PETG Hitam)
+              </h3>
+              <button
+                onClick={resetBracketParams}
+                title="Reset Parameter Braket"
+                className="text-slate-500 hover:text-sky-400 transition"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-1.5">
+              {BRACKET_SPECS.map((b) => {
+                const active = bracketParams.type === b.id;
+                return (
+                  <button
+                    key={b.id}
+                    onClick={() => selectBracketType(b.id)}
+                    className={`px-2.5 py-2 rounded-lg border text-left transition flex items-center justify-between gap-2 ${
+                      active
+                        ? 'bg-sky-500/15 border-sky-500/50 text-sky-100'
+                        : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <div className="font-semibold flex items-center gap-1.5">
+                        <Plus className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                        <span>{b.label}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 truncate">{b.usage}</div>
+                    </div>
+                    <span className="shrink-0 font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300">
+                      {b.qty}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <div className="border-t border-slate-800" />
+
+          <section className="space-y-3">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Dimensi Parametrik Braket (mm)
+            </h3>
+
+            <div className="space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-300">Panjang Lengan (Arm)</span>
+                <span className="font-mono text-sky-300">{bracketParams.armLength} mm</span>
+              </div>
+              <input
+                type="range"
+                min={20}
+                max={44}
+                step={1}
+                value={bracketParams.armLength}
+                onChange={(e) => updateBracketParams({ armLength: Number(e.target.value) })}
+                className="w-full cursor-pointer"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-300">Lebar Lengan (Width)</span>
+                <span className="font-mono text-sky-300">{bracketParams.armWidth} mm</span>
+              </div>
+              <input
+                type="range"
+                min={10}
+                max={24}
+                step={1}
+                value={bracketParams.armWidth}
+                onChange={(e) => updateBracketParams({ armWidth: Number(e.target.value) })}
+                className="w-full cursor-pointer"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-300">Ketebalan Braket</span>
+                <span className="font-mono text-sky-300">{bracketParams.thickness.toFixed(1)} mm</span>
+              </div>
+              <input
+                type="range"
+                min={4}
+                max={9}
+                step={0.5}
+                value={bracketParams.thickness}
+                onChange={(e) => updateBracketParams({ thickness: Number(e.target.value) })}
+                className="w-full cursor-pointer"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-300">Jarak Lubang Baut M3</span>
+                <span className="font-mono text-sky-300">{bracketParams.holeOffset} mm</span>
+              </div>
+              <input
+                type="range"
+                min={10}
+                max={32}
+                step={1}
+                value={bracketParams.holeOffset}
+                onChange={(e) => updateBracketParams({ holeOffset: Number(e.target.value) })}
+                className="w-full cursor-pointer"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-300">Diameter Lubang (M3=3.4)</span>
+                <span className="font-mono text-sky-300">{bracketParams.screwDiameter.toFixed(1)} mm</span>
+              </div>
+              <input
+                type="range"
+                min={3.0}
+                max={4.6}
+                step={0.1}
+                value={bracketParams.screwDiameter}
+                onChange={(e) => updateBracketParams({ screwDiameter: Number(e.target.value) })}
+                className="w-full cursor-pointer"
+              />
+            </div>
+
+            <label className="flex items-center justify-between cursor-pointer pt-1 text-[11px] text-slate-300">
+              <span className="flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5 text-cyan-300" />
+                Tampilkan Preview Baut M3
+              </span>
+              <input
+                type="checkbox"
+                checked={bracketParams.showPreviewBolts}
+                onChange={(e) => updateBracketParams({ showPreviewBolts: e.target.checked })}
+                className="accent-cyan-400"
+              />
+            </label>
+          </section>
+
+          <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-emerald-200 leading-relaxed">
+            <strong>Rekomendasi Slicer:</strong> PETG Hitam Matte • Wall 4 • Infill 40% Gyroid • Layer 0.2mm.
+          </div>
+
+          <section className="space-y-2 pb-2">
+            <button
+              onClick={() => handleExportBracketStl()}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold transition shadow-lg shadow-sky-500/20"
+            >
+              <Download className="w-4 h-4" />
+              <span>Ekspor {activeBracketSpec.label} (.STL)</span>
+            </button>
+            <button
+              onClick={handleExportAllBrackets}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 font-medium transition"
+            >
+              <Download className="w-4 h-4 text-sky-400" />
+              <span>Download Semua 4 Braket (.STL)</span>
+            </button>
+          </section>
+        </>
+      )}
+
+      {/* ================= MODE A: IOT BOX & SLIM FAN SHROUDS ================= */}
+      {printPartCategory === 'enclosure' && (
+        <>
+          {/* Section 0: Quick Pod Presets matching the reference build */}
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
@@ -493,16 +733,18 @@ export const IoTBoxSidebar: React.FC = () => {
           <Download className="w-4 h-4" />
           <span>Ekspor Housing Pod (.STL)</span>
         </button>
-        {iotBox.hasLid && (
-          <button
-            onClick={handleExportLidStl}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 font-medium transition"
-          >
-            <Download className="w-4 h-4 text-sky-400" />
-            <span>Ekspor Front Faceplate (.STL)</span>
-          </button>
-        )}
-      </section>
+          {iotBox.hasLid && (
+            <button
+              onClick={handleExportLidStl}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 font-medium transition"
+            >
+              <Download className="w-4 h-4 text-sky-400" />
+              <span>Ekspor Front Faceplate (.STL)</span>
+            </button>
+          )}
+        </section>
+      </>
+      )}
     </div>
   );
 };

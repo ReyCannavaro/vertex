@@ -5,8 +5,10 @@ import { Edges, Environment, Grid, Lightformer, OrbitControls } from '@react-thr
 import { ArrowUpFromLine } from 'lucide-react';
 import { useCadStore } from '../../store/useCadStore';
 import {
+  buildBracketGeometry,
   buildIoTBoxGeometry,
   buildIoTBoxLidGeometry,
+  getBracketBoltPositions,
   getFaceplateScrewOffsets,
 } from '../../utils/csgBuilder';
 import { createOledScreenTexture } from '../acrylic/HardwareMockup';
@@ -185,9 +187,57 @@ const ParametricIoTBoxMesh: React.FC = () => {
   );
 };
 
+const ParametricBracketMesh: React.FC = () => {
+  const bracketParams = useCadStore((s) => s.bracketParams);
+
+  const bracketGeo = useMemo(
+    () => buildBracketGeometry(bracketParams),
+    [bracketParams]
+  );
+
+  const bolts = useMemo(
+    () => getBracketBoltPositions(bracketParams),
+    [bracketParams]
+  );
+
+  useEffect(() => {
+    return () => {
+      bracketGeo.dispose();
+    };
+  }, [bracketGeo]);
+
+  return (
+    <group>
+      <mesh geometry={bracketGeo} castShadow receiveShadow>
+        <meshStandardMaterial color="#171b23" roughness={0.46} metalness={0.22} />
+        <Edges threshold={25} color="#64748b" scale={1.002} opacity={0.55} transparent />
+      </mesh>
+
+      {/* Visual-only M3 metallic preview bolts (never exported to STL) */}
+      {bracketParams.showPreviewBolts &&
+        bolts.map((b, i) => (
+          <mesh key={`bb-${i}`} position={b.position} rotation={b.rotation}>
+            <cylinderGeometry args={[2.5, 2.5, 2.2, 14]} />
+            <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.2} />
+          </mesh>
+        ))}
+    </group>
+  );
+};
+
 export const IoTBox3DPreview: React.FC = () => {
+  const printPartCategory = useCadStore((s) => s.printPartCategory);
   const iotBox = useCadStore((s) => s.iotBox);
+  const bracketParams = useCadStore((s) => s.bracketParams);
   const updateIoTBox = useCadStore((s) => s.updateIoTBox);
+
+  const isBracket = printPartCategory === 'bracket';
+  const bracketLabels: Record<string, string> = {
+    'corner-3way': 'Corner 3-Way Bracket (Cetak 8×)',
+    't-bracket': 'T-Joint Bracket (Cetak 6×)',
+    'cross-bracket': 'Cross (+) 4-Way Bracket (Cetak 2×)',
+    'l-bracket': 'Heavy-Duty L-Bracket Gusset (Cetak 10×)',
+  };
 
   return (
     <div className="relative w-full h-full bg-gradient-to-b from-slate-950 via-[#080f1e] to-slate-950 overflow-hidden">
@@ -195,19 +245,29 @@ export const IoTBox3DPreview: React.FC = () => {
       <div className="absolute top-3 left-3 z-10 pointer-events-none flex items-center gap-2">
         <div className="px-2.5 py-1 rounded-md bg-slate-900/90 border border-slate-700/80 backdrop-blur-sm flex items-center gap-2 text-xs">
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-400" />
-          <span className="font-semibold text-slate-100">Midnight Parametric Pod (CSG)</span>
+          <span className="font-semibold text-slate-100">
+            {isBracket ? bracketLabels[bracketParams.type] : 'Midnight Parametric Pod (CSG)'}
+          </span>
           <span className="text-slate-400">•</span>
-          <span className="text-sky-300 font-mono">
-            {iotBox.length} × {iotBox.height} × {iotBox.width} mm
-          </span>
-          <span className="text-slate-400 font-mono">
-            (R{iotBox.cornerRadius} • Wall {iotBox.wallThickness.toFixed(1)}mm)
-          </span>
+          {isBracket ? (
+            <span className="text-sky-300 font-mono">
+              Arm {bracketParams.armLength}mm • Tebal {bracketParams.thickness}mm • Ø{bracketParams.screwDiameter}mm
+            </span>
+          ) : (
+            <>
+              <span className="text-sky-300 font-mono">
+                {iotBox.length} × {iotBox.height} × {iotBox.width} mm
+              </span>
+              <span className="text-slate-400 font-mono">
+                (R{iotBox.cornerRadius} • Wall {iotBox.wallThickness.toFixed(1)}mm)
+              </span>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Top-Right Quick Explode Faceplate Toggle */}
-      {iotBox.hasLid && (
+      {/* Top-Right Quick Explode Faceplate Toggle (Enclosure mode only) */}
+      {!isBracket && iotBox.hasLid && (
         <div className="absolute top-3 right-3 z-10 bg-slate-900/90 border border-slate-700/80 rounded-lg p-1 backdrop-blur-sm">
           <button
             onClick={() => updateIoTBox({ lidExploded: !iotBox.lidExploded })}
@@ -225,24 +285,37 @@ export const IoTBox3DPreview: React.FC = () => {
 
       {/* Bottom Orientation Guide */}
       <div className="absolute bottom-3 left-3 z-10 pointer-events-none flex flex-wrap gap-2 text-[11px] font-mono text-slate-400">
-        <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800">
-          {iotBox.fanPlacement === 'front'
-            ? `Depan (+Z): Fan Shroud ${iotBox.fanSize}mm`
-            : 'Depan (+Z): OLED 0.96" Minimalis'}
-        </span>
-        {iotBox.fanPlacement === 'side' && (
+        {isBracket ? (
           <>
-            <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800 text-cyan-300">
-              Kiri (-X): Kisi Louver Angin Masuk
+            <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800 text-emerald-300">
+              PETG Hitam Matte • Infill 40% • Wall 4
             </span>
-            <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800 text-sky-300">
-              Kanan (+X): Kipas {iotBox.fanSize}mm Cross-Flow
+            <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800">
+              Lubang M3 (Ø{bracketParams.screwDiameter.toFixed(1)}mm) • Jarak {bracketParams.holeOffset}mm
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800">
+              {iotBox.fanPlacement === 'front'
+                ? `Depan (+Z): Fan Shroud ${iotBox.fanSize}mm`
+                : 'Depan (+Z): OLED 0.96" Minimalis'}
+            </span>
+            {iotBox.fanPlacement === 'side' && (
+              <>
+                <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800 text-cyan-300">
+                  Kiri (-X): Kisi Louver Angin Masuk
+                </span>
+                <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800 text-sky-300">
+                  Kanan (+X): Kipas {iotBox.fanSize}mm Cross-Flow
+                </span>
+              </>
+            )}
+            <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800">
+              Belakang (-Z): {iotBox.throughAirflow ? 'Lubang Tembus Udara' : '4× Baut Dinding Akrilik'}
             </span>
           </>
         )}
-        <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800">
-          Belakang (-Z): {iotBox.throughAirflow ? 'Lubang Tembus Udara' : '4× Baut Dinding Akrilik'}
-        </span>
       </div>
 
       <Canvas
@@ -290,7 +363,7 @@ export const IoTBox3DPreview: React.FC = () => {
         />
         <directionalLight position={[-130, 110, -140]} intensity={0.65} color="#93c5fd" />
 
-        <ParametricIoTBoxMesh />
+        {isBracket ? <ParametricBracketMesh /> : <ParametricIoTBoxMesh />}
 
         {/* 3D Print Bed Reference Grid (10mm minor / 50mm major) */}
         <Grid
@@ -308,8 +381,8 @@ export const IoTBox3DPreview: React.FC = () => {
 
         <OrbitControls
           makeDefault
-          target={[0, iotBox.height * 0.5, 0]}
-          minDistance={55}
+          target={[0, isBracket ? bracketParams.armLength * 0.55 : iotBox.height * 0.5, 0]}
+          minDistance={35}
           maxDistance={600}
           enableDamping
           dampingFactor={0.08}
