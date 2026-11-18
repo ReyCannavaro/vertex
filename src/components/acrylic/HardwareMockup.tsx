@@ -900,25 +900,81 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
           </group>
         ))}
 
-        {/* External 12V 5A DC Power Adaptor Brick + Rear Panel Barrel Jack (Independent IoT Power) */}
-        <group position={[-85, 16, -halfW - wiringDepth - 58]}>
-          {/* Matte-Black 12V 5A Adaptor Brick resting on table behind Rear Cover */}
-          <mesh>
-            <boxGeometry args={[112, 32, 52]} />
-            <meshStandardMaterial color="#141820" roughness={0.5} metalness={0.25} />
-          </mesh>
-          {/* Green Power-On LED on Adaptor */}
-          <mesh position={[44, 16.5, 14]}>
-            <sphereGeometry args={[1.8, 10, 10]} />
-            <meshStandardMaterial color="#22c55e" emissive="#22c55e" emissiveIntensity={3} toneMapped={false} />
-          </mesh>
-          {/* DC Cord plugging into Rear Wiring Cover */}
-          <mesh position={[45, 10, 42]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[3.2, 3.2, 34, 10]} />
+      {/* ================= REAR CHAMBER POWER BRICKS (MINI PDU + 12V IOT + 2x LAPTOP CHARGERS) ================= */}
+      {/* All-in-One 1-Cable Server Look: 3 bricks neatly strap-mounted inside the 62mm Rear Wiring Chamber */}
+      {showWiring && (
+        <group position={[0, legH, -halfW - Math.min(26, wiringDepth * 0.45)]}>
+          {/* 1. Mini 4-Outlet PDU Power Strip (Left-Bottom Rear Chamber) */}
+          <group position={[-halfL + 130, 74, 0]}>
+            <mesh>
+              <boxGeometry args={[175, 46, 28]} />
+              <meshStandardMaterial color="#181c24" roughness={0.5} metalness={0.22} />
+            </mesh>
+            {/* 4x Recessed AC Socket Outlets */}
+            {[-54, -18, 18, 54].map((sx, i) => (
+              <mesh key={`sock-${i}`} position={[sx, 0, -14.5]}>
+                <cylinderGeometry args={[11, 11, 1.5, 16]} />
+                <meshStandardMaterial color="#0b0e14" roughness={0.85} />
+              </mesh>
+            ))}
+            {/* Glowing Red Master Power Rocker Switch */}
+            <mesh position={[-76, 0, -14.4]}>
+              <boxGeometry args={[10, 16, 2.2]} />
+              <meshStandardMaterial
+                color="#ef4444"
+                emissive="#ef4444"
+                emissiveIntensity={2.2}
+                toneMapped={false}
+              />
+            </mesh>
+            {/* 2x Matte-Black Retention Mounting Straps */}
+            {[-64, 64].map((rx, i) => (
+              <mesh key={`pdu-s-${i}`} position={[rx, 0, -2]}>
+                <boxGeometry args={[8, 52, 32]} />
+                <meshStandardMaterial color="#0f172a" roughness={0.75} />
+              </mesh>
+            ))}
+          </group>
+
+          {/* 2. Three Neatly Spaced Power Bricks: IoT 12V 5A + Laptop #1 (65W) + Laptop #2 (65W) */}
+          {[
+            { key: 'brick-iot', x: 18, w: 102, h: 48, d: 28, led: '#22c55e' },
+            { key: 'brick-lap1', x: 148, w: 98, h: 44, d: 26, led: '#38bdf8' },
+            { key: 'brick-lap2', x: 266, w: 98, h: 44, d: 26, led: '#38bdf8' },
+          ].map((b) => (
+            <group key={b.key} position={[b.x, 82, 0]}>
+              <mesh>
+                <boxGeometry args={[b.w, b.h, b.d]} />
+                <meshStandardMaterial color="#141820" roughness={0.48} metalness={0.25} />
+              </mesh>
+              {/* Status Power LED on brick */}
+              <mesh position={[b.w / 2 - 12, b.h / 2 - 10, -b.d / 2 - 0.6]}>
+                <sphereGeometry args={[1.8, 10, 10]} />
+                <meshStandardMaterial
+                  color={b.led}
+                  emissive={b.led}
+                  emissiveIntensity={2.8}
+                  toneMapped={false}
+                />
+              </mesh>
+              {/* 2x Velcro / 3D-Printed Retention Clips anchoring brick to Back Partition */}
+              {[-b.w * 0.28, b.w * 0.28].map((rx, i) => (
+                <mesh key={`strap-${i}`} position={[rx, 0, -1]}>
+                  <boxGeometry args={[8, b.h + 6, b.d + 3]} />
+                  <meshStandardMaterial color="#0f172a" roughness={0.75} />
+                </mesh>
+              ))}
+            </group>
+          ))}
+
+          {/* Single Clean Main AC Power Cord exiting out Rear Cover bottom exit */}
+          <mesh position={[-24, 34, -wiringDepth * 0.5 - 12]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[4.4, 4.4, 36, 12]} />
             <meshStandardMaterial color="#0f1218" roughness={0.75} />
           </mesh>
         </group>
-      </group>
+      )}
+    </group>
 
       {/* ================= RIGHT EXTERIOR WALL: SINGLE UNIFIED IOT BOX (OPSI D) ================= */}
       {/* Minimalist Front OLED 0.96" + Front-Side Intake Louvers + Rear-Side 40mm Cross-Flow Fan */}

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import {
   AcrylicPanel,
   AcrylicViewMode,
@@ -543,20 +544,20 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         }
       );
     } else if (spec.id === 'rear-cover') {
-      // Rear outer cover: 4 corner Thumb-Screw M3 + Main Exit + DC 12V 5A Barrel Jack (Ø11mm) + Upper Vent
+      // Rear outer cover: 4 corner Thumb-Screw M3 + Single Main Power/LAN Exit + Top & Bottom Charger Chimney Vents
       holes.push(
         {
           id: 'rear-dc-jack-12v',
           type: 'm3',
-          label: 'DC Jack 12V 5A (Ø11mm)',
-          x: Math.round(width * 0.5 + 88),
+          label: 'Aux DC Jack 12V (Ø11mm)',
+          x: Math.round(width * 0.5 + 92),
           y: Math.round(height - 32),
-          diameter: 11, // Standard 5.5x2.1mm panel-mount DC barrel jack nut hole
+          diameter: 11,
         },
         {
           id: 'rear-main-exit',
           type: 'vent',
-          label: 'Main Power & LAN Exit',
+          label: '1-Cable Main AC & LAN Exit',
           x: Math.round(width * 0.5),
           y: Math.round(height - 32),
           width: 120,
@@ -564,12 +565,22 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
           cornerRadius: 8,
         },
         {
+          id: 'rear-lower-intake-vent',
+          type: 'vent',
+          label: 'Charger Bay Intake Vent',
+          x: Math.round(width * 0.72),
+          y: Math.round(height - 32),
+          width: 180,
+          height: 20,
+          cornerRadius: 8,
+        },
+        {
           id: 'rear-upper-vent',
           type: 'vent',
-          label: 'Rear Chamber Passive Vent',
+          label: 'Rear Chamber Heat Exhaust Vent',
           x: Math.round(width * 0.5),
-          y: Math.round(height * 0.2),
-          width: 240,
+          y: Math.round(height * 0.18),
+          width: 300,
           height: 22,
           cornerRadius: 8,
         }
@@ -714,7 +725,7 @@ const DEFAULT_CASE_DIMS: CaseDimensions = {
   dividerX: 285,
   middleTrayY: 205,
   legHeight: 38,
-  wiringDepth: 48,
+  wiringDepth: 62, // 62mm All-in-One Rear Wiring Chamber (fits 2x Laptop Chargers + 12V IoT Adaptor + Mini PDU!)
 };
 
 export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
@@ -880,9 +891,14 @@ interface CadStoreState {
   updateIoTSim: (patch: Partial<IoTSimState>) => void;
   toggleSmokeTest: () => void;
   resetIoTSim: () => void;
+
+  exportProjectJson: () => string;
+  importProjectJson: (raw: string) => boolean;
 }
 
-export const useCadStore = create<CadStoreState>((set) => ({
+export const useCadStore = create<CadStoreState>()(
+  persist(
+    (set, get) => ({
   activeModule: 'acrylic',
   acrylicViewMode: 'split',
   iotVizViewMode: 'split',
@@ -1181,4 +1197,65 @@ export const useCadStore = create<CadStoreState>((set) => ({
     })),
 
   resetIoTSim: () => set({ iotSim: { ...DEFAULT_IOT_SIM } }),
-}));
+
+  exportProjectJson: () => {
+    const s = get();
+    return JSON.stringify(
+      {
+        schema: 'vertex-cad-v2',
+        exportedAt: new Date().toISOString(),
+        caseDims: s.caseDims,
+        panels: s.panels,
+        iotBox: s.iotBox,
+        bracketParams: s.bracketParams,
+        iotSim: s.iotSim,
+        ledEnabled: s.ledEnabled,
+        ledColor: s.ledColor,
+      },
+      null,
+      2
+    );
+  },
+
+  importProjectJson: (raw) => {
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || !parsed.caseDims || !parsed.panels) {
+        return false;
+      }
+      set((state) => ({
+        caseDims: { ...DEFAULT_CASE_DIMS, ...parsed.caseDims },
+        panels: { ...state.panels, ...parsed.panels },
+        iotBox: parsed.iotBox ? { ...IOT_PRESETS['controller-pod'], ...parsed.iotBox } : state.iotBox,
+        bracketParams: parsed.bracketParams
+          ? { ...DEFAULT_BRACKET_PARAMS, ...parsed.bracketParams }
+          : state.bracketParams,
+        iotSim: parsed.iotSim ? { ...DEFAULT_IOT_SIM, ...parsed.iotSim } : state.iotSim,
+        ledEnabled: typeof parsed.ledEnabled === 'boolean' ? parsed.ledEnabled : state.ledEnabled,
+        ledColor: typeof parsed.ledColor === 'string' ? parsed.ledColor : state.ledColor,
+        selectedHoleId: null,
+      }));
+      return true;
+    } catch {
+      return false;
+    }
+  },
+}),
+    {
+      name: 'vertex-cad-project-v2',
+      version: 2,
+      partialize: (state) => ({
+        caseDims: state.caseDims,
+        panels: state.panels,
+        iotBox: state.iotBox,
+        bracketParams: state.bracketParams,
+        iotSim: state.iotSim,
+        ledEnabled: state.ledEnabled,
+        ledColor: state.ledColor,
+        showBrackets: state.showBrackets,
+        showHardwareMockup: state.showHardwareMockup,
+        showWiring: state.showWiring,
+      }),
+    }
+  )
+);

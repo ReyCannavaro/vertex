@@ -233,10 +233,11 @@ export const IoTBox3DPreview: React.FC = () => {
 
   const isBracket = printPartCategory === 'bracket';
   const bracketLabels: Record<string, string> = {
-    'corner-3way': 'Corner 3-Way Bracket (Cetak 8×)',
-    't-bracket': 'T-Joint Bracket (Cetak 6×)',
-    'cross-bracket': 'Cross (+) 4-Way Bracket (Cetak 2×)',
-    'l-bracket': 'Heavy-Duty L-Bracket Gusset (Cetak 10×)',
+    'corner-3way': 'Corner 3-Way Bracket (Cetak 4× Belakang)',
+    't-bracket': 'Slotted T-Clamp 5.2mm (Opsional)',
+    'cross-bracket': 'Slotted Cross (+) 5.2mm (Opsional)',
+    'l-bracket': 'Heavy-Duty L-Bracket Gusset (Cetak 22×)',
+    'handle-m3': 'Door Pull Handle M3 — Pitch 52mm (Cetak 2×)',
   };
 
   return (
@@ -291,7 +292,9 @@ export const IoTBox3DPreview: React.FC = () => {
               PETG Hitam Matte • Infill 40% • Wall 4
             </span>
             <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800">
-              Lubang M3 (Ø{bracketParams.screwDiameter.toFixed(1)}mm) • Jarak {bracketParams.holeOffset}mm
+              {bracketParams.type === 'handle-m3'
+                ? 'Pitch Baut 52mm (±26mm) • Slot Mur Hex M3 • Klop 1:1 Pintu Depan'
+                : `Lubang M3 (Ø${bracketParams.screwDiameter.toFixed(1)}mm) • Jarak ${bracketParams.holeOffset}mm`}
             </span>
           </>
         ) : (
@@ -381,7 +384,15 @@ export const IoTBox3DPreview: React.FC = () => {
 
         <OrbitControls
           makeDefault
-          target={[0, isBracket ? bracketParams.armLength * 0.55 : iotBox.height * 0.5, 0]}
+          target={[
+            0,
+            isBracket
+              ? bracketParams.type === 'handle-m3'
+                ? 38
+                : bracketParams.armLength * 0.55
+              : iotBox.height * 0.5,
+            0,
+          ]}
           minDistance={35}
           maxDistance={600}
           enableDamping

@@ -113,7 +113,8 @@ export type BracketType =
   | 'corner-3way'
   | 't-bracket'
   | 'cross-bracket'
-  | 'l-bracket';
+  | 'l-bracket'
+  | 'handle-m3';
 
 export interface BracketParams {
   type: BracketType;

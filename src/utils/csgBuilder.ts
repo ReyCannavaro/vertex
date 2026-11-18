@@ -655,6 +655,15 @@ export function getBracketBoltPositions(params: BracketParams): BracketBoltSpec[
     ];
   }
 
+  if (type === 'handle-m3') {
+    // Exact 52mm center-to-center hole pitch (±26mm) matching Front Door PC & Laptop M3 handle holes!
+    const cy = 38;
+    return [
+      { position: [0, cy + 26, -1.2], rotation: [Math.PI / 2, 0, 0] },
+      { position: [0, cy - 26, -1.2], rotation: [Math.PI / 2, 0, 0] },
+    ];
+  }
+
   // corner-3way
   const half = arm / 2;
   const off3 = Math.min(Math.max(t + 6, holeOffset), arm - 5);
@@ -852,6 +861,64 @@ export function buildBracketGeometry(params: BracketParams): THREE.BufferGeometr
       ),
       makeM3HexPocketGeo([x0 + t - 0.7, off, 0], [0, 0, Math.PI / 2], 2.5),
     ];
+
+    body = subtractMerged(body, cutters);
+    const out = body.geometry.clone();
+    out.computeVertexNormals();
+    body.geometry.dispose();
+    return out;
+  }
+
+  if (type === 'handle-m3') {
+    // 3D-Printable Ergonomic Low-Profile Server Pull Handle
+    // Exact 52mm center-to-center bolt pitch (±26mm) matching Front Door PC & Laptop 2D/3D holes!
+    // Fastens cleanly from the inside of the 5mm acrylic door using 2x M3x12mm bolts into captive M3 hex nuts!
+    const handleH = 76;
+    const handleW = Math.max(10, Math.min(14, w - 2));
+    const gripThick = 7.5;
+    const legClearance = 15; // comfortable finger clearance from acrylic door face
+    const pitchHalf = 26; // 52mm exact hole spacing matching Module 1 doors!
+    const cy = handleH / 2;
+
+    // Front vertical ergonomic rounded grip bar
+    const gripBar = makeTransformedGeo(
+      createRoundedBlockGeo(handleW, handleH, gripThick, 3.2, 0.7),
+      [0, cy, legClearance + gripThick / 2]
+    );
+
+    // 2x Sturdy Standoff Mounting Legs centered at exact ±26mm (52mm pitch)
+    const legTop = makeTransformedGeo(
+      createRoundedBlockGeo(handleW, 13, legClearance + 2, 2.2, 0.3),
+      [0, cy + pitchHalf, (legClearance + 2) / 2]
+    );
+    const legBot = makeTransformedGeo(
+      createRoundedBlockGeo(handleW, 13, legClearance + 2, 2.2, 0.3),
+      [0, cy - pitchHalf, (legClearance + 2) / 2]
+    );
+
+    let body = makeBrushFromGeo(gripBar);
+    body = unionMerged(body, [legTop, legBot]);
+
+    // Rear-entry M3 bolt holes + side-insertable captive M3 hex nut traps inside each standoff leg
+    const cutters: THREE.BufferGeometry[] = [];
+    for (const sy of [-pitchHalf, pitchHalf]) {
+      // M3 bolt shaft entering from acrylic rear face (z = 0) into leg
+      cutters.push(
+        makeTransformedGeo(
+          new THREE.CylinderGeometry(rHole, rHole, legClearance + 1, 18),
+          [0, cy + sy, legClearance / 2 - 0.5],
+          [Math.PI / 2, 0, 0]
+        )
+      );
+      // Captive M3 hex nut pocket + side drop-in slot so you drop a DIN 934 M3 nut inside each leg!
+      cutters.push(
+        makeM3HexPocketGeo([0, cy + sy, 7.5], [Math.PI / 2, 0, 0], 3.0),
+        makeTransformedGeo(
+          new THREE.BoxGeometry(handleW / 2 + 4, 5.9, 3.0),
+          [handleW / 4 + 1.5, cy + sy, 7.5]
+        )
+      );
+    }
 
     body = subtractMerged(body, cutters);
     const out = body.geometry.clone();

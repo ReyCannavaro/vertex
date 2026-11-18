@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Cable,
+  Calculator,
   CircleDot,
   Cpu,
   DoorOpen,
@@ -24,6 +25,12 @@ import {
   generateAllPanelsSvg,
   generateSinglePanelSvg,
 } from '../../utils/svgExporter';
+import {
+  downloadDxfFile,
+  generateAllPanelsDxf,
+  generateSinglePanelDxf,
+} from '../../utils/dxfExporter';
+import { computeAcrylicEstimate } from '../../utils/acrylicEstimator';
 
 const PANEL_ORDER: PanelId[] = [
   'front-left',
@@ -78,14 +85,29 @@ export const AcrylicSidebar: React.FC = () => {
   const activePanel = panels[activePanelId];
   const selectedHole = activePanel.holes.find((h) => h.id === selectedHoleId) ?? null;
 
-  const handleExportCurrentPanel = () => {
+  const acrylicEstimate = useMemo(
+    () => computeAcrylicEstimate(panels, caseDims),
+    [panels, caseDims]
+  );
+
+  const handleExportCurrentPanelSvg = () => {
     const svg = generateSinglePanelSvg(activePanel);
     downloadSvgFile(svg, `vertex-acrylic-${activePanel.id}-${activePanel.width}x${activePanel.height}mm.svg`);
   };
 
-  const handleExportAllPanels = () => {
+  const handleExportAllPanelsSvg = () => {
     const svg = generateAllPanelsSvg(panels);
     downloadSvgFile(svg, `vertex-hybrid-datacenter-full-sheet-${caseDims.thickness}mm.svg`);
+  };
+
+  const handleExportCurrentPanelDxf = () => {
+    const dxf = generateSinglePanelDxf(activePanel);
+    downloadDxfFile(dxf, `vertex-acrylic-${activePanel.id}-${activePanel.width}x${activePanel.height}mm.dxf`);
+  };
+
+  const handleExportAllPanelsDxf = () => {
+    const dxf = generateAllPanelsDxf(panels);
+    downloadDxfFile(dxf, `vertex-hybrid-datacenter-full-sheet-${caseDims.thickness}mm.dxf`);
   };
 
   return (
@@ -634,23 +656,80 @@ export const AcrylicSidebar: React.FC = () => {
 
       <div className="border-t border-slate-800" />
 
-      {/* Section 6: Laser Cut SVG Export */}
+      {/* Section 6: Estimasi Kebutuhan Lembaran Akrilik (Kalkulator RAB) */}
+      <section className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-700/80 space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-sky-300 flex items-center gap-1.5">
+            <Calculator className="w-3.5 h-3.5" />
+            <span>Estimasi Bahan Akrilik</span>
+          </h3>
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300">
+            {acrylicEstimate.panelCount} Panel
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-[11px]">
+          <div className="p-1.5 rounded bg-slate-950/80 border border-slate-800">
+            <div className="text-[10px] text-slate-400">Luas (+15% Waste)</div>
+            <div className="font-mono font-semibold text-slate-100">
+              {acrylicEstimate.grossAreaWithWasteM2.toFixed(2)} m²
+            </div>
+          </div>
+          <div className="p-1.5 rounded bg-slate-950/80 border border-slate-800">
+            <div className="text-[10px] text-slate-400">Estimasi Berat</div>
+            <div className="font-mono font-semibold text-slate-100">
+              ~{acrylicEstimate.estimatedWeightKg.toFixed(1)} kg
+            </div>
+          </div>
+        </div>
+
+        <div className="text-[11px] text-emerald-200 bg-emerald-500/10 border border-emerald-500/30 rounded px-2 py-1.5">
+          <div className="font-semibold">{acrylicEstimate.sheetRecommendation}</div>
+          <div className="text-[10px] text-emerald-300/80 mt-0.5">
+            Utilisasi lembar: ~{acrylicEstimate.utilizationPct}% • Luas bersih {acrylicEstimate.netAreaM2.toFixed(2)} m²
+          </div>
+        </div>
+      </section>
+
+      {/* Section 7: Laser Cut DXF & SVG Export (1:1 mm) */}
       <section className="space-y-2 pb-2">
         <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-          Ekspor Laser Cut (1:1 mm)
+          Ekspor Laser Cut (Skala 1:1 mm)
         </h3>
+
+        {/* Recommended DXF Export (zero DPI issues in CorelDRAW/AutoCAD/RDWorks) */}
         <button
-          onClick={handleExportCurrentPanel}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 font-medium transition"
-        >
-          <FileCode2 className="w-4 h-4 text-sky-400" />
-          <span>Ekspor Panel Ini (.SVG)</span>
-        </button>
-        <button
-          onClick={handleExportAllPanels}
+          onClick={handleExportAllPanelsDxf}
           className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold transition shadow-lg shadow-sky-500/20"
         >
           <Download className="w-4 h-4" />
+          <span>Ekspor Semua Panel (.DXF)</span>
+        </button>
+
+        <div className="grid grid-cols-2 gap-1.5">
+          <button
+            onClick={handleExportCurrentPanelDxf}
+            className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 font-medium transition"
+            title="Ekspor hanya panel aktif ke AutoCAD DXF (1:1 mm)"
+          >
+            <FileCode2 className="w-3.5 h-3.5 text-sky-400" />
+            <span>Panel (.DXF)</span>
+          </button>
+          <button
+            onClick={handleExportCurrentPanelSvg}
+            className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 font-medium transition"
+            title="Ekspor hanya panel aktif ke vektor SVG (1:1 mm)"
+          >
+            <FileCode2 className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Panel (.SVG)</span>
+          </button>
+        </div>
+
+        <button
+          onClick={handleExportAllPanelsSvg}
+          className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-medium transition"
+        >
+          <Download className="w-3.5 h-3.5 text-cyan-400" />
           <span>Ekspor Semua Panel (.SVG)</span>
         </button>
       </section>

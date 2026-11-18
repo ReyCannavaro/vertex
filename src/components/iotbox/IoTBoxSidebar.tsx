@@ -32,6 +32,7 @@ const BRACKET_SPECS: Array<{
 }> = [
   { id: 'l-bracket', label: 'L-Bracket Siku (Utama Dalam)', qty: 'Cetak 22×', usage: 'Semua joint dalam & depan (bebas ganjel pintu & MC-38!)' },
   { id: 'corner-3way', label: 'Corner 3-Way (Sudut Belakang)', qty: 'Cetak 4×', usage: '4 sudut luar Rear Wiring Chamber (Thumb-Screw M3)' },
+  { id: 'handle-m3', label: 'Door Pull Handle M3 (52mm)', qty: 'Cetak 2×', usage: 'Pitch 52mm + slot mur M3 dalam (klop 1:1 pintu depan!)' },
   { id: 't-bracket', label: 'Slotted T-Clamp (Opsional)', qty: 'Opsional', usage: 'Klip selip 5.2mm (hanya jika tanpa pintu depan)' },
   { id: 'cross-bracket', label: 'Slotted Cross (+) (Opsional)', qty: 'Opsional', usage: 'Klip selip 5.2mm (hanya jika tanpa pintu depan)' },
 ];
@@ -281,7 +282,15 @@ export const IoTBoxSidebar: React.FC = () => {
           </section>
 
           <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-emerald-200 leading-relaxed">
-            <strong>Rekomendasi Slicer:</strong> PETG Hitam Matte • Wall 4 • Infill 40% Gyroid • Layer 0.2mm.
+            {bracketParams.type === 'handle-m3' ? (
+              <>
+                <strong>Kompatibel 1:1 Pintu Depan:</strong> Jarak 2 lubang baut tepat <strong>52 mm</strong> (klop dengan lubang handle di Pintu PC & Laptop). Selipkan 2 mur segi-6 M3 ke celah samping kaki handle, lalu baut M3×12mm dari sisi dalam pintu!
+              </>
+            ) : (
+              <>
+                <strong>Rekomendasi Slicer:</strong> PETG Hitam Matte • Wall 4 • Infill 40% Gyroid • Layer 0.2mm.
+              </>
+            )}
           </div>
 
           <section className="space-y-2 pb-2">
@@ -297,7 +306,7 @@ export const IoTBoxSidebar: React.FC = () => {
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 font-medium transition"
             >
               <Download className="w-4 h-4 text-sky-400" />
-              <span>Download Semua 4 Braket (.STL)</span>
+              <span>Download Semua Braket & Handle (.STL)</span>
             </button>
           </section>
         </>
