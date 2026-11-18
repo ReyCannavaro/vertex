@@ -30,6 +30,7 @@ const PANEL_ORDER: PanelId[] = [
   'front-right',
   'left',
   'right',
+  'center-foot',
   'bottom',
   'filter-rail',
   'top',

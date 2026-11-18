@@ -39,6 +39,7 @@ export type PanelId =
   | 'right'
   | 'divider'
   | 'middle'
+  | 'center-foot'
   | 'filter-rail'
   | 'rear-cover'
   | 'cable-comb';

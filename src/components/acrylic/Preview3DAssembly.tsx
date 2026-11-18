@@ -160,11 +160,34 @@ const StructuralFrameBrackets: React.FC = () => {
         </>
       )}
 
-      {/* 2 Right-Wall T-Brackets supporting the Middle Laptop Shelf */}
+      {/* 2 Right-Wall T-Brackets + 2 Rear Anti-Sag L-Brackets supporting the 41cm Middle Laptop Shelf (3-side support!) */}
       {middleEnabled && (
         <>
           {renderTBracket([halfL - 3, legH + middleTrayY, halfW + 1], -Math.PI / 2, 1, 'rt-mid-f')}
           {renderTBracket([halfL - 3, legH + middleTrayY, -halfW - 1], -Math.PI / 2, -1, 'rt-mid-b')}
+          {[0.32, 0.72].map((ratio, idx) => {
+            const bx = divX + (halfL - divX) * ratio;
+            return (
+              <group key={`mid-rear-l-${idx}`} position={[bx, legH + middleTrayY - 9, -halfW + 12]}>
+                <mesh>
+                  <boxGeometry args={[22, 14, 14]} />
+                  {bracketMat}
+                </mesh>
+              </group>
+            );
+          })}
+        </>
+      )}
+
+      {/* 2 Underside Support Clips anchoring the Center Anti-Sag Foot beneath the E-Track Center Spine */}
+      {legH > 12 && (
+        <>
+          {[halfW - 36, -halfW + 36].map((fz, i) => (
+            <mesh key={`cf-clip-${i}`} position={[divX, legH - 11, fz]}>
+              <boxGeometry args={[16, 10, 18]} />
+              {bracketMat}
+            </mesh>
+          ))}
         </>
       )}
 

@@ -45,17 +45,52 @@ function makeSideLegOutline(totalW: number, mainH: number, legH: number): Point2
 }
 
 /**
- * Generates a U-shaped slide-in dust filter track mounted underneath the Bottom panel.
- * Closed on Rear (y=0), Left, and Right; OPEN at Front (y=h) for tool-less filter pull-out.
+ * Generates an anti-sag chamfered center support foot runner mounted directly under
+ * the center spine of filter-rail / divider (Y = 0 to legH - t) to prevent sagging on 70cm spans.
  */
-function makeUFilterRailOutline(w: number, h: number, railW = 20): Point2D[] {
-  const rw = Math.min(railW, Math.floor(w / 6), Math.floor(h / 6));
+function makeCenterFootOutline(depthW: number, footH: number): Point2D[] {
+  const h = Math.max(8, footH);
+  const footW = Math.min(58, Math.max(34, Math.round(depthW * 0.16)));
+  const chamfer = Math.min(22, Math.round(h * 0.72));
+  const topBeam = Math.max(8, Math.round(h * 0.34));
+
+  return [
+    { x: 0, y: 0 },
+    { x: depthW, y: 0 },
+    { x: depthW, y: h },
+    { x: depthW - footW, y: h },
+    { x: depthW - footW - chamfer, y: topBeam },
+    { x: footW + chamfer, y: topBeam },
+    { x: footW, y: h },
+    { x: 0, y: h },
+  ];
+}
+
+/**
+ * Generates a Dual-Bay E-Shaped slide-in dust filter track mounted underneath the Bottom panel.
+ * Features a center spine aligned with Divider & Center Foot, creating 2 independent front pull-out slots:
+ * Left Slot (PC Bay Filter) and Right Slot (Laptop Bay Filter).
+ */
+function makeDualBayFilterRailOutline(
+  w: number,
+  h: number,
+  splitX: number,
+  railW = 18
+): Point2D[] {
+  const rw = Math.min(railW, Math.floor(w / 8), Math.floor(h / 6));
+  const cHalf = 10; // 20mm center divider rail directly above Center Foot
+  const sx = Math.min(Math.max(rw + cHalf + 20, splitX), w - rw - cHalf - 20);
+
   return [
     { x: 0, y: 0 },
     { x: w, y: 0 },
     { x: w, y: h },
     { x: w - rw, y: h },
     { x: w - rw, y: rw },
+    { x: sx + cHalf, y: rw },
+    { x: sx + cHalf, y: h },
+    { x: sx - cHalf, y: h },
+    { x: sx - cHalf, y: rw },
     { x: rw, y: rw },
     { x: rw, y: h },
     { x: 0, y: h },
@@ -112,12 +147,22 @@ export function getPanelGeometrySpec(
       return { width: L, height: totalW, outline: makeRectOutline(L, totalW) };
     case 'bottom':
       return { width: innerL, height: innerW, outline: makeRectOutline(innerL, innerW) };
-    case 'filter-rail':
+    case 'filter-rail': {
+      const splitX = Math.round(dividerX - t);
       return {
         width: innerL,
         height: innerW,
-        outline: makeUFilterRailOutline(innerL, innerW, 20),
+        outline: makeDualBayFilterRailOutline(innerL, innerW, splitX, 18),
       };
+    }
+    case 'center-foot': {
+      const footH = Math.max(8, legHeight - t);
+      return {
+        width: innerW,
+        height: footH,
+        outline: makeCenterFootOutline(innerW, footH),
+      };
+    }
     case 'front-left': {
       const doorW = Math.max(60, Math.round(dividerX - t - 1));
       const doorH = Math.max(80, wallH - 2);
@@ -193,8 +238,14 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
     },
     {
       id: 'filter-rail',
-      name: 'Dust Filter Rail (Slot Bawah)',
-      description: 'Rel akrilik U-Track untuk slide-in dust filter dari depan',
+      name: 'Dust Filter Rail (Dual-Bay E-Track)',
+      description: 'Rel akrilik 2-slot terpisah untuk Filter Bay PC & Bay Laptop',
+      enabled: true,
+    },
+    {
+      id: 'center-foot',
+      name: 'Center Foot (Kaki Penyangga Tengah)',
+      description: 'Kaki akrilik anti-melengkung di bawah Sekat Tengah (70cm span)',
       enabled: true,
     },
     {
@@ -267,12 +318,21 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
     let holes: PanelHole[] = [];
 
     if (spec.id === 'filter-rail') {
-      // M3 mounting holes along left & right rail arms
+      const splitX = Math.round(dividerX - t);
+      // M3 mounting holes along left, center spine, and right rail arms
       holes = [
-        { id: 'fr-m3-1', type: 'm3', label: 'Rail M3 FL', x: 10, y: height - 18, diameter: 3 },
-        { id: 'fr-m3-2', type: 'm3', label: 'Rail M3 FR', x: width - 10, y: height - 18, diameter: 3 },
-        { id: 'fr-m3-3', type: 'm3', label: 'Rail M3 BL', x: 10, y: 10, diameter: 3 },
-        { id: 'fr-m3-4', type: 'm3', label: 'Rail M3 BR', x: width - 10, y: 10, diameter: 3 },
+        { id: 'fr-m3-1', type: 'm3', label: 'Rail M3 FL', x: 9, y: height - 18, diameter: 3 },
+        { id: 'fr-m3-2', type: 'm3', label: 'Rail M3 FR', x: width - 9, y: height - 18, diameter: 3 },
+        { id: 'fr-m3-3', type: 'm3', label: 'Rail M3 BL', x: 9, y: 9, diameter: 3 },
+        { id: 'fr-m3-4', type: 'm3', label: 'Rail M3 BR', x: width - 9, y: 9, diameter: 3 },
+        { id: 'fr-m3-c1', type: 'm3', label: 'Center Spine Front', x: splitX, y: height - 18, diameter: 3 },
+        { id: 'fr-m3-c2', type: 'm3', label: 'Center Spine Rear', x: splitX, y: 9, diameter: 3 },
+      ];
+    } else if (spec.id === 'center-foot') {
+      // M3 bracket mounting holes on the front & rear solid feet of the center support runner
+      holes = [
+        { id: 'cf-m3-f', type: 'm3', label: 'Center Foot Front M3', x: 24, y: Math.min(10, Math.round(height * 0.3)), diameter: 3 },
+        { id: 'cf-m3-b', type: 'm3', label: 'Center Foot Rear M3', x: width - 24, y: Math.min(10, Math.round(height * 0.3)), diameter: 3 },
       ];
     } else if (spec.id === 'cable-comb') {
       holes = [

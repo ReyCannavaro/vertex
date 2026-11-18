@@ -283,50 +283,30 @@ const MountedCaseFan3D: React.FC<{
 };
 
 /**
- * Slide-Out Magnetic Mesh Dust Filter Tray seated inside the bottom acrylic U-Rail slot.
+ * Single magnetic dust filter tray with fine mesh screen and front pull handle.
  */
-const DustFilterTray3D: React.FC<{
-  dims: CaseDimensions;
-  slideOut: number;
-}> = ({ dims, slideOut }) => {
-  const groupRef = useRef<THREE.Group>(null);
-  const currentSlideRef = useRef(slideOut);
-
-  const { length: L, width: W, thickness: t, legHeight: legH } = dims;
-  const trayW = Math.max(80, L - t * 2 - 42);
-  const trayD = Math.max(80, W - t * 2 - 22);
-  const frameBar = 10;
-  const trayH = Math.max(3, t - 1);
-  const meshTex = useMemo(() => createDustMeshTexture(), []);
-
-  useEffect(() => {
-    return () => meshTex.dispose();
-  }, [meshTex]);
-
-  useFrame((_, delta) => {
-    currentSlideRef.current = THREE.MathUtils.damp(
-      currentSlideRef.current,
-      slideOut,
-      6.5,
-      Math.min(delta, 0.05)
-    );
-    if (groupRef.current) {
-      groupRef.current.position.z = 10 + currentSlideRef.current;
-    }
-  });
+const SingleFilterTray: React.FC<{
+  centerX: number;
+  trayW: number;
+  trayD: number;
+  trayH: number;
+  meshTex: THREE.CanvasTexture;
+}> = ({ centerX, trayW, trayD, trayH, meshTex }) => {
+  const frameBar = 9;
+  const handleW = Math.min(64, Math.max(36, trayW * 0.34));
 
   return (
-    <group ref={groupRef} position={[0, legH - t / 2, 10]}>
+    <group position={[centerX, 0, 0]}>
       {/* Fine perforated charcoal filter mesh */}
-      <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[trayW - frameBar * 2, 1.4, trayD - frameBar * 2]} />
+      <mesh>
+        <boxGeometry args={[Math.max(20, trayW - frameBar * 2), 1.4, Math.max(20, trayD - frameBar * 2)]} />
         <meshStandardMaterial
           map={meshTex}
           color="#334155"
           roughness={0.85}
           metalness={0.15}
           transparent
-          opacity={0.82}
+          opacity={0.84}
         />
       </mesh>
 
@@ -348,25 +328,89 @@ const DustFilterTray3D: React.FC<{
         <meshStandardMaterial color="#181d27" roughness={0.5} metalness={0.3} />
       </mesh>
 
-      {/* Center stiffener crossbar */}
-      <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[6, trayH * 0.85, trayD - frameBar * 2]} />
-        <meshStandardMaterial color="#1e2430" roughness={0.55} />
-      </mesh>
-
       {/* Front Ergonomic Pull-Handle Tab with subtle Sky-Blue accent */}
-      <mesh position={[0, -0.5, trayD / 2 + 7]}>
-        <boxGeometry args={[76, trayH + 1.5, 14]} />
+      <mesh position={[0, -0.5, trayD / 2 + 6.5]}>
+        <boxGeometry args={[handleW, trayH + 1.4, 13]} />
         <meshStandardMaterial color="#1e293b" roughness={0.4} metalness={0.45} />
       </mesh>
-      <mesh position={[0, -0.5, trayD / 2 + 14.2]}>
-        <boxGeometry args={[52, 2.2, 1.5]} />
+      <mesh position={[0, -0.5, trayD / 2 + 13.2]}>
+        <boxGeometry args={[handleW * 0.68, 2.0, 1.4]} />
         <meshStandardMaterial
           color="#38bdf8"
           emissive="#38bdf8"
           emissiveIntensity={0.8}
         />
       </mesh>
+    </group>
+  );
+};
+
+/**
+ * Dual-Bay Split Magnetic Dust Filter Trays (PC Bay Tray Left + Laptop Bay Tray Right)
+ * sliding cleanly through the 2 front openings of the Dual-Bay E-Track rail flanking the Center Foot.
+ */
+const DustFilterTray3D: React.FC<{
+  dims: CaseDimensions;
+  slideOut: number;
+}> = ({ dims, slideOut }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const currentSlideRef = useRef(slideOut);
+
+  const { length: L, width: W, thickness: t, dividerX, legHeight: legH } = dims;
+  const halfL = L / 2;
+  const divX = -halfL + dividerX;
+  const rw = 18;
+  const cHalf = 10;
+
+  // Exact clear slot bounds inside the Dual-Bay E-Track
+  const leftSlotMin = -halfL + t + rw + 2;
+  const leftSlotMax = divX - cHalf - 2;
+  const leftTrayW = Math.max(40, leftSlotMax - leftSlotMin);
+  const leftTrayCX = (leftSlotMin + leftSlotMax) / 2;
+
+  const rightSlotMin = divX + cHalf + 2;
+  const rightSlotMax = halfL - t - rw - 2;
+  const rightTrayW = Math.max(60, rightSlotMax - rightSlotMin);
+  const rightTrayCX = (rightSlotMin + rightSlotMax) / 2;
+
+  const trayD = Math.max(80, W - t * 2 - rw - 4);
+  const trayH = Math.max(3, t - 1);
+  const meshTex = useMemo(() => createDustMeshTexture(), []);
+
+  useEffect(() => {
+    return () => meshTex.dispose();
+  }, [meshTex]);
+
+  useFrame((_, delta) => {
+    currentSlideRef.current = THREE.MathUtils.damp(
+      currentSlideRef.current,
+      slideOut,
+      6.5,
+      Math.min(delta, 0.05)
+    );
+    if (groupRef.current) {
+      groupRef.current.position.z = 9 + currentSlideRef.current;
+    }
+  });
+
+  return (
+    <group ref={groupRef} position={[0, legH - t / 2, 9]}>
+      {/* Tray #1: PC Bay 140mm Dust Filter (Left) */}
+      <SingleFilterTray
+        centerX={leftTrayCX}
+        trayW={leftTrayW}
+        trayD={trayD}
+        trayH={trayH}
+        meshTex={meshTex}
+      />
+      {/* Tray #2: Laptop Bay Dual-120mm Dust Filter (Right) */}
+      <SingleFilterTray
+        centerX={rightTrayCX}
+        trayW={rightTrayW}
+        trayD={trayD}
+        trayH={trayH}
+        meshTex={meshTex}
+      />
     </group>
   );
 };

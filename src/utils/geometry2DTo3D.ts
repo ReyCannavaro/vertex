@@ -206,6 +206,13 @@ export function getPanelAssemblyTransform(
         position: [0, legH - t / 2 - e * 0.75, 0],
         rotation: [-Math.PI / 2, 0, 0],
       };
+    case 'center-foot': {
+      const footH = Math.max(8, legH - t);
+      return {
+        position: [divCenterX, footH / 2 - e * 1.0, 0],
+        rotation: [0, Math.PI / 2, 0],
+      };
+    }
     case 'top':
       return {
         position: [0, legH + H - t / 2 + e, -wDepth / 2],
