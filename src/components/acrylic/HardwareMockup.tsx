@@ -636,7 +636,43 @@ interface HardwareMockupProps {
   smokeAlarm: boolean;
   doorPcOpen: boolean;
   doorLapOpen: boolean;
+  explodeAmount: number;
+  explodeMode: 'frame' | 'all';
 }
+
+/**
+ * Smoothly glides any hardware subsystem along its CAD exploded-assembly vector at 60fps
+ * when "Mode Explode: Semua (Full)" is active.
+ */
+const ExplodeGroup: React.FC<{
+  amount: number;
+  dir: [number, number, number];
+  children: React.ReactNode;
+}> = ({ amount, dir, children }) => {
+  const ref = useRef<THREE.Group>(null);
+  const curRef = useRef<[number, number, number]>([
+    dir[0] * amount,
+    dir[1] * amount,
+    dir[2] * amount,
+  ]);
+
+  useFrame((_, delta) => {
+    const dt = Math.min(delta, 0.05);
+    const cur = curRef.current;
+    cur[0] = THREE.MathUtils.damp(cur[0], dir[0] * amount, 7.5, dt);
+    cur[1] = THREE.MathUtils.damp(cur[1], dir[1] * amount, 7.5, dt);
+    cur[2] = THREE.MathUtils.damp(cur[2], dir[2] * amount, 7.5, dt);
+    if (ref.current) {
+      ref.current.position.set(cur[0], cur[1], cur[2]);
+    }
+  });
+
+  return (
+    <group ref={ref} position={curRef.current}>
+      {children}
+    </group>
+  );
+};
 
 export const HardwareMockup: React.FC<HardwareMockupProps> = ({
   dims,
@@ -654,7 +690,10 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
   smokeAlarm,
   doorPcOpen,
   doorLapOpen,
+  explodeAmount,
+  explodeMode,
 }) => {
+  const devE = explodeMode === 'all' ? explodeAmount : 0;
   const {
     length: L,
     width: W,
@@ -697,15 +736,22 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
   return (
     <group>
       {/* ================= SLIDE-IN BOTTOM DUST FILTER TRAY ================= */}
-      <DustFilterTray3D dims={dims} slideOut={dustFilterSlide} />
+      <ExplodeGroup amount={devE} dir={[0, -0.75, 0.25]}>
+        <DustFilterTray3D dims={dims} slideOut={dustFilterSlide} />
+      </ExplodeGroup>
 
       {/* ================= REAR WIRING CHAMBER CABLE HARNESS ================= */}
-      {showWiring && <RearWiringHarness3D dims={dims} />}
+      {showWiring && (
+        <ExplodeGroup amount={devE} dir={[0, 0, -0.62]}>
+          <RearWiringHarness3D dims={dims} />
+        </ExplodeGroup>
+      )}
 
       {/* ================= LEFT BAY: FULL FRONTAL SHOWCASE MICRO-ATX PC (244x244mm) ================= */}
       <group>
         {/* True-Scale Micro-ATX Motherboard (244 x 244mm) facing forward cleanly above ATX PSU */}
-        <group position={[pcBayCenterX - 6, legH + H * 0.62, -halfW + 34]}>
+        <ExplodeGroup amount={devE} dir={[-0.55, 0.16, 0.22]}>
+          <group position={[pcBayCenterX - 6, legH + H * 0.62, -halfW + 34]}>
           {/* Matte-Black mATX PCB (244 x 244mm) */}
           <mesh>
             <boxGeometry args={[Math.min(244, pcBayWidth - 26), Math.min(244, H * 0.58), 4]} />
@@ -753,10 +799,12 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
             <boxGeometry args={[Math.min(220, pcBayWidth - 36), 34, 96]} />
             <meshStandardMaterial color="#1c222d" roughness={0.38} metalness={0.5} />
           </mesh>
-        </group>
+          </group>
+        </ExplodeGroup>
 
         {/* ATX PSU sitting cleanly at the back of Bottom Floor */}
-        <group position={[pcBayCenterX, legH + t + 42, -halfW + 78]}>
+        <ExplodeGroup amount={devE} dir={[-0.58, -0.18, -0.18]}>
+          <group position={[pcBayCenterX, legH + t + 42, -halfW + 78]}>
           <mesh>
             <boxGeometry args={[Math.min(144, pcBayWidth - 36), 82, 134]} />
             <meshStandardMaterial color="#161a22" roughness={0.55} metalness={0.35} />
@@ -765,10 +813,12 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
             <cylinderGeometry args={[46, 46, 1.5, 24]} />
             <meshStandardMaterial color="#0b0e14" roughness={0.7} />
           </mesh>
-        </group>
+          </group>
+        </ExplodeGroup>
 
         {/* 3.5" / 2.5" HDD mounted neatly beside PSU */}
-        <group position={[pcBayRight - 34, legH + t + 11, halfW - 58]}>
+        <ExplodeGroup amount={devE} dir={[-0.25, -0.22, 0.55]}>
+          <group position={[pcBayRight - 34, legH + t + 11, halfW - 58]}>
           <mesh>
             <boxGeometry args={[52, 20, 88]} />
             <meshStandardMaterial color="#1a1f28" roughness={0.4} metalness={0.6} />
@@ -777,60 +827,69 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
             <boxGeometry args={[42, 1, 70]} />
             <meshStandardMaterial color="#cbd5e1" roughness={0.3} metalness={0.75} />
           </mesh>
-        </group>
+          </group>
+        </ExplodeGroup>
       </group>
 
       {/* ================= TOP & BOTTOM SLIM-SHROUDED CASE FANS (SYNCED TO 4-CH RELAY) ================= */}
       <group>
         {/* Bottom Intake Fans: PC 140mm -> CH1, Laptop 120mm -> CH3 */}
-        {bottomFans.map((hole) => {
-          const isPcFan = hole.type === 'fan140';
-          return (
-            <MountedCaseFan3D
-              key={`bot-fan-${hole.id}`}
-              size={isPcFan ? 140 : 120}
-              position={[hole.x - innerL / 2, legH + t + 11.5, hole.y - innerW / 2]}
-              mountSide="bottom"
-              rearWallZ={-halfW + t}
-              ledColor={ledColor}
-              ledEnabled={ledEnabled}
-              fanActive={isPcFan ? relayPcOn : relayLapBotOn}
-            />
-          );
-        })}
+        <ExplodeGroup amount={devE} dir={[0, -0.22, 0]}>
+          {bottomFans.map((hole) => {
+            const isPcFan = hole.type === 'fan140';
+            return (
+              <MountedCaseFan3D
+                key={`bot-fan-${hole.id}`}
+                size={isPcFan ? 140 : 120}
+                position={[hole.x - innerL / 2, legH + t + 11.5, hole.y - innerW / 2]}
+                mountSide="bottom"
+                rearWallZ={-halfW + t}
+                ledColor={ledColor}
+                ledEnabled={ledEnabled}
+                fanActive={isPcFan ? relayPcOn : relayLapBotOn}
+              />
+            );
+          })}
+        </ExplodeGroup>
 
         {/* Top Exhaust Fans: PC 140mm -> CH1, Laptop 120mm -> CH2 */}
-        {topFans.map((hole) => {
-          const isPcFan = hole.type === 'fan140';
-          return (
-            <MountedCaseFan3D
-              key={`top-fan-${hole.id}`}
-              size={isPcFan ? 140 : 120}
-              position={[hole.x - halfL, legH + H - t - 11.5, hole.y - halfW - wiringDepth]}
-              mountSide="top"
-              rearWallZ={-halfW + t}
-              ledColor={ledColor}
-              ledEnabled={ledEnabled}
-              fanActive={isPcFan ? relayPcOn : relayLapTopOn}
-            />
-          );
-        })}
+        <ExplodeGroup amount={devE} dir={[0, 0.62, 0]}>
+          {topFans.map((hole) => {
+            const isPcFan = hole.type === 'fan140';
+            return (
+              <MountedCaseFan3D
+                key={`top-fan-${hole.id}`}
+                size={isPcFan ? 140 : 120}
+                position={[hole.x - halfL, legH + H - t - 11.5, hole.y - halfW - wiringDepth]}
+                mountSide="top"
+                rearWallZ={-halfW + t}
+                ledColor={ledColor}
+                ledEnabled={ledEnabled}
+                fanActive={isPcFan ? relayPcOn : relayLapTopOn}
+              />
+            );
+          })}
+        </ExplodeGroup>
       </group>
 
       {/* ================= RIGHT BAY: DUAL-TIER LAPTOP SERVERS ================= */}
       <group>
-        <LaptopUnit
-          position={[lapBayCenterX, legH + t + 25, 6]}
-          maxWidth={lapBayWidth}
-          maxDepth={W - t * 2}
-        />
-
-        {middleEnabled && (
+        <ExplodeGroup amount={devE} dir={[0.48, -0.14, 0.52]}>
           <LaptopUnit
-            position={[lapBayCenterX, legH + middleTrayY + t / 2, 6]}
+            position={[lapBayCenterX, legH + t + 25, 6]}
             maxWidth={lapBayWidth}
             maxDepth={W - t * 2}
           />
+        </ExplodeGroup>
+
+        {middleEnabled && (
+          <ExplodeGroup amount={devE} dir={[0.48, 0.34, 0.36]}>
+            <LaptopUnit
+              position={[lapBayCenterX, legH + middleTrayY + t / 2, 6]}
+              maxWidth={lapBayWidth}
+              maxDepth={W - t * 2}
+            />
+          </ExplodeGroup>
         )}
       </group>
 
@@ -875,162 +934,168 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
 
         return (
           <group>
-            {/* 3x Black AOSONG DHT21 / AM2301 Modules (flush-bolted via top ear M3 + 3-wire tail straight through Ø8mm Back hole!) */}
-            {dhtUnits.map((dht) => (
-              <group key={dht.key} position={dht.pos} rotation={[0, 0, dht.rotZ]}>
-                {/* Matte-Black Slotted Casing (27 × 52 × 13.5 mm) */}
-                <mesh castShadow receiveShadow>
-                  <boxGeometry args={[27, 52, 13.5]} />
-                  <meshStandardMaterial color="#141820" roughness={0.48} metalness={0.18} />
-                </mesh>
-                {/* Ventilated Sensor Slotted Louver Grille on front face */}
-                {[-14, -7, 0, 7, 14].map((vy, vi) => (
-                  <mesh key={vi} position={[0, vy, 6.95]}>
-                    <boxGeometry args={[18, 2.4, 0.8]} />
-                    <meshStandardMaterial color="#07090e" roughness={0.95} />
+            {/* 3x Black AOSONG DHT21 / AM2301 Modules (ride back with Back Partition in Full Explode!) */}
+            <ExplodeGroup amount={devE} dir={[0, 0, -0.35]}>
+              {dhtUnits.map((dht) => (
+                <group key={dht.key} position={dht.pos} rotation={[0, 0, dht.rotZ]}>
+                  {/* Matte-Black Slotted Casing (27 × 52 × 13.5 mm) */}
+                  <mesh castShadow receiveShadow>
+                    <boxGeometry args={[27, 52, 13.5]} />
+                    <meshStandardMaterial color="#141820" roughness={0.48} metalness={0.18} />
                   </mesh>
-                ))}
-                {/* Integrated Top Mounting Ear Tab + Silver M3 Bolt aligned 1:1 with Back laser-cut hole */}
-                <mesh position={[0, 29.5, -5.0]}>
-                  <boxGeometry args={[12, 9, 3.5]} />
-                  <meshStandardMaterial color="#141820" roughness={0.5} />
-                </mesh>
-                <mesh position={[0, 30, -2.8]} rotation={[Math.PI / 2, 0, 0]}>
-                  <cylinderGeometry args={[2.1, 2.1, 2.2, 12]} />
-                  <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.2} />
-                </mesh>
-                {/* Cable Strain-Relief Collar at bottom + 3-Wire Lead (Red/Yellow/Black) ducking straight into Ø8mm Back hole */}
-                <mesh position={[0, -27.5, -1.5]}>
-                  <cylinderGeometry args={[3.4, 3.4, 4, 12]} />
-                  <meshStandardMaterial color="#11141c" roughness={0.7} />
-                </mesh>
-                {[
-                  { x: -1.8, color: '#ef4444' }, // Red = VCC
-                  { x: 0, color: '#eab308' }, // Yellow = DATA
-                  { x: 1.8, color: '#1e293b' }, // Black = GND
-                ].map((wire, wi) => (
-                  <group key={wi}>
-                    <mesh position={[wire.x, -30.5, -1.5]}>
-                      <cylinderGeometry args={[0.75, 0.75, 5, 8]} />
-                      <meshStandardMaterial color={wire.color} roughness={0.6} />
+                  {/* Ventilated Sensor Slotted Louver Grille on front face */}
+                  {[-14, -7, 0, 7, 14].map((vy, vi) => (
+                    <mesh key={vi} position={[0, vy, 6.95]}>
+                      <boxGeometry args={[18, 2.4, 0.8]} />
+                      <meshStandardMaterial color="#07090e" roughness={0.95} />
                     </mesh>
-                    <mesh position={[wire.x, -32, -5.2]} rotation={[Math.PI / 2, 0, 0]}>
-                      <cylinderGeometry args={[0.75, 0.75, 8.5, 8]} />
-                      <meshStandardMaterial color={wire.color} roughness={0.6} />
+                  ))}
+                  {/* Integrated Top Mounting Ear Tab + Silver M3 Bolt aligned 1:1 with Back laser-cut hole */}
+                  <mesh position={[0, 29.5, -5.0]}>
+                    <boxGeometry args={[12, 9, 3.5]} />
+                    <meshStandardMaterial color="#141820" roughness={0.5} />
+                  </mesh>
+                  <mesh position={[0, 30, -2.8]} rotation={[Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[2.1, 2.1, 2.2, 12]} />
+                    <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.2} />
+                  </mesh>
+                  {/* Cable Strain-Relief Collar at bottom + 3-Wire Lead (Red/Yellow/Black) ducking straight into Ø8mm Back hole */}
+                  <mesh position={[0, -27.5, -1.5]}>
+                    <cylinderGeometry args={[3.4, 3.4, 4, 12]} />
+                    <meshStandardMaterial color="#11141c" roughness={0.7} />
+                  </mesh>
+                  {[
+                    { x: -1.8, color: '#ef4444' }, // Red = VCC
+                    { x: 0, color: '#eab308' }, // Yellow = DATA
+                    { x: 1.8, color: '#1e293b' }, // Black = GND
+                  ].map((wire, wi) => (
+                    <group key={wi}>
+                      <mesh position={[wire.x, -30.5, -1.5]}>
+                        <cylinderGeometry args={[0.75, 0.75, 5, 8]} />
+                        <meshStandardMaterial color={wire.color} roughness={0.6} />
+                      </mesh>
+                      <mesh position={[wire.x, -32, -5.2]} rotation={[Math.PI / 2, 0, 0]}>
+                        <cylinderGeometry args={[0.75, 0.75, 8.5, 8]} />
+                        <meshStandardMaterial color={wire.color} roughness={0.6} />
+                      </mesh>
+                    </group>
+                  ))}
+                </group>
+              ))}
+            </ExplodeGroup>
+
+            {/* 1x MQ-2 Smoke / Fire Safety Sensor on 4x 10mm M3 Standoffs (rides up with Top Panel in Full Explode!) */}
+            <ExplodeGroup amount={devE} dir={[0, 0.92, 0]}>
+              <group position={[mq2WorldX, mq2TopY, mq2WorldZ]}>
+                {/* 4x 10mm Brass Hex Standoffs creating safe thermal air-gap below Top acrylic ceiling */}
+                {[
+                  [-7, -13],
+                  [7, -13],
+                  [7, 13],
+                  [-7, 13],
+                ].map(([sx, sz], si) => (
+                  <group key={`mq2-so-${si}`} position={[sx, -standoffH / 2, sz]}>
+                    <mesh>
+                      <cylinderGeometry args={[2.3, 2.3, standoffH, 6]} />
+                      <meshStandardMaterial color="#d4a017" metalness={0.82} roughness={0.28} />
+                    </mesh>
+                    {/* Silver M3 Screw Head beneath PCB */}
+                    <mesh position={[0, -standoffH / 2 - 1.8, 0]}>
+                      <cylinderGeometry args={[2.0, 2.0, 1.5, 10]} />
+                      <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.2} />
                     </mesh>
                   </group>
                 ))}
-              </group>
-            ))}
 
-            {/* 1x MQ-2 Smoke / Fire Safety Sensor on 4x 10mm Brass/Nylon M3 Standoffs (exact 14×26mm PCB mount pitch!) */}
-            <group position={[mq2WorldX, mq2TopY, mq2WorldZ]}>
-              {/* 4x 10mm Brass Hex Standoffs creating safe thermal air-gap below Top acrylic ceiling */}
-              {[
-                [-7, -13],
-                [7, -13],
-                [7, 13],
-                [-7, 13],
-              ].map(([sx, sz], si) => (
-                <group key={`mq2-so-${si}`} position={[sx, -standoffH / 2, sz]}>
-                  <mesh>
-                    <cylinderGeometry args={[2.3, 2.3, standoffH, 6]} />
-                    <meshStandardMaterial color="#d4a017" metalness={0.82} roughness={0.28} />
-                  </mesh>
-                  {/* Silver M3 Screw Head beneath PCB */}
-                  <mesh position={[0, -standoffH / 2 - 1.8, 0]}>
-                    <cylinderGeometry args={[2.0, 2.0, 1.5, 10]} />
-                    <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.2} />
-                  </mesh>
-                </group>
-              ))}
-
-              {/* Blue MQ-2 Module PCB (20 × 32 × 1.6 mm) */}
-              <mesh position={[0, -standoffH - 0.8, 0]}>
-                <boxGeometry args={[20, 1.6, 32]} />
-                <meshStandardMaterial color="#1d4ed8" roughness={0.42} metalness={0.18} />
-              </mesh>
-              {/* Iconic Metallic Stainless-Steel Mesh Gas/Smoke Cylinder facing downward */}
-              <mesh position={[0, -standoffH - 8.5, 2]}>
-                <cylinderGeometry args={[8.4, 9.2, 13.5, 22]} />
-                <meshStandardMaterial color="#cbd5e1" metalness={0.88} roughness={0.28} />
-              </mesh>
-              <mesh position={[0, -standoffH - 15.2, 2]}>
-                <cylinderGeometry args={[7.6, 8.3, 1.4, 22]} />
-                <meshStandardMaterial color="#94a3b8" metalness={0.75} roughness={0.45} />
-              </mesh>
-              {/* Blue Trimpot Sensitivity Potentiometer */}
-              <mesh position={[-4.5, -standoffH - 3.6, -10.5]}>
-                <boxGeometry args={[6.5, 4.5, 6.5]} />
-                <meshStandardMaterial color="#2563eb" roughness={0.5} />
-              </mesh>
-              {/* Live MQ-2 Status LED (Green = Normal, Red = Fire Cut-Off Alarm!) */}
-              <mesh position={[5.2, -standoffH - 2.2, -10.5]}>
-                <sphereGeometry args={[1.9, 10, 10]} />
-                <meshStandardMaterial
-                  color={smokeAlarm ? '#ef4444' : '#22c55e'}
-                  emissive={smokeAlarm ? '#ef4444' : '#22c55e'}
-                  emissiveIntensity={3.5}
-                  toneMapped={false}
-                />
-              </mesh>
-              {/* 4x Rear Header Pins + Clean Sleeved Jumper Cable straight back into Ø8mm Back Partition hole */}
-              {[-3.8, -1.3, 1.3, 3.8].map((px, pi) => (
-                <mesh key={pi} position={[px, -standoffH - 1.5, -18.5]} rotation={[Math.PI / 2, 0, 0]}>
-                  <cylinderGeometry args={[0.45, 0.45, 6, 6]} />
-                  <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.2} />
+                {/* Blue MQ-2 Module PCB (20 × 32 × 1.6 mm) */}
+                <mesh position={[0, -standoffH - 0.8, 0]}>
+                  <boxGeometry args={[20, 1.6, 32]} />
+                  <meshStandardMaterial color="#1d4ed8" roughness={0.42} metalness={0.18} />
                 </mesh>
-              ))}
-              <mesh position={[0, -standoffH - 1.5, -36]} rotation={[Math.PI / 2, 0, 0]}>
-                <boxGeometry args={[9, 36, 2.4]} />
-                <meshStandardMaterial color="#111622" roughness={0.78} />
-              </mesh>
-            </group>
-
-            {/* 2x White MC-38 Magnetic Door Reed Switches mounted flush on Top Inner Front (aligned 1:1 with Door Magnets!) */}
-            {[
-              { key: 'mc38-pc', x: -halfL + dividerX - 44, open: doorPcOpen },
-              { key: 'mc38-lap', x: -halfL + dividerX + 44, open: doorLapOpen },
-            ].map((reed) => (
-              <group key={reed.key} position={[reed.x, mq2TopY - 4.5, halfW - 16]}>
-                {/* Cream 3M Adhesive Foam Backing Pad */}
-                <mesh position={[0, 4.1, 0]}>
-                  <boxGeometry args={[27, 1.0, 14]} />
-                  <meshStandardMaterial color="#e7e0c9" roughness={0.85} />
+                {/* Iconic Metallic Stainless-Steel Mesh Gas/Smoke Cylinder facing downward */}
+                <mesh position={[0, -standoffH - 8.5, 2]}>
+                  <cylinderGeometry args={[8.4, 9.2, 13.5, 22]} />
+                  <meshStandardMaterial color="#cbd5e1" metalness={0.88} roughness={0.28} />
                 </mesh>
-                {/* White ABS Reed Switch Block (27 × 7.5 × 8 mm) + Side Mounting Flange (14 mm deep) */}
-                <mesh position={[0, 0, 2.5]}>
-                  <boxGeometry args={[27, 7.5, 8]} />
-                  <meshStandardMaterial color="#f1f5f9" roughness={0.42} />
+                <mesh position={[0, -standoffH - 15.2, 2]}>
+                  <cylinderGeometry args={[7.6, 8.3, 1.4, 22]} />
+                  <meshStandardMaterial color="#94a3b8" metalness={0.75} roughness={0.45} />
                 </mesh>
-                <mesh position={[0, 2.2, -3.2]}>
-                  <boxGeometry args={[27, 3.0, 6]} />
-                  <meshStandardMaterial color="#f1f5f9" roughness={0.42} />
+                {/* Blue Trimpot Sensitivity Potentiometer */}
+                <mesh position={[-4.5, -standoffH - 3.6, -10.5]}>
+                  <boxGeometry args={[6.5, 4.5, 6.5]} />
+                  <meshStandardMaterial color="#2563eb" roughness={0.5} />
                 </mesh>
-                {/* 2x Silver M3 Flange Screws (exact 18mm pitch matching Top laser-cut holes!) */}
-                {[-9, 9].map((sx, si) => (
-                  <mesh key={si} position={[sx, 0.2, -3.5]}>
-                    <cylinderGeometry args={[1.6, 1.6, 1.4, 10]} />
-                    <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
-                  </mesh>
-                ))}
-                {/* Twin White Wired Lead tucked rearward along ceiling */}
-                <mesh position={[0, 1.5, -16]} rotation={[Math.PI / 2, 0, 0]}>
-                  <cylinderGeometry args={[1.1, 1.1, 22, 8]} />
-                  <meshStandardMaterial color="#e2e8f0" roughness={0.55} />
-                </mesh>
-                {/* Live Magnetic Reed State Indicator (Emerald = Closed, Amber = Door Opened!) */}
-                <mesh position={[0, -4.2, 4.5]}>
-                  <sphereGeometry args={[1.8, 10, 10]} />
+                {/* Live MQ-2 Status LED (Green = Normal, Red = Fire Cut-Off Alarm!) */}
+                <mesh position={[5.2, -standoffH - 2.2, -10.5]}>
+                  <sphereGeometry args={[1.9, 10, 10]} />
                   <meshStandardMaterial
-                    color={reed.open ? '#fbbf24' : '#22c55e'}
-                    emissive={reed.open ? '#fbbf24' : '#22c55e'}
-                    emissiveIntensity={3}
+                    color={smokeAlarm ? '#ef4444' : '#22c55e'}
+                    emissive={smokeAlarm ? '#ef4444' : '#22c55e'}
+                    emissiveIntensity={3.5}
                     toneMapped={false}
                   />
                 </mesh>
+                {/* 4x Rear Header Pins + Clean Sleeved Jumper Cable straight back into Ø8mm Back Partition hole */}
+                {[-3.8, -1.3, 1.3, 3.8].map((px, pi) => (
+                  <mesh key={pi} position={[px, -standoffH - 1.5, -18.5]} rotation={[Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[0.45, 0.45, 6, 6]} />
+                    <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.2} />
+                  </mesh>
+                ))}
+                <mesh position={[0, -standoffH - 1.5, -36]} rotation={[Math.PI / 2, 0, 0]}>
+                  <boxGeometry args={[9, 36, 2.4]} />
+                  <meshStandardMaterial color="#111622" roughness={0.78} />
+                </mesh>
               </group>
-            ))}
+            </ExplodeGroup>
+
+            {/* 2x White MC-38 Magnetic Door Reed Switches (ride up with Top Panel in Full Explode!) */}
+            <ExplodeGroup amount={devE} dir={[0, 0.96, 0]}>
+              {[
+                { key: 'mc38-pc', x: -halfL + dividerX - 44, open: doorPcOpen },
+                { key: 'mc38-lap', x: -halfL + dividerX + 44, open: doorLapOpen },
+              ].map((reed) => (
+                <group key={reed.key} position={[reed.x, mq2TopY - 4.5, halfW - 16]}>
+                  {/* Cream 3M Adhesive Foam Backing Pad */}
+                  <mesh position={[0, 4.1, 0]}>
+                    <boxGeometry args={[27, 1.0, 14]} />
+                    <meshStandardMaterial color="#e7e0c9" roughness={0.85} />
+                  </mesh>
+                  {/* White ABS Reed Switch Block (27 × 7.5 × 8 mm) + Side Mounting Flange (14 mm deep) */}
+                  <mesh position={[0, 0, 2.5]}>
+                    <boxGeometry args={[27, 7.5, 8]} />
+                    <meshStandardMaterial color="#f1f5f9" roughness={0.42} />
+                  </mesh>
+                  <mesh position={[0, 2.2, -3.2]}>
+                    <boxGeometry args={[27, 3.0, 6]} />
+                    <meshStandardMaterial color="#f1f5f9" roughness={0.42} />
+                  </mesh>
+                  {/* 2x Silver M3 Flange Screws (exact 18mm pitch matching Top laser-cut holes!) */}
+                  {[-9, 9].map((sx, si) => (
+                    <mesh key={si} position={[sx, 0.2, -3.5]}>
+                      <cylinderGeometry args={[1.6, 1.6, 1.4, 10]} />
+                      <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
+                    </mesh>
+                  ))}
+                  {/* Twin White Wired Lead tucked rearward along ceiling */}
+                  <mesh position={[0, 1.5, -16]} rotation={[Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[1.1, 1.1, 22, 8]} />
+                    <meshStandardMaterial color="#e2e8f0" roughness={0.55} />
+                  </mesh>
+                  {/* Live Magnetic Reed State Indicator (Emerald = Closed, Amber = Door Opened!) */}
+                  <mesh position={[0, -4.2, 4.5]}>
+                    <sphereGeometry args={[1.8, 10, 10]} />
+                    <meshStandardMaterial
+                      color={reed.open ? '#fbbf24' : '#22c55e'}
+                      emissive={reed.open ? '#fbbf24' : '#22c55e'}
+                      emissiveIntensity={3}
+                      toneMapped={false}
+                    />
+                  </mesh>
+                </group>
+              ))}
+            </ExplodeGroup>
           </group>
         );
       })()}
@@ -1039,7 +1104,8 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
       {/* Zero floating! Mini PDU & 3x Power Bricks rest solidly on the ventilated Rear Floor acrylic shelf
           and are held tightly against Back Partition by 3D-printed matte-black U-Cradle Holsters + M3 bolts. */}
       {showWiring && (
-        <group position={[0, legH + t, -halfW - Math.min(22, wiringDepth * 0.38)]}>
+        <ExplodeGroup amount={devE} dir={[0, -0.45, -0.78]}>
+          <group position={[0, legH + t, -halfW - Math.min(22, wiringDepth * 0.38)]}>
           {/* 1. Mini 4-Outlet PDU Power Strip seated squarely on Rear Floor (bottom touches Y = 0!) */}
           <group position={[-halfL + 128, 24, 0]}>
             <mesh>
@@ -1137,12 +1203,14 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
             <cylinderGeometry args={[4.4, 4.4, 36, 12]} />
             <meshStandardMaterial color="#0f1218" roughness={0.75} />
           </mesh>
-        </group>
+          </group>
+        </ExplodeGroup>
       )}
 
       {/* ================= RIGHT EXTERIOR WALL: SINGLE UNIFIED IOT BOX (OPSI D • 196×126×64mm) ================= */}
-      {/* Roomy 1:1 Real-Scale Box: Front OLED 0.96" + Front-Side Intake Louvers + Rear-Side 40mm Cross-Flow Fan */}
-      <group position={[halfL + 32, legH + H * 0.5, 0]}>
+      {/* Roomy 1:1 Real-Scale Box: flies cleanly past Right Wall (+1.45e) in Full Explode mode! */}
+      <ExplodeGroup amount={devE} dir={[1.45, 0, 0]}>
+        <group position={[halfL + 32, legH + H * 0.5, 0]}>
         {/* Matte-Black Midnight Unified IoT Enclosure (64mm depth x 126mm height x 196mm width) */}
         <mesh castShadow receiveShadow>
           <boxGeometry args={[64, 126, 196]} />
@@ -1217,7 +1285,8 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
             roughness={0.2}
           />
         </mesh>
-      </group>
+        </group>
+      </ExplodeGroup>
     </group>
   );
 };

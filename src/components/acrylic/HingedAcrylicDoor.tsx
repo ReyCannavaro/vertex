@@ -36,6 +36,7 @@ export const HingedAcrylicDoor: React.FC<HingedAcrylicDoorProps> = ({
   onSelect,
   onToggleDoor,
 }) => {
+  const outerGroupRef = useRef<THREE.Group>(null);
   const pivotRef = useRef<THREE.Group>(null);
   const currentRadRef = useRef(0);
 
@@ -48,7 +49,8 @@ export const HingedAcrylicDoor: React.FC<HingedAcrylicDoorProps> = ({
   const isLeft = side === 'left';
   // Exact physical hinge pin axis right outside the front corner so door swings 0..135° with zero clipping
   const pivotX = isLeft ? -halfL + t - 1 : halfL - t + 1;
-  const pivotZ = halfW + 2.2 + explodeAmount;
+  const targetPivotZ = halfW + 2.2 + explodeAmount;
+  const currentPivotZRef = useRef(targetPivotZ);
 
   // Local offset from hinge pin to door mesh center
   const meshOffsetX = isLeft ? panel.width / 2 + 1 : -panel.width / 2 - 1;
@@ -73,8 +75,9 @@ export const HingedAcrylicDoor: React.FC<HingedAcrylicDoorProps> = ({
     };
   }, [geometry]);
 
-  // Buttery-smooth 60fps spring-damped door swing animation
+  // Buttery-smooth 60fps spring-damped door swing + explode Z glide animation
   useFrame((_, delta) => {
+    const dt = Math.min(delta, 0.05);
     // Left door swings outward by negative Y rotation; Right door swings outward by positive Y rotation
     const clampedDeg = Math.min(Math.max(0, targetAngleDeg), 135);
     const targetRad = THREE.MathUtils.degToRad(clampedDeg) * (isLeft ? -1 : 1);
@@ -82,10 +85,19 @@ export const HingedAcrylicDoor: React.FC<HingedAcrylicDoorProps> = ({
       currentRadRef.current,
       targetRad,
       6.5,
-      Math.min(delta, 0.05)
+      dt
     );
     if (pivotRef.current) {
       pivotRef.current.rotation.y = currentRadRef.current;
+    }
+    currentPivotZRef.current = THREE.MathUtils.damp(
+      currentPivotZRef.current,
+      targetPivotZ,
+      7.5,
+      dt
+    );
+    if (outerGroupRef.current) {
+      outerGroupRef.current.position.z = currentPivotZRef.current;
     }
   });
 
@@ -93,7 +105,7 @@ export const HingedAcrylicDoor: React.FC<HingedAcrylicDoorProps> = ({
   const dir = isLeft ? 1 : -1;
 
   return (
-    <group position={[pivotX, doorCenterY, pivotZ]}>
+    <group ref={outerGroupRef} position={[pivotX, doorCenterY, currentPivotZRef.current]}>
       {/* Stationary Hinge Frame Leaves (bolted to Left / Right outer acrylic wall) & Knuckle Barrels */}
       {hingeYs.map((hy, idx) => (
         <group key={`hinge-fixed-${idx}`} position={[0, hy, 0]}>

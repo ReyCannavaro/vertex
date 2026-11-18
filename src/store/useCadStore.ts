@@ -885,6 +885,7 @@ interface CadStoreState {
   gridSize: number;
   snapToGrid: boolean;
   explodeAmount: number;
+  explodeMode: 'frame' | 'all'; // 'frame' = acrylic panels only, 'all' = panels + all hardware & IoT devices!
   dustFilterSlide: number; // 0 = seated under bottom, >0 = slid forward out of slot
   doorLeftAngle: number; // degrees (0 = closed, 130 = wide open outward)
   doorRightAngle: number; // degrees (0 = closed, 130 = wide open outward)
@@ -911,6 +912,7 @@ interface CadStoreState {
   setGridSize: (size: number) => void;
   setSnapToGrid: (snap: boolean) => void;
   setExplodeAmount: (amount: number) => void;
+  setExplodeMode: (mode: 'frame' | 'all') => void;
   setDustFilterSlide: (slide: number) => void;
   setDoorLeftAngle: (deg: number) => void;
   setDoorRightAngle: (deg: number) => void;
@@ -961,6 +963,7 @@ export const useCadStore = create<CadStoreState>()(
   gridSize: 10,
   snapToGrid: true,
   explodeAmount: 0,
+  explodeMode: 'frame',
   dustFilterSlide: 0,
   doorLeftAngle: 0,
   doorRightAngle: 0,
@@ -983,6 +986,11 @@ export const useCadStore = create<CadStoreState>()(
   setGridSize: (gridSize) => set({ gridSize }),
   setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
   setExplodeAmount: (explodeAmount) => set({ explodeAmount }),
+  setExplodeMode: (explodeMode) =>
+    set((state) => ({
+      explodeMode,
+      explodeAmount: state.explodeAmount === 0 ? 85 : state.explodeAmount,
+    })),
   setDustFilterSlide: (dustFilterSlide) => set({ dustFilterSlide }),
   setDoorLeftAngle: (doorLeftAngle) => set({ doorLeftAngle }),
   setDoorRightAngle: (doorRightAngle) => set({ doorRightAngle }),

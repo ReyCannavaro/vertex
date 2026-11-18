@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
+import * as THREE from 'three';
+import { useFrame } from '@react-three/fiber';
 import { Edges } from '@react-three/drei';
 import { AcrylicPanel, CaseDimensions } from '../../types/cad';
 import {
@@ -25,6 +27,8 @@ export const AcrylicPanelMesh: React.FC<AcrylicPanelMeshProps> = ({
   ledColor,
   onSelect,
 }) => {
+  const meshRef = useRef<THREE.Mesh>(null);
+
   const geometry = useMemo(
     () => buildPanelExtrudeGeometry(panel, caseDims.thickness),
     [panel, caseDims.thickness]
@@ -41,6 +45,20 @@ export const AcrylicPanelMesh: React.FC<AcrylicPanelMeshProps> = ({
     [panel.id, caseDims, explodeAmount]
   );
 
+  const currentPosRef = useRef<[number, number, number]>([...position]);
+
+  // Smooth 60fps spring-damped explode/collapse glide for every acrylic panel
+  useFrame((_, delta) => {
+    const dt = Math.min(delta, 0.05);
+    const cur = currentPosRef.current;
+    cur[0] = THREE.MathUtils.damp(cur[0], position[0], 7.5, dt);
+    cur[1] = THREE.MathUtils.damp(cur[1], position[1], 7.5, dt);
+    cur[2] = THREE.MathUtils.damp(cur[2], position[2], 7.5, dt);
+    if (meshRef.current) {
+      meshRef.current.position.set(cur[0], cur[1], cur[2]);
+    }
+  });
+
   // Edge-lit acrylic simulation: active panel highlights bright sky/gold, others glow Ice Blue when LED is on
   const edgeColor = isActive
     ? '#38bdf8'
@@ -50,8 +68,9 @@ export const AcrylicPanelMesh: React.FC<AcrylicPanelMeshProps> = ({
 
   return (
     <mesh
+      ref={meshRef}
       geometry={geometry}
-      position={position}
+      position={currentPosRef.current}
       rotation={rotation}
       onClick={(e) => {
         e.stopPropagation();

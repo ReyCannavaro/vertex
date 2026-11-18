@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
+import React, { useMemo, useRef } from 'react';
+import * as THREE from 'three';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, Grid, Lightformer, OrbitControls } from '@react-three/drei';
 import { Cpu, DoorClosed, DoorOpen, Filter, Layers, Play, Sparkles } from 'lucide-react';
 import { useCadStore } from '../../store/useCadStore';
@@ -8,6 +9,31 @@ import { AcrylicPanelMesh } from './AcrylicPanelMesh';
 import { HingedAcrylicDoor } from './HingedAcrylicDoor';
 import { HardwareMockup } from './HardwareMockup';
 import { computeEffectiveIoTState } from '../../utils/iotSimulation';
+
+const SmoothOffsetGroup: React.FC<{
+  target: [number, number, number];
+  children: React.ReactNode;
+}> = ({ target, children }) => {
+  const ref = useRef<THREE.Group>(null);
+  const curRef = useRef<[number, number, number]>([...target]);
+
+  useFrame((_, delta) => {
+    const dt = Math.min(delta, 0.05);
+    const cur = curRef.current;
+    cur[0] = THREE.MathUtils.damp(cur[0], target[0], 7.5, dt);
+    cur[1] = THREE.MathUtils.damp(cur[1], target[1], 7.5, dt);
+    cur[2] = THREE.MathUtils.damp(cur[2], target[2], 7.5, dt);
+    if (ref.current) {
+      ref.current.position.set(cur[0], cur[1], cur[2]);
+    }
+  });
+
+  return (
+    <group ref={ref} position={curRef.current}>
+      {children}
+    </group>
+  );
+};
 
 /**
  * Door-safe, flush-clearance 3D-printed matte-black structural brackets:
@@ -24,6 +50,9 @@ const StructuralFrameBrackets: React.FC = () => {
   const dims = useCadStore((s) => s.caseDims);
   const middleEnabled = useCadStore((s) => s.panels.middle.enabled);
   const dividerEnabled = useCadStore((s) => s.panels.divider.enabled);
+  const explodeAmount = useCadStore((s) => s.explodeAmount);
+  const explodeMode = useCadStore((s) => s.explodeMode);
+  const be = explodeMode === 'all' ? explodeAmount : 0;
 
   const {
     length: L,
@@ -101,24 +130,36 @@ const StructuralFrameBrackets: React.FC = () => {
 
   return (
     <group>
-      {/* 4x Rear Outer Corner 3-Way Brackets (at back of Rear Wiring Chamber) */}
+      {/* 4x Rear Outer Corner 3-Way Brackets (expand outward with Rear Cover + Top/Bottom + Sides!) */}
       {[-1, 1].map((sx) =>
-        [-1, 1].map((sy) => renderRearCorner(sx, sy, `cr-${sx}-${sy}`))
+        [-1, 1].map((sy) => (
+          <SmoothOffsetGroup
+            key={`cr-g-${sx}-${sy}`}
+            target={[sx * be * 1.15, sy > 0 ? be * 1.1 : -be * 0.45, -be * 1.45]}
+          >
+            {renderRearCorner(sx, sy, `cr-${sx}-${sy}`)}
+          </SmoothOffsetGroup>
+        ))
       )}
 
-      {/* 4x Recessed Front Interior Corner L-Brackets (clear of Hinged Doors & MC-38 Sensors!) */}
+      {/* 4x Recessed Front Interior Corner L-Brackets (expand outward cleanly with Front Corners!) */}
       {[-1, 1].map((sx) =>
-        [-1, 1].map((sy) =>
-          renderInternalL(
-            [
-              sx * (halfL - t - 10),
-              sy > 0 ? legH + H - t - 10 : legH + t + 10,
-              halfW - 34, // recessed 34mm back from front door plane!
-            ],
-            [18, 18, 16],
-            `front-int-l-${sx}-${sy}`
-          )
-        )
+        [-1, 1].map((sy) => (
+          <SmoothOffsetGroup
+            key={`front-int-g-${sx}-${sy}`}
+            target={[sx * be * 0.85, sy > 0 ? be * 0.85 : -be * 0.3, be * 0.35]}
+          >
+            {renderInternalL(
+              [
+                sx * (halfL - t - 10),
+                sy > 0 ? legH + H - t - 10 : legH + t + 10,
+                halfW - 34, // recessed 34mm back from front door plane!
+              ],
+              [18, 18, 16],
+              `front-int-l-${sx}-${sy}`
+            )}
+          </SmoothOffsetGroup>
+        ))
       )}
 
       {/* 4x Recessed Interior L-Brackets anchoring Divider to Top & Bottom (2 Top + 2 Bottom) */}
@@ -127,25 +168,29 @@ const StructuralFrameBrackets: React.FC = () => {
           {[halfW - 36, -halfW + 32].map((dz, idx) => (
             <React.Fragment key={`div-l-${idx}`}>
               {/* Top Divider L-Bracket */}
-              {renderInternalL(
-                [divX + 11, legH + H - t - 10, dz],
-                [16, 16, 18],
-                `div-top-l-${idx}`
-              )}
+              <SmoothOffsetGroup target={[0, be * 0.78, 0]}>
+                {renderInternalL(
+                  [divX + 11, legH + H - t - 10, dz],
+                  [16, 16, 18],
+                  `div-top-l-${idx}`
+                )}
+              </SmoothOffsetGroup>
               {/* Bottom Divider L-Bracket */}
-              {renderInternalL(
-                [divX + 11, legH + t + 10, dz],
-                [16, 16, 18],
-                `div-bot-l-${idx}`
-              )}
+              <SmoothOffsetGroup target={[0, -be * 0.3, 0]}>
+                {renderInternalL(
+                  [divX + 11, legH + t + 10, dz],
+                  [16, 16, 18],
+                  `div-bot-l-${idx}`
+                )}
+              </SmoothOffsetGroup>
             </React.Fragment>
           ))}
         </>
       )}
 
-      {/* 6x Heavy-Duty Underside L-Brackets supporting Middle Laptop Shelf on 3 sides (2 Left Divider + 2 Right Wall + 2 Back) */}
+      {/* 6x Heavy-Duty Underside L-Brackets supporting Middle Laptop Shelf (glide right with Middle Shelf!) */}
       {middleEnabled && (
-        <>
+        <SmoothOffsetGroup target={[be * 0.35, 0, 0]}>
           {/* 2x Left-Side Underside L-Brackets bolted to Divider wide face (recessed behind doors!) */}
           {[halfW - 32, -halfW + 32].map((bz, idx) =>
             renderInternalL(
@@ -173,40 +218,50 @@ const StructuralFrameBrackets: React.FC = () => {
               `mid-rear-l-${idx}`
             );
           })}
-        </>
+        </SmoothOffsetGroup>
       )}
 
       {/* 2x Underside L-Brackets anchoring the Center Anti-Sag Foot beneath the E-Track Center Spine */}
-      {legH > 12 &&
-        [halfW - 36, -halfW + 36].map((fz, i) =>
-          renderInternalL([divX, legH - 11, fz], [16, 10, 18], `cf-clip-${i}`)
-        )}
+      {legH > 12 && (
+        <SmoothOffsetGroup target={[0, -be * 0.85, 0]}>
+          {[halfW - 36, -halfW + 36].map((fz, i) =>
+            renderInternalL([divX, legH - 11, fz], [16, 10, 18], `cf-clip-${i}`)
+          )}
+        </SmoothOffsetGroup>
+      )}
 
       {/* 2x Underside L-Brackets supporting the Rear Chamber Floor (holds Mini PDU & 3x Power Bricks) */}
-      {[-1, 1].map((sx) =>
-        renderInternalL(
-          [sx * (halfL - t - 10), legH - 9, -halfW - wDepth * 0.5],
-          [16, 14, 18],
-          `rf-sup-${sx}`
-        )
-      )}
+      {[-1, 1].map((sx) => (
+        <SmoothOffsetGroup
+          key={`rf-sup-g-${sx}`}
+          target={[sx * be * 0.45, -be * 0.5, -be * 0.55]}
+        >
+          {renderInternalL(
+            [sx * (halfL - t - 10), legH - 9, -halfW - wDepth * 0.5],
+            [16, 14, 18],
+            `rf-sup-${sx}`
+          )}
+        </SmoothOffsetGroup>
+      ))}
 
       {/* Center Magnetic Door Catch Latch mounted cleanly at Top-Front of Divider (100% unobstructed!) */}
       {dividerEnabled && (
-        <group position={[divX, legH + H - 28, halfW - 11]}>
-          <mesh>
-            <boxGeometry args={[28, 12, 14]} />
-            {bracketMat}
-          </mesh>
-          <mesh position={[-8, 0, 7.2]}>
-            <boxGeometry args={[9, 8, 1.5]} />
-            {screwMat}
-          </mesh>
-          <mesh position={[8, 0, 7.2]}>
-            <boxGeometry args={[9, 8, 1.5]} />
-            {screwMat}
-          </mesh>
-        </group>
+        <SmoothOffsetGroup target={[0, be * 0.45, be * 0.45]}>
+          <group position={[divX, legH + H - 28, halfW - 11]}>
+            <mesh>
+              <boxGeometry args={[28, 12, 14]} />
+              {bracketMat}
+            </mesh>
+            <mesh position={[-8, 0, 7.2]}>
+              <boxGeometry args={[9, 8, 1.5]} />
+              {screwMat}
+            </mesh>
+            <mesh position={[8, 0, 7.2]}>
+              <boxGeometry args={[9, 8, 1.5]} />
+              {screwMat}
+            </mesh>
+          </group>
+        </SmoothOffsetGroup>
       )}
     </group>
   );
@@ -320,6 +375,7 @@ export const Preview3DAssembly: React.FC = () => {
   const panels = useCadStore((s) => s.panels);
   const activePanelId = useCadStore((s) => s.activePanelId);
   const explodeAmount = useCadStore((s) => s.explodeAmount);
+  const explodeMode = useCadStore((s) => s.explodeMode);
   const dustFilterSlide = useCadStore((s) => s.dustFilterSlide);
   const doorLeftAngle = useCadStore((s) => s.doorLeftAngle);
   const doorRightAngle = useCadStore((s) => s.doorRightAngle);
@@ -338,6 +394,7 @@ export const Preview3DAssembly: React.FC = () => {
 
   const setActivePanelId = useCadStore((s) => s.setActivePanelId);
   const setExplodeAmount = useCadStore((s) => s.setExplodeAmount);
+  const setExplodeMode = useCadStore((s) => s.setExplodeMode);
   const setDustFilterSlide = useCadStore((s) => s.setDustFilterSlide);
   const setDoorLeftAngle = useCadStore((s) => s.setDoorLeftAngle);
   const setDoorRightAngle = useCadStore((s) => s.setDoorRightAngle);
@@ -420,18 +477,50 @@ export const Preview3DAssembly: React.FC = () => {
           />
         </div>
 
-        {/* Explode View Control */}
-        <div className="flex items-center gap-1 text-xs text-slate-300" title="Exploded View">
-          <Layers className="w-3.5 h-3.5 text-sky-400" />
+        {/* Explode View Control (Frame-only vs Full All-Devices Explode) */}
+        <div className="flex items-center gap-1 text-xs text-slate-300" title="Exploded View (Klik ikon untuk toggle cepat)">
+          <button
+            onClick={() => setExplodeAmount(explodeAmount > 0 ? 0 : 85)}
+            className={`p-0.5 rounded transition ${
+              explodeAmount > 0 ? 'text-sky-300 bg-sky-500/20' : 'text-sky-400 hover:bg-slate-800'
+            }`}
+            title={explodeAmount > 0 ? 'Rapatkan Kembali (0mm)' : 'Sebar Exploded View (85mm)'}
+          >
+            <Layers className="w-3.5 h-3.5" />
+          </button>
           <input
             type="range"
             min={0}
-            max={110}
+            max={120}
             step={5}
             value={explodeAmount}
             onChange={(e) => setExplodeAmount(Number(e.target.value))}
             className="w-12 cursor-pointer"
           />
+          <div className="flex items-center bg-slate-950/90 border border-slate-700/80 rounded p-0.5 text-[10px]">
+            <button
+              onClick={() => setExplodeMode('frame')}
+              className={`px-1.5 py-0.5 rounded font-medium transition ${
+                explodeMode === 'frame'
+                  ? 'bg-sky-500/25 text-sky-200'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Hanya buka panel frame akrilik (perangkat tetap di tempat)"
+            >
+              Frame
+            </button>
+            <button
+              onClick={() => setExplodeMode('all')}
+              className={`px-1.5 py-0.5 rounded font-medium transition ${
+                explodeMode === 'all'
+                  ? 'bg-emerald-500/25 text-emerald-200'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Sebar seluruh frame akrilik + PC, Laptop, Kipas, Sensor, Adaptor & IoT Box!"
+            >
+              Semua
+            </button>
+          </div>
         </div>
 
         <div className="w-px h-4 bg-slate-700" />
@@ -526,6 +615,8 @@ export const Preview3DAssembly: React.FC = () => {
             smokeAlarm={effectiveIot.smokeAlarm}
             doorPcOpen={effectiveIot.doorPcOpen}
             doorLapOpen={effectiveIot.doorLapOpen}
+            explodeAmount={explodeAmount}
+            explodeMode={explodeMode}
           />
         )}
 
