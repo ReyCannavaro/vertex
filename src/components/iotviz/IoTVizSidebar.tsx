@@ -130,7 +130,7 @@ export const IoTVizSidebar: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-slate-200 font-medium">
                   <Flame className="w-3.5 h-3.5 text-rose-400" />
-                  MQ-2 Asap (GPIO34)
+                  MQ-2 Asap (GPIO35 • Shifter)
                 </span>
                 <span
                   className={`font-mono font-semibold ${

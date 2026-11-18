@@ -326,8 +326,23 @@ const InternalElectronicsScene: React.FC<{
         ))}
       </group>
 
-      {/* ================= 4. ACTIVE BUZZER 5V ================= */}
-      <BuzzerModule3D active={eff.buzzerActive} position={[-6, 15, -14]} />
+      {/* ================= 4. ACTIVE BUZZER 5V + LOGIC LEVEL SHIFTER 4-CH ================= */}
+      <BuzzerModule3D active={eff.buzzerActive} position={[-12, 15, -14]} />
+
+      {/* Miniature Blue Logic Level Shifter 4-Ch (3.3V <-> 5V, Zero-Resistor Protector) */}
+      <group position={[4, 15, -15]}>
+        <mesh>
+          <boxGeometry args={[14, 16, 2]} />
+          <meshStandardMaterial color="#0284c7" roughness={0.45} metalness={0.2} />
+        </mesh>
+        {/* 4x tiny black SOT-23 BSS138 MOSFETs */}
+        {[-4.5, -1.5, 1.5, 4.5].map((my, i) => (
+          <mesh key={i} position={[0, my, 1.5]}>
+            <boxGeometry args={[3.5, 2, 1.2]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.6} />
+          </mesh>
+        ))}
+      </group>
 
       {/* ================= 5. RIGHT-SIDE 40mm 5V CROSS-FLOW COOLING FAN ================= */}
       <Spinning5VFan active={eff.relayIotOn} position={[L / 2 - 7, H / 2, -2]} />
@@ -414,7 +429,7 @@ export const IoTInternal3DPreview: React.FC = () => {
 
       {/* Bottom Legend */}
       <div className="absolute bottom-3 left-3 z-10 pointer-events-none text-[11px] font-mono text-slate-400 px-2.5 py-1 rounded bg-slate-900/85 border border-slate-800">
-        ESP32 38-Pin + Screw Terminal • Buck 12V→5V • Relay 4-Ch • Buzzer • Kipas 40mm 5V • Live OLED
+        ESP32 38-Pin + Screw Terminal • Buck 12V→5V • Level Shifter 4-Ch • Relay 4-Ch • Buzzer • Kipas 40mm 5V • Live OLED
       </div>
 
       <Canvas
