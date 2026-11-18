@@ -164,24 +164,33 @@ function isCircleInsidePanel(
 }
 
 /**
- * Computes exact 3D assembly world transform [position, rotation] for each panel
- * so all 6 outer walls + optional middle tray assemble cleanly into a watertight acrylic case.
- * Units: 1 Three.js unit = 1 mm. Bottom of case rests at y = 0.
+ * Computes exact 3D assembly world transform [position, rotation] for all 11 laser-cut panels:
+ * - Elevated main chamber supported by Left & Right integrated chamfered acrylic legs (bottom feet at Y = 0)
+ * - Slide-in U-shaped Dust Filter Rail directly beneath the Bottom floor
+ * - Dedicated Rear Wiring Chamber behind the Back partition with slotted Acrylic Cable Comb & Rear Cover
  */
 export function getPanelAssemblyTransform(
   panelId: PanelId,
   dims: CaseDimensions,
   explodeAmount: number
 ): { position: [number, number, number]; rotation: [number, number, number] } {
-  const { length: L, width: W, height: H, thickness: t, dividerX, middleTrayY } = dims;
+  const {
+    length: L,
+    width: W,
+    height: H,
+    thickness: t,
+    dividerX,
+    middleTrayY,
+    legHeight: legH,
+    wiringDepth: wDepth,
+  } = dims;
+
   const halfL = L / 2;
   const halfW = W / 2;
-  const centerY = H / 2;
+  const wallH = H - t;
   const e = explodeAmount;
 
-  // Center X of vertical divider wall separating Left PC Bay & Right Laptop Bay
   const divCenterX = -halfL + dividerX;
-  // Center X of Right-Bay Middle Laptop Shelf (spans from divider right face to right outer wall inner face)
   const rightInnerStart = divCenterX + t / 2;
   const rightInnerEnd = halfL - t;
   const middleCenterX = (rightInnerStart + rightInnerEnd) / 2;
@@ -189,42 +198,57 @@ export function getPanelAssemblyTransform(
   switch (panelId) {
     case 'bottom':
       return {
-        position: [0, t / 2 - e * 0.6, 0],
+        position: [0, legH + t / 2 - e * 0.35, 0],
+        rotation: [-Math.PI / 2, 0, 0],
+      };
+    case 'filter-rail':
+      return {
+        position: [0, legH - t / 2 - e * 0.75, 0],
         rotation: [-Math.PI / 2, 0, 0],
       };
     case 'top':
       return {
-        position: [0, H - t / 2 + e, 0],
+        position: [0, legH + H - t / 2 + e, -wDepth / 2],
         rotation: [-Math.PI / 2, 0, 0],
       };
     case 'divider':
       return {
-        position: [divCenterX, centerY, 0],
+        position: [divCenterX, legH + H / 2, 0],
         rotation: [0, Math.PI / 2, 0],
       };
     case 'middle':
       return {
-        position: [middleCenterX + e * 0.35, middleTrayY, 0],
+        position: [middleCenterX + e * 0.35, legH + middleTrayY, 0],
         rotation: [-Math.PI / 2, 0, 0],
       };
     case 'front':
       return {
-        position: [0, centerY, halfW - t / 2 + e],
+        position: [0, legH + wallH / 2, halfW - t / 2 + e],
         rotation: [0, 0, 0],
       };
     case 'back':
       return {
-        position: [0, centerY, -halfW + t / 2 - e],
+        position: [0, legH + wallH / 2, -halfW + t / 2 - e * 0.35],
+        rotation: [0, Math.PI, 0],
+      };
+    case 'cable-comb':
+      return {
+        position: [0, legH + H * 0.52, -halfW - (wDepth - t) / 2 - e * 0.85],
+        rotation: [-Math.PI / 2, 0, 0],
+      };
+    case 'rear-cover':
+      return {
+        position: [0, legH + wallH / 2, -halfW - wDepth + t / 2 - e * 1.4],
         rotation: [0, Math.PI, 0],
       };
     case 'right':
       return {
-        position: [halfL - t / 2 + e, centerY, 0],
+        position: [halfL - t / 2 + e, (wallH + legH) / 2, -wDepth / 2],
         rotation: [0, Math.PI / 2, 0],
       };
     case 'left':
       return {
-        position: [-halfL + t / 2 - e, centerY, 0],
+        position: [-halfL + t / 2 - e, (wallH + legH) / 2, -wDepth / 2],
         rotation: [0, -Math.PI / 2, 0],
       };
   }

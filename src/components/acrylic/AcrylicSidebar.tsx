@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Cable,
   CircleDot,
   Cpu,
   Fan,
@@ -23,13 +24,16 @@ import {
 } from '../../utils/svgExporter';
 
 const PANEL_ORDER: PanelId[] = [
+  'left',
+  'right',
   'bottom',
+  'filter-rail',
   'top',
   'divider',
   'middle',
-  'right',
-  'left',
   'back',
+  'cable-comb',
+  'rear-cover',
   'front',
 ];
 
@@ -39,14 +43,18 @@ export const AcrylicSidebar: React.FC = () => {
   const activePanelId = useCadStore((s) => s.activePanelId);
   const selectedHoleId = useCadStore((s) => s.selectedHoleId);
   const gridSize = useCadStore((s) => s.gridSize);
+  const dustFilterSlide = useCadStore((s) => s.dustFilterSlide);
   const showBrackets = useCadStore((s) => s.showBrackets);
   const showHardwareMockup = useCadStore((s) => s.showHardwareMockup);
+  const showWiring = useCadStore((s) => s.showWiring);
   const ledEnabled = useCadStore((s) => s.ledEnabled);
 
   const setActivePanelId = useCadStore((s) => s.setActivePanelId);
   const setGridSize = useCadStore((s) => s.setGridSize);
+  const setDustFilterSlide = useCadStore((s) => s.setDustFilterSlide);
   const setShowBrackets = useCadStore((s) => s.setShowBrackets);
   const setShowHardwareMockup = useCadStore((s) => s.setShowHardwareMockup);
+  const setShowWiring = useCadStore((s) => s.setShowWiring);
   const setLedEnabled = useCadStore((s) => s.setLedEnabled);
   const updateCaseDims = useCadStore((s) => s.updateCaseDims);
   const togglePanelEnabled = useCadStore((s) => s.togglePanelEnabled);
@@ -191,6 +199,57 @@ export const AcrylicSidebar: React.FC = () => {
             />
           </div>
         )}
+
+        {/* Integrated Acrylic Leg Height */}
+        <div className="space-y-1 pt-1">
+          <div className="flex justify-between text-[11px]">
+            <span className="text-slate-400">Tinggi Kaki Akrilik (Kiri/Kanan)</span>
+            <span className="font-mono text-sky-300">{caseDims.legHeight} mm</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={70}
+            step={2}
+            value={caseDims.legHeight}
+            onChange={(e) => updateCaseDims({ legHeight: Number(e.target.value) })}
+            className="w-full cursor-pointer"
+          />
+        </div>
+
+        {/* Rear Wiring Chamber Depth */}
+        <div className="space-y-1 pt-1">
+          <div className="flex justify-between text-[11px]">
+            <span className="text-slate-400">Kedalaman Ruang Wiring Belakang</span>
+            <span className="font-mono text-sky-300">{caseDims.wiringDepth} mm</span>
+          </div>
+          <input
+            type="range"
+            min={28}
+            max={80}
+            step={2}
+            value={caseDims.wiringDepth}
+            onChange={(e) => updateCaseDims({ wiringDepth: Number(e.target.value) })}
+            className="w-full cursor-pointer"
+          />
+        </div>
+
+        {/* Interactive Dust Filter Slide Out */}
+        <div className="space-y-1 pt-1">
+          <div className="flex justify-between text-[11px]">
+            <span className="text-slate-400">Tarik Dust Filter Bawah (3D)</span>
+            <span className="font-mono text-amber-300">{dustFilterSlide} mm</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={220}
+            step={5}
+            value={dustFilterSlide}
+            onChange={(e) => setDustFilterSlide(Number(e.target.value))}
+            className="w-full cursor-pointer"
+          />
+        </div>
       </section>
 
       <div className="border-t border-slate-800" />
@@ -475,6 +534,19 @@ export const AcrylicSidebar: React.FC = () => {
             checked={showHardwareMockup}
             onChange={(e) => setShowHardwareMockup(e.target.checked)}
             className="rounded accent-emerald-400"
+          />
+        </label>
+
+        <label className="flex items-center justify-between cursor-pointer py-0.5">
+          <span className="flex items-center gap-1.5 text-slate-300">
+            <Cable className="w-3.5 h-3.5 text-blue-400" />
+            Visualisasi Kabel Wiring Belakang
+          </span>
+          <input
+            type="checkbox"
+            checked={showWiring}
+            onChange={(e) => setShowWiring(e.target.checked)}
+            className="rounded accent-blue-400"
           />
         </label>
 

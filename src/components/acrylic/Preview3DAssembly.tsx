@@ -1,28 +1,38 @@
 import React, { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Environment, Grid, Lightformer, OrbitControls } from '@react-three/drei';
-import { Cpu, Layers, Sparkles } from 'lucide-react';
+import { Cpu, Filter, Layers, Sparkles } from 'lucide-react';
 import { useCadStore } from '../../store/useCadStore';
 import { AcrylicPanel } from '../../types/cad';
 import { AcrylicPanelMesh } from './AcrylicPanelMesh';
 import { HardwareMockup } from './HardwareMockup';
 
 /**
- * Matte-black industrial 3D-printed exterior Corner, T-Joint, and Cross (+) Brackets
- * with visible silver M3 hex screws — faithfully matching the dual-bay mini data center frame.
+ * Matte-black industrial exterior Corner, T-Joint, and Cross (+) Brackets with M3 screws.
+ * Elevated cleanly above the integrated acrylic legs (y = legHeight .. legHeight + H)
+ * and spanning back to cover the Rear Wiring Chamber.
  */
 const StructuralFrameBrackets: React.FC = () => {
   const dims = useCadStore((s) => s.caseDims);
   const middleEnabled = useCadStore((s) => s.panels.middle.enabled);
   const dividerEnabled = useCadStore((s) => s.panels.divider.enabled);
 
-  const { length: L, width: W, height: H, dividerX, middleTrayY } = dims;
+  const {
+    length: L,
+    width: W,
+    height: H,
+    dividerX,
+    middleTrayY,
+    legHeight: legH,
+    wiringDepth: wDepth,
+  } = dims;
   const halfL = L / 2;
   const halfW = W / 2;
+  const rearZ = -halfW - wDepth;
   const divX = -halfL + dividerX;
 
-  const arm = 26; // bracket arm length
-  const thick = 7; // bracket plate thickness
+  const arm = 26;
+  const thick = 7;
 
   const bracketMat = (
     <meshStandardMaterial color="#14171f" roughness={0.48} metalness={0.25} />
@@ -32,38 +42,33 @@ const StructuralFrameBrackets: React.FC = () => {
   );
 
   // Helper: 3-way outer corner bracket
-  const renderCorner = (sx: number, sy: number, sz: number, key: string) => {
+  const renderCorner = (sx: number, sy: number, zPos: number, szDir: number, key: string) => {
     const cx = sx * (halfL + 1);
-    const cy = sy > 0 ? H + 1 : -1;
-    const cz = sz * (halfW + 1);
+    const cy = sy > 0 ? legH + H + 1 : legH - 1;
+    const cz = zPos + szDir * 1;
     return (
       <group key={key} position={[cx, cy, cz]}>
-        {/* Corner Hub */}
         <mesh>
           <boxGeometry args={[12, 12, 12]} />
           {bracketMat}
         </mesh>
-        {/* Arm along X */}
-        <mesh position={[-sx * (arm / 2), -sy * 3, -sz * 3]}>
+        <mesh position={[-sx * (arm / 2), -sy * 3, -szDir * 3]}>
           <boxGeometry args={[arm, thick, thick]} />
           {bracketMat}
         </mesh>
-        {/* Arm along Y */}
-        <mesh position={[-sx * 3, -sy * (arm / 2), -sz * 3]}>
+        <mesh position={[-sx * 3, -sy * (arm / 2), -szDir * 3]}>
           <boxGeometry args={[thick, arm, thick]} />
           {bracketMat}
         </mesh>
-        {/* Arm along Z */}
-        <mesh position={[-sx * 3, -sy * 3, -sz * (arm / 2)]}>
+        <mesh position={[-sx * 3, -sy * 3, -szDir * (arm / 2)]}>
           <boxGeometry args={[thick, thick, arm]} />
           {bracketMat}
         </mesh>
-        {/* Silver M3 Screws */}
-        <mesh position={[-sx * (arm - 6), -sy * 3, sz * 1.2]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh position={[-sx * (arm - 6), -sy * 3, szDir * 1.2]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[2.1, 2.1, 2.5, 10]} />
           {screwMat}
         </mesh>
-        <mesh position={[-sx * 3, -sy * (arm - 6), sz * 1.2]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh position={[-sx * 3, -sy * (arm - 6), szDir * 1.2]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[2.1, 2.1, 2.5, 10]} />
           {screwMat}
         </mesh>
@@ -71,7 +76,6 @@ const StructuralFrameBrackets: React.FC = () => {
     );
   };
 
-  // Helper: T-Joint bracket at Top/Bottom Divider or Right-Wall Middle Shelf
   const renderTBracket = (
     pos: [number, number, number],
     rotZ: number,
@@ -79,17 +83,14 @@ const StructuralFrameBrackets: React.FC = () => {
     key: string
   ) => (
     <group key={key} position={pos} rotation={[0, 0, rotZ]}>
-      {/* Horizontal bar */}
       <mesh>
         <boxGeometry args={[arm * 1.85, 11, thick]} />
         {bracketMat}
       </mesh>
-      {/* Vertical stem */}
       <mesh position={[0, -arm * 0.48, 0]}>
         <boxGeometry args={[11, arm * 0.95, thick]} />
         {bracketMat}
       </mesh>
-      {/* M3 Screws */}
       {[-arm * 0.65, arm * 0.65].map((ox, i) => (
         <mesh key={i} position={[ox, 0, sz * 3.6]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[2.1, 2.1, 2, 10]} />
@@ -103,7 +104,6 @@ const StructuralFrameBrackets: React.FC = () => {
     </group>
   );
 
-  // Helper: Cross (+) 4-way bracket where Divider meets Middle Laptop Shelf
   const renderCrossBracket = (pos: [number, number, number], sz: number, key: string) => (
     <group key={key} position={pos}>
       <mesh>
@@ -130,50 +130,48 @@ const StructuralFrameBrackets: React.FC = () => {
 
   return (
     <group>
-      {/* 8 Outer Corner L-Brackets */}
+      {/* 4 Front Outer Corner Brackets (z = +halfW) + 4 Rear Outer Corner Brackets (z = -halfW - wDepth) */}
       {[-1, 1].map((sx) =>
-        [-1, 1].map((sy) =>
-          [-1, 1].map((sz) => renderCorner(sx, sy, sz, `c-${sx}-${sy}-${sz}`))
-        )
+        [-1, 1].map((sy) => (
+          <React.Fragment key={`corners-${sx}-${sy}`}>
+            {renderCorner(sx, sy, halfW, 1, `cf-${sx}-${sy}`)}
+            {renderCorner(sx, sy, rearZ, -1, `cr-${sx}-${sy}`)}
+          </React.Fragment>
+        ))
       )}
 
-      {/* 4 Divider T-Brackets (Top & Bottom, Front & Back) */}
-      {dividerEnabled &&
-        [-1, 1].map((sz) => (
-          <React.Fragment key={`div-t-${sz}`}>
-            {renderTBracket([divX, H - 3, sz * (halfW + 1)], 0, sz, `dt-top-${sz}`)}
-            {renderTBracket([divX, 3, sz * (halfW + 1)], Math.PI, sz, `dt-bot-${sz}`)}
-          </React.Fragment>
-        ))}
+      {/* 4 Divider T-Brackets (Top & Bottom, Front & Back of Main Chamber) */}
+      {dividerEnabled && (
+        <>
+          {renderTBracket([divX, legH + H - 3, halfW + 1], 0, 1, 'dt-top-f')}
+          {renderTBracket([divX, legH + 3, halfW + 1], Math.PI, 1, 'dt-bot-f')}
+          {renderTBracket([divX, legH + H - 3, -halfW - 1], 0, -1, 'dt-top-b')}
+          {renderTBracket([divX, legH + 3, -halfW - 1], Math.PI, -1, 'dt-bot-b')}
+        </>
+      )}
 
       {/* 2 Cross (+)-Brackets where Divider intersects Middle Laptop Shelf */}
-      {dividerEnabled &&
-        middleEnabled &&
-        [-1, 1].map((sz) =>
-          renderCrossBracket(
-            [divX, middleTrayY, sz * (halfW + 1)],
-            sz,
-            `cross-${sz}`
-          )
-        )}
+      {dividerEnabled && middleEnabled && (
+        <>
+          {renderCrossBracket([divX, legH + middleTrayY, halfW + 1], 1, 'cross-f')}
+          {renderCrossBracket([divX, legH + middleTrayY, -halfW - 1], -1, 'cross-b')}
+        </>
+      )}
 
       {/* 2 Right-Wall T-Brackets supporting the Middle Laptop Shelf */}
-      {middleEnabled &&
-        [-1, 1].map((sz) =>
-          renderTBracket(
-            [halfL - 3, middleTrayY, sz * (halfW + 1)],
-            -Math.PI / 2,
-            sz,
-            `rt-mid-${sz}`
-          )
-        )}
+      {middleEnabled && (
+        <>
+          {renderTBracket([halfL - 3, legH + middleTrayY, halfW + 1], -Math.PI / 2, 1, 'rt-mid-f')}
+          {renderTBracket([halfL - 3, legH + middleTrayY, -halfW - 1], -Math.PI / 2, -1, 'rt-mid-b')}
+        </>
+      )}
     </group>
   );
 };
 
 /**
  * Continuous diffused WS2812B Ice Blue (#A0E6FF) LED Neon Frame lining the inner perimeter
- * of both PC Bay and Laptop Bay — recreating the crisp luminous edge glow from the reference build.
+ * of both PC Bay and Laptop Bay (elevated cleanly above legHeight).
  */
 const PerimeterWs2812Leds: React.FC = () => {
   const dims = useCadStore((s) => s.caseDims);
@@ -183,7 +181,7 @@ const PerimeterWs2812Leds: React.FC = () => {
 
   if (!ledEnabled) return null;
 
-  const { length: L, width: W, height: H, thickness: t, dividerX } = dims;
+  const { length: L, width: W, height: H, thickness: t, dividerX, legHeight: legH } = dims;
   const halfL = L / 2;
   const halfW = W / 2;
   const divX = -halfL + dividerX;
@@ -203,7 +201,6 @@ const PerimeterWs2812Leds: React.FC = () => {
     />
   );
 
-  // Vertical posts X,Z positions (outer 4 corners + 2 at divider front/back)
   const verticalPosts: [number, number][] = [
     [-halfL + inset, halfW - inset],
     [-halfL + inset, -halfW + inset],
@@ -218,23 +215,22 @@ const PerimeterWs2812Leds: React.FC = () => {
 
   return (
     <group>
-      {/* Soft Ice Blue PointLights illuminating PC Bay & Laptop Bay interiors */}
       <pointLight
-        position={[-halfL + dividerX * 0.5, H * 0.65, 20]}
+        position={[-halfL + dividerX * 0.5, legH + H * 0.65, 20]}
         color={ledColor}
         intensity={26000}
         distance={680}
         decay={2}
       />
       <pointLight
-        position={[(-halfL + dividerX + halfL) * 0.5, H * 0.72, 20]}
+        position={[(-halfL + dividerX + halfL) * 0.5, legH + H * 0.72, 20]}
         color={ledColor}
         intensity={30000}
         distance={750}
         decay={2}
       />
       <pointLight
-        position={[(-halfL + dividerX + halfL) * 0.5, H * 0.25, 30]}
+        position={[(-halfL + dividerX + halfL) * 0.5, legH + H * 0.25, 30]}
         color={ledColor}
         intensity={18000}
         distance={600}
@@ -242,24 +238,24 @@ const PerimeterWs2812Leds: React.FC = () => {
       />
 
       {/* Top Perimeter Diffused LED Tubes */}
-      <mesh position={[0, H - inset, halfW - inset]}>
+      <mesh position={[0, legH + H - inset, halfW - inset]}>
         <boxGeometry args={[innerL, tubeR * 1.4, tubeR * 1.4]} />
         {ledMat}
       </mesh>
-      <mesh position={[0, H - inset, -halfW + inset]}>
+      <mesh position={[0, legH + H - inset, -halfW + inset]}>
         <boxGeometry args={[innerL, tubeR * 1.4, tubeR * 1.4]} />
         {ledMat}
       </mesh>
-      <mesh position={[-halfL + inset, H - inset, 0]}>
+      <mesh position={[-halfL + inset, legH + H - inset, 0]}>
         <boxGeometry args={[tubeR * 1.4, tubeR * 1.4, innerW]} />
         {ledMat}
       </mesh>
-      <mesh position={[halfL - inset, H - inset, 0]}>
+      <mesh position={[halfL - inset, legH + H - inset, 0]}>
         <boxGeometry args={[tubeR * 1.4, tubeR * 1.4, innerW]} />
         {ledMat}
       </mesh>
       {dividerEnabled && (
-        <mesh position={[divX + t / 2 + 3.5, H - inset, 0]}>
+        <mesh position={[divX + t / 2 + 3.5, legH + H - inset, 0]}>
           <boxGeometry args={[tubeR * 1.3, tubeR * 1.3, innerW]} />
           {ledMat}
         </mesh>
@@ -267,7 +263,7 @@ const PerimeterWs2812Leds: React.FC = () => {
 
       {/* Vertical Frame Diffused LED Tubes */}
       {verticalPosts.map(([px, pz], idx) => (
-        <mesh key={`vled-${idx}`} position={[px, H / 2, pz]}>
+        <mesh key={`vled-${idx}`} position={[px, legH + H / 2, pz]}>
           <boxGeometry args={[tubeR * 1.4, innerH, tubeR * 1.4]} />
           {ledMat}
         </mesh>
@@ -281,13 +277,16 @@ export const Preview3DAssembly: React.FC = () => {
   const panels = useCadStore((s) => s.panels);
   const activePanelId = useCadStore((s) => s.activePanelId);
   const explodeAmount = useCadStore((s) => s.explodeAmount);
+  const dustFilterSlide = useCadStore((s) => s.dustFilterSlide);
   const ledEnabled = useCadStore((s) => s.ledEnabled);
   const ledColor = useCadStore((s) => s.ledColor);
   const showBrackets = useCadStore((s) => s.showBrackets);
   const showHardwareMockup = useCadStore((s) => s.showHardwareMockup);
+  const showWiring = useCadStore((s) => s.showWiring);
 
   const setActivePanelId = useCadStore((s) => s.setActivePanelId);
   const setExplodeAmount = useCadStore((s) => s.setExplodeAmount);
+  const setDustFilterSlide = useCadStore((s) => s.setDustFilterSlide);
   const setLedEnabled = useCadStore((s) => s.setLedEnabled);
   const setShowHardwareMockup = useCadStore((s) => s.setShowHardwareMockup);
 
@@ -305,16 +304,35 @@ export const Preview3DAssembly: React.FC = () => {
           <span className="font-semibold text-slate-100">Dual-Bay 3D Assembly</span>
           <span className="text-slate-400">•</span>
           <span className="text-cyan-300 font-mono">
-            {caseDims.length}×{caseDims.width}×{caseDims.height}mm ({caseDims.thickness}mm)
+            {caseDims.length}×{caseDims.width + caseDims.wiringDepth}×{caseDims.height + caseDims.legHeight}mm
           </span>
         </div>
       </div>
 
       {/* Top-Right Quick 3D Controls */}
       <div className="absolute top-3 right-3 z-10 flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 rounded-lg px-2.5 py-1.5 backdrop-blur-sm">
-        <div className="flex items-center gap-1.5 text-xs text-slate-300">
+        {/* Slide Dust Filter Control */}
+        <div
+          className="flex items-center gap-1.5 text-xs text-slate-300"
+          title="Tarik / Masukkan Dust Filter Bawah"
+        >
+          <Filter className="w-3.5 h-3.5 text-amber-400" />
+          <input
+            type="range"
+            min={0}
+            max={220}
+            step={5}
+            value={dustFilterSlide}
+            onChange={(e) => setDustFilterSlide(Number(e.target.value))}
+            className="w-14 cursor-pointer"
+          />
+        </div>
+
+        <div className="w-px h-4 bg-slate-700" />
+
+        {/* Explode View Control */}
+        <div className="flex items-center gap-1.5 text-xs text-slate-300" title="Exploded View">
           <Layers className="w-3.5 h-3.5 text-sky-400" />
-          <span className="hidden sm:inline">Explode</span>
           <input
             type="range"
             min={0}
@@ -322,7 +340,7 @@ export const Preview3DAssembly: React.FC = () => {
             step={5}
             value={explodeAmount}
             onChange={(e) => setExplodeAmount(Number(e.target.value))}
-            className="w-16 cursor-pointer"
+            className="w-14 cursor-pointer"
           />
         </div>
 
@@ -335,10 +353,10 @@ export const Preview3DAssembly: React.FC = () => {
               ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
               : 'text-slate-400 hover:text-slate-200'
           }`}
-          title="Tampilkan/Sembunyikan Mockup PC + 2 Laptop + IoT/Fan Pod"
+          title="Tampilkan/Sembunyikan Mockup Hardware + Dust Filter + Wiring"
         >
           <Cpu className="w-3.5 h-3.5" />
-          <span className="hidden xl:inline">Hardware</span>
+          <span className="hidden xl:inline">HW</span>
         </button>
 
         <button
@@ -351,37 +369,34 @@ export const Preview3DAssembly: React.FC = () => {
           title="Toggle LED WS2812B Ice Blue Frame"
         >
           <Sparkles className="w-3.5 h-3.5" />
-          <span>LED</span>
         </button>
       </div>
 
       {/* Bottom Hint */}
       <div className="absolute bottom-3 left-3 z-10 pointer-events-none text-[11px] font-mono text-slate-400 px-2.5 py-1 rounded bg-slate-900/80 border border-slate-800">
-        Kiri: PC Bay • Kanan: Dual Laptop Bay + Side Fan & IoT Pods • Klik panel untuk edit 2D
+        Putar ke belakang untuk lihat Rear Wiring Chamber & Sisir Kabel • Slider Filter untuk tarik dust filter
       </div>
 
-      {/* React Three Fiber Canvas */}
       <Canvas
-        camera={{ position: [560, 400, 660], fov: 36, near: 1, far: 5000 }}
+        camera={{ position: [590, 420, 690], fov: 36, near: 1, far: 5000 }}
         dpr={[1, 2]}
         gl={{ antialias: true }}
       >
         <color attach="background" args={['#060b18']} />
 
-        {/* Procedural Studio Environment for crisp clear acrylic reflections */}
         <Environment resolution={256}>
           <group rotation={[-Math.PI / 3, 0, 0]}>
             <Lightformer
               form="rect"
               intensity={2.4}
-              position={[0, 500, 180]}
+              position={[0, 520, 180]}
               scale={[800, 260, 1]}
               color="#f0f9ff"
             />
             <Lightformer
               form="rect"
               intensity={1.5}
-              position={[-550, 200, -250]}
+              position={[-550, 220, -250]}
               rotation={[0, Math.PI / 2, 0]}
               scale={[600, 320, 1]}
               color="#A0E6FF"
@@ -389,7 +404,7 @@ export const Preview3DAssembly: React.FC = () => {
             <Lightformer
               form="rect"
               intensity={1.3}
-              position={[550, 200, 250]}
+              position={[550, 220, 250]}
               rotation={[0, -Math.PI / 2, 0]}
               scale={[600, 320, 1]}
               color="#bae6fd"
@@ -399,15 +414,12 @@ export const Preview3DAssembly: React.FC = () => {
 
         <ambientLight intensity={0.5} />
         <directionalLight position={[420, 620, 480]} intensity={1.2} color="#f8fafc" />
-        <directionalLight position={[-420, 240, -360]} intensity={0.45} color="#7dd3fc" />
+        <directionalLight position={[-420, 260, -480]} intensity={0.65} color="#7dd3fc" />
 
-        {/* Perimeter Ice Blue WS2812B LED Frame */}
         <PerimeterWs2812Leds />
 
-        {/* Matte-Black Exterior Corner, T-Joint & Cross Brackets with M3 Screws */}
         {showBrackets && <StructuralFrameBrackets />}
 
-        {/* Optional Internal & Side-Mounted Server Hardware Mockup */}
         {showHardwareMockup && (
           <HardwareMockup
             dims={caseDims}
@@ -416,10 +428,11 @@ export const Preview3DAssembly: React.FC = () => {
             middleEnabled={panels.middle.enabled}
             bottomHoles={panels.bottom.holes}
             topHoles={panels.top.holes}
+            dustFilterSlide={dustFilterSlide}
+            showWiring={showWiring}
           />
         )}
 
-        {/* Assembled Extruded 3D Acrylic Panels */}
         <group>
           {enabledPanels.map((panel) => (
             <AcrylicPanelMesh
@@ -435,25 +448,25 @@ export const Preview3DAssembly: React.FC = () => {
           ))}
         </group>
 
-        {/* Millimeter Floor Reference Grid */}
+        {/* Table / Floor Surface Grid at Y = 0 (Acrylic Feet rest cleanly right on Y = 0!) */}
         <Grid
-          position={[0, -0.8, 0]}
-          args={[1400, 1400]}
+          position={[0, -0.5, 0]}
+          args={[1600, 1600]}
           cellSize={20}
           cellThickness={0.5}
           cellColor="#1e293b"
           sectionSize={100}
           sectionThickness={1}
           sectionColor="#334155"
-          fadeDistance={1300}
+          fadeDistance={1400}
           infiniteGrid
         />
 
         <OrbitControls
           makeDefault
-          target={[0, caseDims.height * 0.48, 0]}
+          target={[0, caseDims.legHeight + caseDims.height * 0.48, -caseDims.wiringDepth * 0.2]}
           minDistance={180}
-          maxDistance={2200}
+          maxDistance={2300}
           enableDamping
           dampingFactor={0.08}
         />

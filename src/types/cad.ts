@@ -9,7 +9,10 @@ export type PanelId =
   | 'left'
   | 'right'
   | 'divider'
-  | 'middle';
+  | 'middle'
+  | 'filter-rail'
+  | 'rear-cover'
+  | 'cable-comb';
 
 export type HoleType = 'm3' | 'fan120' | 'fan140' | 'vent';
 
@@ -53,16 +56,20 @@ export interface AcrylicPanel {
 export interface CaseDimensions {
   /** Total dual-bay case length along X-axis in mm */
   length: number;
-  /** Case depth/width along Z-axis in mm */
+  /** Main hardware chamber depth/width along Z-axis in mm */
   width: number;
-  /** Case height along Y-axis in mm */
+  /** Main hardware chamber height along Y-axis in mm (excluding integrated acrylic legs) */
   height: number;
   /** Acrylic sheet thickness in mm (3mm or 5mm) */
   thickness: 3 | 5;
   /** Distance from left edge to center vertical divider separating PC Bay & Laptop Bay (mm) */
   dividerX: number;
-  /** Height of right-bay middle laptop shelf from bottom in mm */
+  /** Height of right-bay middle laptop shelf from bottom floor in mm */
   middleTrayY: number;
+  /** Height of integrated acrylic legs extending downward from Left & Right panels (mm) */
+  legHeight: number;
+  /** Depth of dedicated rear acrylic wiring/cable-management chamber behind Back wall (mm) */
+  wiringDepth: number;
 }
 
 export type IoTBoxPreset = 'controller-pod' | 'fan-pod';

@@ -21,29 +21,127 @@ function makeRectOutline(width: number, height: number): Point2D[] {
   ];
 }
 
-export function getPanelSize(
+/**
+ * Generates an industrial chamfered bridge-foot outline for Left & Right side walls.
+ * Bottom extends down by `legH` forming sturdy front & rear acrylic feet with a 45° airflow arch.
+ */
+function makeSideLegOutline(totalW: number, mainH: number, legH: number): Point2D[] {
+  if (legH <= 2) return makeRectOutline(totalW, mainH);
+  const footW = Math.min(62, Math.max(36, Math.round(totalW * 0.16)));
+  const chamfer = Math.min(28, Math.round(legH * 0.85));
+  const totalH = mainH + legH;
+
+  return [
+    { x: 0, y: 0 },
+    { x: totalW, y: 0 },
+    { x: totalW, y: totalH },
+    { x: totalW - footW, y: totalH },
+    { x: totalW - footW - chamfer, y: mainH },
+    { x: footW + chamfer, y: mainH },
+    { x: footW, y: totalH },
+    { x: 0, y: totalH },
+  ];
+}
+
+/**
+ * Generates a U-shaped slide-in dust filter track mounted underneath the Bottom panel.
+ * Closed on Rear (y=0), Left, and Right; OPEN at Front (y=h) for tool-less filter pull-out.
+ */
+function makeUFilterRailOutline(w: number, h: number, railW = 20): Point2D[] {
+  const rw = Math.min(railW, Math.floor(w / 6), Math.floor(h / 6));
+  return [
+    { x: 0, y: 0 },
+    { x: w, y: 0 },
+    { x: w, y: h },
+    { x: w - rw, y: h },
+    { x: w - rw, y: rw },
+    { x: rw, y: rw },
+    { x: rw, y: h },
+    { x: 0, y: h },
+  ];
+}
+
+/**
+ * Generates a laser-cut acrylic cable management comb bar with evenly-spaced teeth slots
+ * mounted inside the Rear Wiring Chamber to organize PC, Laptop, Fan & LED cables.
+ */
+function makeCableCombOutline(w: number, d: number): Point2D[] {
+  const slotCount = Math.max(6, Math.min(12, Math.floor(w / 55)));
+  const marginX = 28;
+  const usableW = Math.max(60, w - marginX * 2);
+  const pitch = usableW / slotCount;
+  const slotW = Math.min(14, Math.max(8, Math.round(pitch * 0.34)));
+  const slotDepth = Math.max(8, Math.round(d * 0.58));
+
+  // Spine along bottom of Konva (y = d -> touches back wall), comb slots cut from top (y = 0 -> toward rear cover)
+  const pts: Point2D[] = [{ x: 0, y: 0 }];
+
+  for (let i = 0; i < slotCount; i++) {
+    const cx = marginX + pitch * (i + 0.5);
+    const x0 = Math.round(cx - slotW / 2);
+    const x1 = Math.round(cx + slotW / 2);
+    pts.push({ x: x0, y: 0 });
+    pts.push({ x: x0, y: slotDepth });
+    pts.push({ x: x1, y: slotDepth });
+    pts.push({ x: x1, y: 0 });
+  }
+
+  pts.push({ x: w, y: 0 });
+  pts.push({ x: w, y: d });
+  pts.push({ x: 0, y: d });
+
+  return pts;
+}
+
+export function getPanelGeometrySpec(
   id: PanelId,
   dims: CaseDimensions
-): { width: number; height: number } {
-  const { length, width, height, thickness, dividerX } = dims;
-  const innerH = Math.max(60, height - thickness * 2);
-  const innerW = Math.max(60, width - thickness * 2);
-  const rightBayInnerL = Math.max(80, length - dividerX - thickness * 1.5);
+): { width: number; height: number; outline: Point2D[] } {
+  const { length: L, width: W, height: H, thickness: t, dividerX, legHeight, wiringDepth } = dims;
+  const totalW = W + wiringDepth;
+  const innerL = Math.max(80, L - t * 2);
+  const innerW = Math.max(60, W - t * 2);
+  const wallH = Math.max(80, H - t); // vertical walls span from y=legHeight to y=legHeight+H-t
+  const dividerH = Math.max(60, H - t * 2);
+  const rightBayInnerL = Math.max(80, L - dividerX - t * 1.5);
+  const combDepth = Math.max(18, wiringDepth - t - 4);
 
   switch (id) {
-    case 'bottom':
     case 'top':
-      return { width: length, height: width };
+      return { width: L, height: totalW, outline: makeRectOutline(L, totalW) };
+    case 'bottom':
+      return { width: innerL, height: innerW, outline: makeRectOutline(innerL, innerW) };
+    case 'filter-rail':
+      return {
+        width: innerL,
+        height: innerW,
+        outline: makeUFilterRailOutline(innerL, innerW, 20),
+      };
     case 'front':
     case 'back':
-      return { width: length, height: innerH };
+    case 'rear-cover':
+      return { width: innerL, height: wallH, outline: makeRectOutline(innerL, wallH) };
     case 'left':
     case 'right':
+      return {
+        width: totalW,
+        height: wallH + legHeight,
+        outline: makeSideLegOutline(totalW, wallH, legHeight),
+      };
     case 'divider':
-      return { width: innerW, height: innerH };
+      return { width: innerW, height: dividerH, outline: makeRectOutline(innerW, dividerH) };
     case 'middle':
-      // Right-bay laptop shelf spans cleanly between center divider & right outer wall
-      return { width: Math.round(rightBayInnerL), height: innerW };
+      return {
+        width: Math.round(rightBayInnerL),
+        height: innerW,
+        outline: makeRectOutline(Math.round(rightBayInnerL), innerW),
+      };
+    case 'cable-comb':
+      return {
+        width: innerL,
+        height: combDepth,
+        outline: makeCableCombOutline(innerL, combDepth),
+      };
   }
 }
 
@@ -51,13 +149,14 @@ function makeCornerM3Holes(
   panelId: PanelId,
   w: number,
   h: number,
-  margin = 14
+  margin = 14,
+  bottomMargin = margin
 ): PanelHole[] {
   const coords = [
     { x: margin, y: margin, tag: 'TL' },
     { x: w - margin, y: margin, tag: 'TR' },
-    { x: w - margin, y: h - margin, tag: 'BR' },
-    { x: margin, y: h - margin, tag: 'BL' },
+    { x: w - margin, y: h - bottomMargin, tag: 'BR' },
+    { x: margin, y: h - bottomMargin, tag: 'BL' },
   ];
   return coords.map((c, idx) => ({
     id: `${panelId}-m3-${c.tag}-${idx}`,
@@ -79,13 +178,19 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
     {
       id: 'bottom',
       name: 'Bottom (Lantai Dasar)',
-      description: 'Basis PSU PC, HDD & Cooling Pad Laptop Bawah',
+      description: '1× Fan 140mm PC + 2× Fan 120mm Laptop',
+      enabled: true,
+    },
+    {
+      id: 'filter-rail',
+      name: 'Dust Filter Rail (Slot Bawah)',
+      description: 'Rel akrilik U-Track untuk slide-in dust filter dari depan',
       enabled: true,
     },
     {
       id: 'top',
       name: 'Top (Atap Akrilik)',
-      description: 'Penutup Atas Dual-Bay + LED Frame',
+      description: '1× Exhaust 140mm PC + 2× Exhaust 120mm Laptop',
       enabled: true,
     },
     {
@@ -96,66 +201,99 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
     },
     {
       id: 'middle',
-      name: 'Middle Shelf (Rak Laptop Atas)',
-      description: 'Rak Tengah Khusus Bay Kanan (Laptop #2)',
-      enabled: true,
-    },
-    {
-      id: 'right',
-      name: 'Right Wall (Kanan — IoT & Fan)',
-      description: 'Mounting Eksternal Fan Pod Atas & IoT Box Bawah',
+      name: 'Middle Shelf (Rak Laptop)',
+      description: 'Rak Tengah Bay Kanan + 2× Airflow 120mm',
       enabled: true,
     },
     {
       id: 'left',
-      name: 'Left Wall (Kiri — PC Bay)',
-      description: 'Sisi Motherboard PC & Akses I/O',
+      name: 'Left Wall + Kaki Akrilik',
+      description: 'Dinding Kiri dengan kaki chamfer menyatu + ruang wiring',
+      enabled: true,
+    },
+    {
+      id: 'right',
+      name: 'Right Wall + Kaki (IoT/Fan)',
+      description: 'Dinding Kanan + kaki chamfer + mounting Fan & IoT Pod',
       enabled: true,
     },
     {
       id: 'back',
-      name: 'Back Wall (Belakang)',
-      description: 'Lubang Kabel Power, LAN & Exhaust',
+      name: 'Back Partition (Slot Kabel)',
+      description: 'Sekat belakang dengan grommet jalur kabel ke ruang wiring',
+      enabled: true,
+    },
+    {
+      id: 'cable-comb',
+      name: 'Cable Comb (Sisir Kabel)',
+      description: 'Sisir akrilik 10-slot di ruang belakang untuk rapikan kabel',
+      enabled: true,
+    },
+    {
+      id: 'rear-cover',
+      name: 'Rear Wiring Cover (Tutup Belakang)',
+      description: 'Penutup ruang kabel belakang + jalur keluar AC & LAN',
       enabled: true,
     },
     {
       id: 'front',
-      name: 'Front Panel (Depan)',
-      description: 'Panel Kaca Depan (opsional buka/tutup)',
-      enabled: false, // Open front by default for clean showcase like open-front inspection, toggleable!
+      name: 'Front Panel (Kaca Depan)',
+      description: 'Panel kaca depan showcase (opsional buka/tutup)',
+      enabled: false,
     },
   ];
 
   const panels = {} as Record<PanelId, AcrylicPanel>;
+  const { length: L, width: W, thickness: t, dividerX, legHeight, wiringDepth } = dims;
 
   for (const spec of specs) {
-    const { width, height } = getPanelSize(spec.id, dims);
-    const holes: PanelHole[] = makeCornerM3Holes(spec.id, width, height, 14);
+    const { width, height, outline } = getPanelGeometrySpec(spec.id, dims);
+    let holes: PanelHole[] = [];
+
+    if (spec.id === 'filter-rail') {
+      // M3 mounting holes along left & right rail arms
+      holes = [
+        { id: 'fr-m3-1', type: 'm3', label: 'Rail M3 FL', x: 10, y: height - 18, diameter: 3 },
+        { id: 'fr-m3-2', type: 'm3', label: 'Rail M3 FR', x: width - 10, y: height - 18, diameter: 3 },
+        { id: 'fr-m3-3', type: 'm3', label: 'Rail M3 BL', x: 10, y: 10, diameter: 3 },
+        { id: 'fr-m3-4', type: 'm3', label: 'Rail M3 BR', x: width - 10, y: 10, diameter: 3 },
+      ];
+    } else if (spec.id === 'cable-comb') {
+      holes = [
+        { id: 'cc-m3-l', type: 'm3', label: 'Comb Mount L', x: 12, y: height - 8, diameter: 3 },
+        { id: 'cc-m3-r', type: 'm3', label: 'Comb Mount R', x: width - 12, y: height - 8, diameter: 3 },
+      ];
+    } else if (spec.id === 'left' || spec.id === 'right') {
+      // Keep bottom corner M3 holes above the chamfered leg cutout!
+      holes = makeCornerM3Holes(spec.id, width, height, 14, legHeight + 14);
+    } else {
+      holes = makeCornerM3Holes(spec.id, width, height, 14);
+    }
 
     if (spec.id === 'right') {
-      // Upper external Fan Pod mounting cutout + air hole
+      // On Right wall (rotated +90 deg Y), Konva x=0 is Front (+Z), x=totalW is Rear (-Z)
+      const mainCenterX = Math.round(W * 0.5);
+      const mainH = height - legHeight;
       holes.push({
         id: 'right-fan-pod',
         type: 'fan120',
         label: 'Upper Fan Pod Exhaust',
-        x: Math.round(width * 0.5),
-        y: Math.round(height * 0.27),
+        x: mainCenterX,
+        y: Math.round(mainH * 0.27),
         diameter: 82,
         includeMountHoles: false,
       });
-      // Lower IoT Controller Box cable & mounting pass-through
       holes.push({
         id: 'right-iot-cable',
         type: 'vent',
         label: 'IoT Box Cable Pass',
-        x: Math.round(width * 0.5),
-        y: Math.round(height * 0.72),
+        x: mainCenterX,
+        y: Math.round(mainH * 0.72),
         width: 34,
         height: 18,
         cornerRadius: 4,
       });
     } else if (spec.id === 'divider') {
-      // Inter-bay cable routing slots between PC Bay and Laptop Bay
       holes.push({
         id: 'divider-cable-upper',
         type: 'vent',
@@ -177,130 +315,172 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         cornerRadius: 8,
       });
     } else if (spec.id === 'back') {
-      // Rear I/O for PC motherboard on left bay + PSU power inlet
-      holes.push({
-        id: 'back-pc-io',
-        type: 'vent',
-        label: 'PC Motherboard I/O',
-        x: Math.round(dims.length - dims.dividerX * 0.55),
-        y: Math.round(height * 0.34),
-        width: 50,
-        height: 145,
-        cornerRadius: 4,
-      });
-      holes.push({
-        id: 'back-psu-inlet',
-        type: 'vent',
-        label: 'ATX PSU Exhaust & AC',
-        x: Math.round(dims.length - dims.dividerX * 0.55),
-        y: Math.round(height * 0.8),
-        width: 120,
-        height: 68,
-        cornerRadius: 6,
-      });
-      // Laptop bay rear exhaust vents
-      holes.push({
-        id: 'back-laptop-vent-top',
-        type: 'vent',
-        label: 'Exhaust Laptop Atas',
-        x: Math.round((dims.length - dims.dividerX) * 0.5),
-        y: Math.round(height * 0.35),
-        width: 220,
-        height: 28,
-        cornerRadius: 8,
-      });
-      holes.push({
-        id: 'back-laptop-vent-bot',
-        type: 'vent',
-        label: 'Exhaust Laptop Bawah',
-        x: Math.round((dims.length - dims.dividerX) * 0.5),
-        y: Math.round(height * 0.78),
-        width: 220,
-        height: 28,
-        cornerRadius: 8,
-      });
+      // Back wall is rotated 180° around Y: Konva left (small X) = Right Laptop Bay, Konva right (large X) = Left PC Bay
+      const pcX = Math.round(width - (dividerX - t) * 0.52);
+      const lapLeftX = Math.round((L - dividerX - t) * 0.32);
+      const lapRightX = Math.round((L - dividerX - t) * 0.72);
+      holes.push(
+        {
+          id: 'back-pc-io',
+          type: 'vent',
+          label: 'PC Motherboard & 24-Pin Grommet',
+          x: pcX,
+          y: Math.round(height * 0.32),
+          width: 48,
+          height: 130,
+          cornerRadius: 8,
+        },
+        {
+          id: 'back-psu-wire',
+          type: 'vent',
+          label: 'ATX PSU Cable Grommet',
+          x: pcX,
+          y: Math.round(height * 0.78),
+          width: 110,
+          height: 64,
+          cornerRadius: 8,
+        },
+        {
+          id: 'back-lap-wire-top',
+          type: 'vent',
+          label: 'Slot Kabel Laptop Atas',
+          x: lapLeftX,
+          y: Math.round(height * 0.36),
+          width: 90,
+          height: 28,
+          cornerRadius: 8,
+        },
+        {
+          id: 'back-lap-wire-bot',
+          type: 'vent',
+          label: 'Slot Kabel Laptop Bawah',
+          x: lapLeftX,
+          y: Math.round(height * 0.76),
+          width: 90,
+          height: 28,
+          cornerRadius: 8,
+        },
+        {
+          id: 'back-iot-wire-slot',
+          type: 'vent',
+          label: 'Slot Kabel Fan & IoT Pod',
+          x: lapRightX,
+          y: Math.round(height * 0.54),
+          width: 44,
+          height: 74,
+          cornerRadius: 8,
+        }
+      );
+    } else if (spec.id === 'rear-cover') {
+      // Rear outer cover of the Wiring Chamber: clean bottom main exit + top rear vent
+      holes.push(
+        {
+          id: 'rear-main-exit',
+          type: 'vent',
+          label: 'Main Power & LAN Exit',
+          x: Math.round(width * 0.5),
+          y: Math.round(height - 32),
+          width: 120,
+          height: 28,
+          cornerRadius: 8,
+        },
+        {
+          id: 'rear-upper-vent',
+          type: 'vent',
+          label: 'Rear Chamber Passive Vent',
+          x: Math.round(width * 0.5),
+          y: Math.round(height * 0.2),
+          width: 240,
+          height: 22,
+          cornerRadius: 8,
+        }
+      );
     } else if (spec.id === 'middle') {
-      // 2x 120mm vertical chimney airflow cutouts aligned directly between Laptop Bay bottom & top fans
-      holes.push({
-        id: 'middle-cooling-vent-1',
-        type: 'fan120',
-        label: 'Laptop Airflow Pass #1 (120mm)',
-        x: Math.round(width * 0.28),
-        y: Math.round(height * 0.5),
-        diameter: 115,
-        includeMountHoles: false,
-      });
-      holes.push({
-        id: 'middle-cooling-vent-2',
-        type: 'fan120',
-        label: 'Laptop Airflow Pass #2 (120mm)',
-        x: Math.round(width * 0.72),
-        y: Math.round(height * 0.5),
-        diameter: 115,
-        includeMountHoles: false,
-      });
+      holes.push(
+        {
+          id: 'middle-cooling-vent-1',
+          type: 'fan120',
+          label: 'Laptop Airflow Pass #1 (120mm)',
+          x: Math.round(width * 0.28),
+          y: Math.round(height * 0.5),
+          diameter: 115,
+          includeMountHoles: false,
+        },
+        {
+          id: 'middle-cooling-vent-2',
+          type: 'fan120',
+          label: 'Laptop Airflow Pass #2 (120mm)',
+          x: Math.round(width * 0.72),
+          y: Math.round(height * 0.5),
+          diameter: 115,
+          includeMountHoles: false,
+        }
+      );
     } else if (spec.id === 'bottom') {
-      const rightSpan = dims.length - dims.dividerX;
-      // 1x Big 140mm Bottom Intake Fan for PC Bay (left)
-      holes.push({
-        id: 'bottom-pc-fan140',
-        type: 'fan140',
-        label: 'PC Bay Intake 140mm',
-        x: Math.round(dims.dividerX * 0.5),
-        y: Math.round(height * 0.62),
-        diameter: 135,
-        includeMountHoles: true,
-      });
-      // 2x 120mm Bottom Intake Fans for Laptop Bay (right)
-      holes.push({
-        id: 'bottom-lap-fan120-1',
-        type: 'fan120',
-        label: 'Laptop Intake 120mm #1',
-        x: Math.round(dims.dividerX + rightSpan * 0.28),
-        y: Math.round(height * 0.5),
-        diameter: 115,
-        includeMountHoles: true,
-      });
-      holes.push({
-        id: 'bottom-lap-fan120-2',
-        type: 'fan120',
-        label: 'Laptop Intake 120mm #2',
-        x: Math.round(dims.dividerX + rightSpan * 0.72),
-        y: Math.round(height * 0.5),
-        diameter: 115,
-        includeMountHoles: true,
-      });
+      const pcSpan = dividerX - t;
+      const rightSpan = width - pcSpan;
+      holes.push(
+        {
+          id: 'bottom-pc-fan140',
+          type: 'fan140',
+          label: 'PC Bay Intake 140mm',
+          x: Math.round(pcSpan * 0.5),
+          y: Math.round(height * 0.62),
+          diameter: 135,
+          includeMountHoles: true,
+        },
+        {
+          id: 'bottom-lap-fan120-1',
+          type: 'fan120',
+          label: 'Laptop Intake 120mm #1',
+          x: Math.round(pcSpan + rightSpan * 0.28),
+          y: Math.round(height * 0.5),
+          diameter: 115,
+          includeMountHoles: true,
+        },
+        {
+          id: 'bottom-lap-fan120-2',
+          type: 'fan120',
+          label: 'Laptop Intake 120mm #2',
+          x: Math.round(pcSpan + rightSpan * 0.72),
+          y: Math.round(height * 0.5),
+          diameter: 115,
+          includeMountHoles: true,
+        }
+      );
     } else if (spec.id === 'top') {
-      const rightSpan = dims.length - dims.dividerX;
-      // 1x Big 140mm Top Exhaust Fan for PC Bay (left)
-      holes.push({
-        id: 'top-pc-fan140',
-        type: 'fan140',
-        label: 'PC Bay Exhaust 140mm',
-        x: Math.round(dims.dividerX * 0.5),
-        y: Math.round(height * 0.5),
-        diameter: 135,
-        includeMountHoles: true,
-      });
-      // 2x 120mm Top Exhaust Fans for Laptop Bay (right)
-      holes.push({
-        id: 'top-lap-fan120-1',
-        type: 'fan120',
-        label: 'Laptop Exhaust 120mm #1',
-        x: Math.round(dims.dividerX + rightSpan * 0.28),
-        y: Math.round(height * 0.5),
-        diameter: 115,
-        includeMountHoles: true,
-      });
-      holes.push({
-        id: 'top-lap-fan120-2',
-        type: 'fan120',
-        label: 'Laptop Exhaust 120mm #2',
-        x: Math.round(dims.dividerX + rightSpan * 0.72),
-        y: Math.round(height * 0.5),
-        diameter: 115,
-        includeMountHoles: true,
-      });
+      // Top spans full depth (W + wiringDepth): Konva y=0 is Rear (-W/2 - wiringDepth), so main chamber starts at y = wiringDepth!
+      const rightSpan = L - dividerX;
+      const mainCenterY = Math.round(wiringDepth + W * 0.5);
+      holes.push(
+        {
+          id: 'top-pc-fan140',
+          type: 'fan140',
+          label: 'PC Bay Exhaust 140mm',
+          x: Math.round(dividerX * 0.5),
+          y: mainCenterY,
+          diameter: 135,
+          includeMountHoles: true,
+        },
+        {
+          id: 'top-lap-fan120-1',
+          type: 'fan120',
+          label: 'Laptop Exhaust 120mm #1',
+          x: Math.round(dividerX + rightSpan * 0.28),
+          y: mainCenterY,
+          diameter: 115,
+          includeMountHoles: true,
+        },
+        {
+          id: 'top-lap-fan120-2',
+          type: 'fan120',
+          label: 'Laptop Exhaust 120mm #2',
+          x: Math.round(dividerX + rightSpan * 0.72),
+          y: mainCenterY,
+          diameter: 115,
+          includeMountHoles: true,
+        }
+      );
     }
 
     panels[spec.id] = {
@@ -310,7 +490,7 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
       enabled: spec.enabled,
       width,
       height,
-      outline: makeRectOutline(width, height),
+      outline,
       holes,
     };
   }
@@ -325,6 +505,8 @@ const DEFAULT_CASE_DIMS: CaseDimensions = {
   thickness: 5,
   dividerX: 220,
   middleTrayY: 205,
+  legHeight: 38,
+  wiringDepth: 48,
 };
 
 export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
@@ -380,10 +562,12 @@ interface CadStoreState {
   gridSize: number;
   snapToGrid: boolean;
   explodeAmount: number;
+  dustFilterSlide: number; // 0 = seated under bottom, >0 = slid forward out of slot
   ledEnabled: boolean;
   ledColor: string;
   showBrackets: boolean;
   showHardwareMockup: boolean;
+  showWiring: boolean;
 
   // Module 2: Parametric IoT Box Builder
   iotBox: IoTBoxParams;
@@ -396,10 +580,12 @@ interface CadStoreState {
   setGridSize: (size: number) => void;
   setSnapToGrid: (snap: boolean) => void;
   setExplodeAmount: (amount: number) => void;
+  setDustFilterSlide: (slide: number) => void;
   setLedEnabled: (enabled: boolean) => void;
   setLedColor: (color: string) => void;
   setShowBrackets: (show: boolean) => void;
   setShowHardwareMockup: (show: boolean) => void;
+  setShowWiring: (show: boolean) => void;
 
   updateCaseDims: (patch: Partial<CaseDimensions>) => void;
   togglePanelEnabled: (id: PanelId) => void;
@@ -421,15 +607,17 @@ export const useCadStore = create<CadStoreState>((set) => ({
 
   caseDims: DEFAULT_CASE_DIMS,
   panels: createInitialPanels(DEFAULT_CASE_DIMS),
-  activePanelId: 'top',
+  activePanelId: 'left',
   selectedHoleId: null,
   gridSize: 10,
   snapToGrid: true,
   explodeAmount: 0,
+  dustFilterSlide: 45, // Slightly pulled forward by default so user immediately sees the dust filter slot!
   ledEnabled: true,
   ledColor: '#A0E6FF',
   showBrackets: true,
   showHardwareMockup: true,
+  showWiring: true,
 
   iotBox: IOT_PRESETS['controller-pod'],
 
@@ -440,10 +628,12 @@ export const useCadStore = create<CadStoreState>((set) => ({
   setGridSize: (gridSize) => set({ gridSize }),
   setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
   setExplodeAmount: (explodeAmount) => set({ explodeAmount }),
+  setDustFilterSlide: (dustFilterSlide) => set({ dustFilterSlide }),
   setLedEnabled: (ledEnabled) => set({ ledEnabled }),
   setLedColor: (ledColor) => set({ ledColor }),
   setShowBrackets: (showBrackets) => set({ showBrackets }),
   setShowHardwareMockup: (showHardwareMockup) => set({ showHardwareMockup }),
+  setShowWiring: (showWiring) => set({ showWiring }),
 
   updateCaseDims: (patch) =>
     set((state) => {
@@ -451,20 +641,18 @@ export const useCadStore = create<CadStoreState>((set) => ({
         ...state.caseDims,
         ...patch,
       };
-      // Clamp dividerX and middleTrayY cleanly within valid mechanical bounds
-      nextDims.dividerX = Math.min(
-        Math.max(120, nextDims.dividerX),
-        nextDims.length - 160
-      );
+      nextDims.dividerX = Math.min(Math.max(120, nextDims.dividerX), nextDims.length - 160);
       nextDims.middleTrayY = Math.min(
         Math.max(nextDims.thickness + 60, nextDims.middleTrayY),
         nextDims.height - nextDims.thickness - 60
       );
+      nextDims.legHeight = Math.min(Math.max(0, nextDims.legHeight), 80);
+      nextDims.wiringDepth = Math.min(Math.max(24, nextDims.wiringDepth), 90);
 
       const nextPanels = { ...state.panels };
       (Object.keys(nextPanels) as PanelId[]).forEach((pid) => {
         const oldPanel = nextPanels[pid];
-        const { width, height } = getPanelSize(pid, nextDims);
+        const { width, height, outline } = getPanelGeometrySpec(pid, nextDims);
         const clampedHoles = oldPanel.holes.map((h) => ({
           ...h,
           x: Math.min(Math.max(4, h.x), width - 4),
@@ -474,7 +662,7 @@ export const useCadStore = create<CadStoreState>((set) => ({
           ...oldPanel,
           width,
           height,
-          outline: makeRectOutline(width, height),
+          outline,
           holes: clampedHoles,
         };
       });
@@ -588,7 +776,15 @@ export const useCadStore = create<CadStoreState>((set) => ({
     set((state) => {
       const panel = state.panels[panelId];
       const existingNonAuto = panel.holes.filter((h) => !h.id.startsWith(`${panelId}-m3-`));
-      const cornerHoles = makeCornerM3Holes(panelId, panel.width, panel.height, margin);
+      const bottomMargin =
+        panelId === 'left' || panelId === 'right' ? state.caseDims.legHeight + margin : margin;
+      const cornerHoles = makeCornerM3Holes(
+        panelId,
+        panel.width,
+        panel.height,
+        margin,
+        bottomMargin
+      );
       return {
         panels: {
           ...state.panels,
@@ -618,6 +814,7 @@ export const useCadStore = create<CadStoreState>((set) => ({
       panels: createInitialPanels(DEFAULT_CASE_DIMS),
       selectedHoleId: null,
       explodeAmount: 0,
+      dustFilterSlide: 45,
     }),
 
   updateIoTBox: (patch) =>

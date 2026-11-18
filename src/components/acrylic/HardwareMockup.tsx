@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { CaseDimensions, PanelHole } from '../../types/cad';
@@ -15,7 +15,6 @@ export function createOledScreenTexture(): THREE.CanvasTexture {
     ctx.fillStyle = '#030812';
     ctx.fillRect(0, 0, 256, 128);
 
-    // Top yellow-blue split bar feel of classic 0.96" OLED
     ctx.fillStyle = '#38bdf8';
     ctx.font = 'bold 20px monospace';
     ctx.fillText('VERTEX MINI-DC', 14, 28);
@@ -39,6 +38,38 @@ export function createOledScreenTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+/**
+ * Procedural fine perforated magnetic dust-filter mesh texture.
+ */
+function createDustMeshTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.fillStyle = '#0b0f17';
+    ctx.fillRect(0, 0, 64, 64);
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i <= 64; i += 8) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, 64);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(64, i);
+      ctx.stroke();
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(36, 22);
+  tex.needsUpdate = true;
+  return tex;
+}
+
 const SpinningFanBlades: React.FC<{ radius: number; ledColor: string }> = ({
   radius,
   ledColor,
@@ -52,12 +83,10 @@ const SpinningFanBlades: React.FC<{ radius: number; ledColor: string }> = ({
 
   return (
     <group ref={rotorRef}>
-      {/* Central Hub */}
       <mesh rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[radius * 0.28, radius * 0.28, 8, 20]} />
         <meshStandardMaterial color="#1e293b" roughness={0.3} metalness={0.5} />
       </mesh>
-      {/* 7 Translucent Cyan-lit Blades */}
       {Array.from({ length: 7 }).map((_, i) => {
         const angle = (i / 7) * Math.PI * 2;
         return (
@@ -80,55 +109,6 @@ const SpinningFanBlades: React.FC<{ radius: number; ledColor: string }> = ({
   );
 };
 
-const LaptopUnit: React.FC<{
-  position: [number, number, number];
-  maxWidth: number;
-  maxDepth: number;
-}> = ({ position, maxWidth, maxDepth }) => {
-  const padW = Math.min(315, maxWidth - 26);
-  const padD = Math.min(245, maxDepth - 40);
-  const lapW = padW - 14;
-  const lapD = padD - 18;
-
-  return (
-    <group position={position}>
-      {/* Cooling Pad Mesh Stand */}
-      <mesh position={[0, 9, 0]} rotation={[0.04, 0, 0]}>
-        <boxGeometry args={[padW, 18, padD]} />
-        <meshStandardMaterial color="#171b22" roughness={0.72} metalness={0.22} />
-      </mesh>
-      {/* Cooling pad rubber lip */}
-      <mesh position={[0, 18, padD / 2 - 4]}>
-        <boxGeometry args={[padW * 0.65, 6, 5]} />
-        <meshStandardMaterial color="#0f131a" roughness={0.8} />
-      </mesh>
-
-      {/* Closed Laptop Chassis */}
-      <group position={[0, 26, -2]} rotation={[0.04, 0, 0]}>
-        {/* Lower Base */}
-        <mesh position={[0, 0, 0]}>
-          <boxGeometry args={[lapW, 11, lapD]} />
-          <meshStandardMaterial color="#1f252e" roughness={0.45} metalness={0.35} />
-        </mesh>
-        {/* Top Lid */}
-        <mesh position={[0, 8.5, 0]}>
-          <boxGeometry args={[lapW - 2, 6, lapD - 2]} />
-          <meshStandardMaterial color="#272e3a" roughness={0.32} metalness={0.48} />
-        </mesh>
-        {/* Subtle metallic logo accent */}
-        <mesh position={[0, 11.7, 0]}>
-          <boxGeometry args={[28, 0.8, 6]} />
-          <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.2} />
-        </mesh>
-      </group>
-    </group>
-  );
-};
-
-/**
- * Realistic 3D Horizontal Case Fan (120mm or 140mm) with matte-black outer frame,
- * recessed circular fan shroud, 4 silver mounting screws, and spinning Ice-Blue LED blades.
- */
 const MountedCaseFan3D: React.FC<{
   size: 120 | 140;
   position: [number, number, number];
@@ -144,7 +124,6 @@ const MountedCaseFan3D: React.FC<{
 
   return (
     <group position={position}>
-      {/* 4 Outer Frame Rails forming square fan housing */}
       <mesh position={[0, 0, -half + barW / 2]}>
         <boxGeometry args={[size, frameH, barW]} />
         <meshStandardMaterial color="#141820" roughness={0.48} metalness={0.25} />
@@ -162,7 +141,6 @@ const MountedCaseFan3D: React.FC<{
         <meshStandardMaterial color="#141820" roughness={0.48} metalness={0.25} />
       </mesh>
 
-      {/* Glowing Inner LED Accent Ring */}
       <mesh rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[bladeR + 2.5, 2.2, 10, 36]} />
         <meshStandardMaterial
@@ -173,12 +151,10 @@ const MountedCaseFan3D: React.FC<{
         />
       </mesh>
 
-      {/* Spinning Fan Rotor oriented horizontally (air flowing vertically along Y) */}
       <group rotation={[-Math.PI / 2, 0, 0]}>
         <SpinningFanBlades radius={bladeR} ledColor={activeColor} />
       </group>
 
-      {/* 4 Silver M4 Mounting Screws */}
       {[
         [-mountPitch, -mountPitch],
         [mountPitch, -mountPitch],
@@ -194,6 +170,284 @@ const MountedCaseFan3D: React.FC<{
   );
 };
 
+/**
+ * Slide-Out Magnetic Mesh Dust Filter Tray seated inside the bottom acrylic U-Rail slot.
+ */
+const DustFilterTray3D: React.FC<{
+  dims: CaseDimensions;
+  slideOut: number;
+}> = ({ dims, slideOut }) => {
+  const { length: L, width: W, thickness: t, legHeight: legH } = dims;
+  const trayW = Math.max(80, L - t * 2 - 42);
+  const trayD = Math.max(80, W - t * 2 - 22);
+  const frameBar = 10;
+  const trayH = Math.max(3, t - 1);
+  const meshTex = useMemo(() => createDustMeshTexture(), []);
+
+  useEffect(() => {
+    return () => meshTex.dispose();
+  }, [meshTex]);
+
+  return (
+    <group position={[0, legH - t / 2, 10 + slideOut]}>
+      {/* Fine perforated charcoal filter mesh */}
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[trayW - frameBar * 2, 1.4, trayD - frameBar * 2]} />
+        <meshStandardMaterial
+          map={meshTex}
+          color="#334155"
+          roughness={0.85}
+          metalness={0.15}
+          transparent
+          opacity={0.82}
+        />
+      </mesh>
+
+      {/* Perimeter Magnetic Frame Rails */}
+      <mesh position={[0, 0, -trayD / 2 + frameBar / 2]}>
+        <boxGeometry args={[trayW, trayH, frameBar]} />
+        <meshStandardMaterial color="#181d27" roughness={0.5} metalness={0.3} />
+      </mesh>
+      <mesh position={[0, 0, trayD / 2 - frameBar / 2]}>
+        <boxGeometry args={[trayW, trayH, frameBar]} />
+        <meshStandardMaterial color="#181d27" roughness={0.5} metalness={0.3} />
+      </mesh>
+      <mesh position={[-trayW / 2 + frameBar / 2, 0, 0]}>
+        <boxGeometry args={[frameBar, trayH, trayD - frameBar * 2]} />
+        <meshStandardMaterial color="#181d27" roughness={0.5} metalness={0.3} />
+      </mesh>
+      <mesh position={[trayW / 2 - frameBar / 2, 0, 0]}>
+        <boxGeometry args={[frameBar, trayH, trayD - frameBar * 2]} />
+        <meshStandardMaterial color="#181d27" roughness={0.5} metalness={0.3} />
+      </mesh>
+
+      {/* Center stiffener crossbar */}
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[6, trayH * 0.85, trayD - frameBar * 2]} />
+        <meshStandardMaterial color="#1e2430" roughness={0.55} />
+      </mesh>
+
+      {/* Front Ergonomic Pull-Handle Tab with subtle Sky-Blue accent */}
+      <mesh position={[0, -0.5, trayD / 2 + 7]}>
+        <boxGeometry args={[76, trayH + 1.5, 14]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.4} metalness={0.45} />
+      </mesh>
+      <mesh position={[0, -0.5, trayD / 2 + 14.2]}>
+        <boxGeometry args={[52, 2.2, 1.5]} />
+        <meshStandardMaterial
+          color="#38bdf8"
+          emissive="#38bdf8"
+          emissiveIntensity={0.8}
+        />
+      </mesh>
+    </group>
+  );
+};
+
+/**
+ * Visualizes neatly combed cables inside the Rear Acrylic Wiring Chamber:
+ * - Black ATX 24-pin / CPU power bundles (PSU -> Back grommet -> Cable Comb -> Motherboard)
+ * - Cobalt-Blue Cat6 Server LAN + Laptop Power bundles (Laptop Bay -> Cable Comb -> Bottom Main Exit)
+ * - Cyan WS2812B LED & PWM Fan Control cables (IoT Pod -> Rear Comb -> Top/Bottom Fans)
+ */
+const RearWiringHarness3D: React.FC<{ dims: CaseDimensions }> = ({ dims }) => {
+  const { length: L, width: W, height: H, thickness: t, dividerX, legHeight: legH, wiringDepth } =
+    dims;
+  const halfL = L / 2;
+  const halfW = W / 2;
+  const zChamber = -halfW - wiringDepth * 0.52;
+  const zInside = -halfW + 18;
+  const zExit = -halfW - wiringDepth - 14;
+  const combY = legH + H * 0.52;
+
+  const pcX = -halfL + dividerX * 0.52;
+  const lapCenterX = -halfL + dividerX + (L - dividerX) * 0.45;
+  const rightPodX = halfL - 38;
+
+  const cables = useMemo(() => {
+    const specs: Array<{ pts: [number, number, number][]; radius: number; color: string }> = [
+      // 1. Thick ATX 24-Pin Braided Bundle (PSU -> Rear Chamber -> Combed up -> PC Motherboard)
+      {
+        pts: [
+          [pcX - 18, legH + 78, zInside],
+          [pcX - 24, legH + 84, zChamber],
+          [pcX - 24, combY, zChamber - 4],
+          [pcX - 22, legH + H * 0.72, zChamber],
+          [pcX - 12, legH + H * 0.72, zInside],
+        ],
+        radius: 5.2,
+        color: '#181c24',
+      },
+      // 2. 8-Pin EPS CPU Power (Sleeved dark slate)
+      {
+        pts: [
+          [pcX + 10, legH + 78, zInside],
+          [pcX + 16, legH + 92, zChamber],
+          [pcX + 16, combY, zChamber - 4],
+          [pcX + 14, legH + H * 0.84, zChamber],
+          [pcX + 6, legH + H * 0.84, zInside],
+        ],
+        radius: 3.6,
+        color: '#27303f',
+      },
+      // 3. Main AC Power Cable from PSU -> Rear Bottom Main Exit
+      {
+        pts: [
+          [pcX - 4, legH + 62, zInside],
+          [pcX - 4, legH + 54, zChamber],
+          [-26, legH + 42, zChamber],
+          [-26, legH + 34, zExit],
+        ],
+        radius: 4.5,
+        color: '#111318',
+      },
+      // 4. Upper Laptop DC Power Cable -> Combed down -> Rear Bottom Main Exit
+      {
+        pts: [
+          [lapCenterX - 36, legH + H * 0.64, zInside],
+          [lapCenterX - 36, legH + H * 0.62, zChamber],
+          [lapCenterX - 36, combY, zChamber - 4],
+          [lapCenterX - 36, legH + 62, zChamber],
+          [10, legH + 38, zChamber],
+          [10, legH + 34, zExit],
+        ],
+        radius: 3.2,
+        color: '#1e2430',
+      },
+      // 5. Lower Laptop DC Power Cable -> Rear Bottom Main Exit
+      {
+        pts: [
+          [lapCenterX - 12, legH + H * 0.24, zInside],
+          [lapCenterX - 12, legH + H * 0.24, zChamber],
+          [22, legH + 38, zChamber],
+          [22, legH + 34, zExit],
+        ],
+        radius: 3.2,
+        color: '#1e2430',
+      },
+      // 6. Cat6 Uplink Ethernet #1 (Upper Laptop -> Combed -> Rear Bottom Main Exit)
+      {
+        pts: [
+          [lapCenterX + 18, legH + H * 0.64, zInside],
+          [lapCenterX + 18, legH + H * 0.62, zChamber],
+          [lapCenterX + 18, combY, zChamber - 4],
+          [lapCenterX + 18, legH + 74, zChamber],
+          [38, legH + 38, zChamber],
+          [38, legH + 34, zExit],
+        ],
+        radius: 2.8,
+        color: '#2563eb',
+      },
+      // 7. Cat6 Uplink Ethernet #2 (PC Motherboard -> Combed -> Rear Bottom Main Exit)
+      {
+        pts: [
+          [pcX + 36, legH + H * 0.68, zInside],
+          [pcX + 36, legH + H * 0.66, zChamber],
+          [pcX + 36, combY, zChamber - 4],
+          [pcX + 36, legH + 56, zChamber],
+          [-6, legH + 38, zChamber],
+          [-6, legH + 34, zExit],
+        ],
+        radius: 2.8,
+        color: '#3b82f6',
+      },
+      // 8. Cyan WS2812B & PWM Fan Harness (Right IoT Pod -> Combed up to Top Exhaust Fans)
+      {
+        pts: [
+          [rightPodX, legH + H * 0.28, zInside],
+          [rightPodX, legH + H * 0.28, zChamber],
+          [rightPodX, combY, zChamber - 4],
+          [rightPodX, legH + H - t - 22, zChamber],
+          [lapCenterX, legH + H - t - 22, zChamber],
+          [pcX, legH + H - t - 22, zChamber],
+        ],
+        radius: 2.4,
+        color: '#38bdf8',
+      },
+      // 9. Cyan Sensor & Bottom Fan PWM Harness
+      {
+        pts: [
+          [rightPodX - 18, legH + H * 0.28, zInside],
+          [rightPodX - 18, legH + H * 0.24, zChamber],
+          [rightPodX - 18, legH + 26, zChamber],
+          [lapCenterX, legH + 26, zChamber],
+          [pcX + 20, legH + 26, zChamber],
+        ],
+        radius: 2.2,
+        color: '#0ea5e9',
+      },
+    ];
+
+    return specs.map((s) => {
+      const curve = new THREE.CatmullRomCurve3(
+        s.pts.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
+        false,
+        'catmullrom',
+        0.25
+      );
+      return {
+        geometry: new THREE.TubeGeometry(curve, 32, s.radius, 8, false),
+        color: s.color,
+      };
+    });
+  }, [L, W, H, t, dividerX, legH, wiringDepth, zChamber, zInside, zExit, combY, pcX, lapCenterX, rightPodX]);
+
+  useEffect(() => {
+    return () => {
+      cables.forEach((c) => c.geometry.dispose());
+    };
+  }, [cables]);
+
+  return (
+    <group>
+      {cables.map((c, idx) => (
+        <mesh key={`wire-${idx}`} geometry={c.geometry}>
+          <meshStandardMaterial color={c.color} roughness={0.62} metalness={0.2} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+const LaptopUnit: React.FC<{
+  position: [number, number, number];
+  maxWidth: number;
+  maxDepth: number;
+}> = ({ position, maxWidth, maxDepth }) => {
+  const padW = Math.min(315, maxWidth - 26);
+  const padD = Math.min(245, maxDepth - 40);
+  const lapW = padW - 14;
+  const lapD = padD - 18;
+
+  return (
+    <group position={position}>
+      <mesh position={[0, 9, 0]} rotation={[0.04, 0, 0]}>
+        <boxGeometry args={[padW, 18, padD]} />
+        <meshStandardMaterial color="#171b22" roughness={0.72} metalness={0.22} />
+      </mesh>
+      <mesh position={[0, 18, padD / 2 - 4]}>
+        <boxGeometry args={[padW * 0.65, 6, 5]} />
+        <meshStandardMaterial color="#0f131a" roughness={0.8} />
+      </mesh>
+
+      <group position={[0, 26, -2]} rotation={[0.04, 0, 0]}>
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[lapW, 11, lapD]} />
+          <meshStandardMaterial color="#1f252e" roughness={0.45} metalness={0.35} />
+        </mesh>
+        <mesh position={[0, 8.5, 0]}>
+          <boxGeometry args={[lapW - 2, 6, lapD - 2]} />
+          <meshStandardMaterial color="#272e3a" roughness={0.32} metalness={0.48} />
+        </mesh>
+        <mesh position={[0, 11.7, 0]}>
+          <boxGeometry args={[28, 0.8, 6]} />
+          <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.2} />
+        </mesh>
+      </group>
+    </group>
+  );
+};
+
 interface HardwareMockupProps {
   dims: CaseDimensions;
   ledEnabled: boolean;
@@ -201,6 +455,8 @@ interface HardwareMockupProps {
   middleEnabled: boolean;
   bottomHoles: PanelHole[];
   topHoles: PanelHole[];
+  dustFilterSlide: number;
+  showWiring: boolean;
 }
 
 export const HardwareMockup: React.FC<HardwareMockupProps> = ({
@@ -210,10 +466,23 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
   middleEnabled,
   bottomHoles,
   topHoles,
+  dustFilterSlide,
+  showWiring,
 }) => {
-  const { length: L, width: W, height: H, thickness: t, dividerX, middleTrayY } = dims;
+  const {
+    length: L,
+    width: W,
+    height: H,
+    thickness: t,
+    dividerX,
+    middleTrayY,
+    legHeight: legH,
+    wiringDepth,
+  } = dims;
   const halfL = L / 2;
   const halfW = W / 2;
+  const innerL = L - t * 2;
+  const innerW = W - t * 2;
 
   const bottomFans = useMemo(
     () => bottomHoles.filter((h) => h.type === 'fan120' || h.type === 'fan140'),
@@ -235,12 +504,15 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
   const lapBayWidth = Math.max(120, lapBayRight - lapBayLeft);
 
   const oledTex = useMemo(() => createOledScreenTexture(), []);
+  useEffect(() => {
+    return () => oledTex.dispose();
+  }, [oledTex]);
 
   // Curved black braided interconnect cable from Upper Fan Pod down to Lower IoT Box
   const cableGeometry = useMemo(() => {
     const xOut = halfL + 18;
-    const upperY = H * 0.72;
-    const lowerY = H * 0.28;
+    const upperY = legH + H * 0.72;
+    const lowerY = legH + H * 0.28;
     const curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(xOut, upperY - 46, 12),
       new THREE.Vector3(xOut + 8, (upperY + lowerY) / 2 + 12, 26),
@@ -248,25 +520,32 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
       new THREE.Vector3(xOut, lowerY + 34, 10),
     ]);
     return new THREE.TubeGeometry(curve, 24, 3.2, 10, false);
-  }, [halfL, H]);
+  }, [halfL, H, legH]);
+
+  useEffect(() => {
+    return () => cableGeometry.dispose();
+  }, [cableGeometry]);
 
   return (
     <group>
+      {/* ================= SLIDE-IN BOTTOM DUST FILTER TRAY ================= */}
+      <DustFilterTray3D dims={dims} slideOut={dustFilterSlide} />
+
+      {/* ================= REAR WIRING CHAMBER CABLE HARNESS ================= */}
+      {showWiring && <RearWiringHarness3D dims={dims} />}
+
       {/* ================= LEFT BAY: PC SERVER HARDWARE ================= */}
       <group>
         {/* Motherboard (mounted vertically on back-left standoffs) */}
-        <group position={[pcBayCenterX, H * 0.62, -W * 0.16]}>
-          {/* Dark PCB */}
+        <group position={[pcBayCenterX, legH + H * 0.62, -W * 0.16]}>
           <mesh>
             <boxGeometry args={[Math.min(180, pcBayWidth - 24), Math.min(200, H * 0.48), 4]} />
             <meshStandardMaterial color="#141820" roughness={0.55} metalness={0.25} />
           </mesh>
-          {/* VRM / I/O Shroud with subtle cyan accent */}
           <mesh position={[-Math.min(62, pcBayWidth * 0.28), 32, 14]}>
             <boxGeometry args={[32, 95, 24]} />
             <meshStandardMaterial color="#1f2735" roughness={0.35} metalness={0.55} />
           </mesh>
-          {/* Round Stock CPU Cooler */}
           <group position={[0, 30, 24]}>
             <mesh rotation={[Math.PI / 2, 0, 0]}>
               <cylinderGeometry args={[36, 38, 34, 24]} />
@@ -277,27 +556,24 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
               <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.25} />
             </mesh>
           </group>
-          {/* 2x RAM Sticks */}
           {[48, 57].map((rx, i) => (
             <mesh key={i} position={[rx, 30, 16]}>
               <boxGeometry args={[5, 86, 22]} />
               <meshStandardMaterial color="#11161f" roughness={0.3} metalness={0.6} />
             </mesh>
           ))}
-          {/* Horizontal PCIe / GPU Card */}
           <mesh position={[6, -34, 38]}>
             <boxGeometry args={[Math.min(160, pcBayWidth - 34), 22, 72]} />
             <meshStandardMaterial color="#1c222d" roughness={0.4} metalness={0.5} />
           </mesh>
         </group>
 
-        {/* ATX PSU sitting cleanly at the back of Bottom Floor (clear of 140mm front intake fan) */}
-        <group position={[pcBayCenterX, t + 42, -halfW + 78]}>
+        {/* ATX PSU sitting cleanly at the back of Bottom Floor */}
+        <group position={[pcBayCenterX, legH + t + 42, -halfW + 78]}>
           <mesh>
             <boxGeometry args={[Math.min(144, pcBayWidth - 36), 82, 134]} />
             <meshStandardMaterial color="#161a22" roughness={0.55} metalness={0.35} />
           </mesh>
-          {/* Top PSU Fan Grille */}
           <mesh position={[0, 41.5, 0]}>
             <cylinderGeometry args={[46, 46, 1.5, 24]} />
             <meshStandardMaterial color="#0b0e14" roughness={0.7} />
@@ -305,7 +581,7 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
         </group>
 
         {/* 3.5" / 2.5" HDD mounted neatly beside PSU */}
-        <group position={[pcBayRight - 34, t + 11, halfW - 58]}>
+        <group position={[pcBayRight - 34, legH + t + 11, halfW - 58]}>
           <mesh>
             <boxGeometry args={[52, 20, 88]} />
             <meshStandardMaterial color="#1a1f28" roughness={0.4} metalness={0.6} />
@@ -319,23 +595,23 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
 
       {/* ================= TOP & BOTTOM SYNCED CASE FANS (1x 140mm PC + 2x 120mm LAPTOP) ================= */}
       <group>
-        {/* Bottom Intake Fans (synced live to 2D Bottom Panel fan holes!) */}
+        {/* Bottom Intake Fans (bottom panel size = innerL x innerW, centered at X=0, Z=0) */}
         {bottomFans.map((hole) => (
           <MountedCaseFan3D
             key={`bot-fan-${hole.id}`}
             size={hole.type === 'fan140' ? 140 : 120}
-            position={[hole.x - halfL, t + 9.5, hole.y - halfW]}
+            position={[hole.x - innerL / 2, legH + t + 9.5, hole.y - innerW / 2]}
             ledColor={ledColor}
             ledEnabled={ledEnabled}
           />
         ))}
 
-        {/* Top Exhaust Fans (synced live to 2D Top Panel fan holes!) */}
+        {/* Top Exhaust Fans (top panel size = L x (W + wiringDepth), centered at X=0, Z=-wiringDepth/2) */}
         {topFans.map((hole) => (
           <MountedCaseFan3D
             key={`top-fan-${hole.id}`}
             size={hole.type === 'fan140' ? 140 : 120}
-            position={[hole.x - halfL, H - t - 9.5, hole.y - halfW]}
+            position={[hole.x - halfL, legH + H - t - 9.5, hole.y - halfW - wiringDepth]}
             ledColor={ledColor}
             ledEnabled={ledEnabled}
           />
@@ -344,24 +620,21 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
 
       {/* ================= RIGHT BAY: DUAL-TIER LAPTOP SERVERS ================= */}
       <group>
-        {/* Bottom Laptop elevated cleanly above the 2x 120mm Bottom Intake Fans */}
         <LaptopUnit
-          position={[lapBayCenterX, t + 21, 6]}
+          position={[lapBayCenterX, legH + t + 21, 6]}
           maxWidth={lapBayWidth}
           maxDepth={W - t * 2}
         />
 
-        {/* Upper Laptop on Right-Bay Middle Shelf */}
         {middleEnabled && (
           <LaptopUnit
-            position={[lapBayCenterX, middleTrayY + t / 2, 8]}
+            position={[lapBayCenterX, legH + middleTrayY + t / 2, 6]}
             maxWidth={lapBayWidth}
             maxDepth={W - t * 2}
           />
         )}
 
-        {/* White DHT22 Temp/Humidity Sensor hanging near top-back */}
-        <mesh position={[lapBayLeft + 34, H - t - 42, -W / 2 + 24]}>
+        <mesh position={[lapBayLeft + 34, legH + H - t - 42, -W / 2 + 24]}>
           <boxGeometry args={[16, 22, 8]} />
           <meshStandardMaterial color="#e2e8f0" roughness={0.5} />
         </mesh>
@@ -369,21 +642,17 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
 
       {/* ================= RIGHT EXTERIOR WALL: FAN POD + IOT BOX ================= */}
       <group>
-        {/* Upper Exterior 3D-Printed Fan Pod (matches photo top-right) */}
-        <group position={[halfL + 22, H * 0.72, 0]}>
-          {/* Matte Black Rounded Body */}
+        <group position={[halfL + 22, legH + H * 0.72, 0]}>
           <mesh>
             <boxGeometry args={[42, 104, 104]} />
             <meshStandardMaterial color="#181c24" roughness={0.5} metalness={0.22} />
           </mesh>
-          {/* Side Louver Vent Strips */}
           {[-30, -18, -6, 6, 18, 30].map((ly, i) => (
             <mesh key={i} position={[0, ly, 52.5]}>
               <boxGeometry args={[28, 4.5, 1.2]} />
               <meshStandardMaterial color="#090b10" roughness={0.9} />
             </mesh>
           ))}
-          {/* Glowing Blue Fan Ring & Spinning Rotor on Outer Face */}
           <group position={[21.5, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
             <mesh>
               <cylinderGeometry args={[40, 40, 2, 32]} />
@@ -396,21 +665,17 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
           </group>
         </group>
 
-        {/* Lower Exterior 3D-Printed Midnight ESP32 IoT Controller Box (matches photo bottom-right) */}
-        <group position={[halfL + 22, H * 0.28, 0]}>
-          {/* Matte Black Body */}
+        <group position={[halfL + 22, legH + H * 0.28, 0]}>
           <mesh>
             <boxGeometry args={[42, 74, 118]} />
             <meshStandardMaterial color="#181c24" roughness={0.5} metalness={0.22} />
           </mesh>
-          {/* Side Louver Vent Strips */}
           {[-20, -10, 0, 10, 20].map((ly, i) => (
             <mesh key={i} position={[0, ly, 59.5]}>
               <boxGeometry args={[26, 4, 1.2]} />
               <meshStandardMaterial color="#090b10" roughness={0.9} />
             </mesh>
           ))}
-          {/* 4 Silver Corner Faceplate M3 Screws */}
           {[
             [-28, -50],
             [28, -50],
@@ -426,7 +691,6 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
               <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
             </mesh>
           ))}
-          {/* Live Glowing Ice Blue 0.96" OLED Telemetry Display */}
           <mesh position={[21.6, 2, 0]} rotation={[0, Math.PI / 2, 0]}>
             <planeGeometry args={[52, 26]} />
             <meshStandardMaterial
@@ -439,7 +703,6 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
           </mesh>
         </group>
 
-        {/* Braided Black Interconnect Cable between Upper Fan Pod & Lower IoT Box */}
         <mesh geometry={cableGeometry}>
           <meshStandardMaterial color="#111318" roughness={0.75} metalness={0.15} />
         </mesh>
