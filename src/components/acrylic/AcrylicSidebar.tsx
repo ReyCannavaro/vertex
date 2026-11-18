@@ -110,7 +110,7 @@ export const AcrylicSidebar: React.FC = () => {
             <input
               type="number"
               min={150}
-              max={600}
+              max={950}
               step={5}
               value={caseDims.length}
               onChange={(e) =>

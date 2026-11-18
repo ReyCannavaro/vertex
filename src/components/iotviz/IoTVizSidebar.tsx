@@ -218,10 +218,31 @@ export const IoTVizSidebar: React.FC = () => {
 
           {/* 3x DHT22 Temperature Simulators */}
           <section className="space-y-2.5">
-            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Thermometer className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Simulasi 3× DHT22 (Per Bay)</span>
-            </h3>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Thermometer className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Simulasi 3× DHT22</span>
+              </h3>
+              <button
+                onClick={() => {
+                  const isHigh =
+                    iotSim.tempPc >= 65 || iotSim.tempLapTop >= 65 || iotSim.tempLapBot >= 65;
+                  updateIoTSim(
+                    isHigh
+                      ? { autoMode: true, tempPc: 32, tempLapTop: 33, tempLapBot: 31 }
+                      : { autoMode: true, tempPc: 68, tempLapTop: 66, tempLapBot: 62 }
+                  );
+                }}
+                className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition ${
+                  eff.overheatAlarm
+                    ? 'bg-rose-500 text-white border-rose-400'
+                    : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border-amber-500/40'
+                }`}
+                title="1-Klik simulasi suhu tinggi agar Relay CH1–CH4 ON & kipas 3D berputar"
+              >
+                {eff.overheatAlarm ? 'Dinginkan (32°C)' : 'Trigger High Temp'}
+              </button>
+            </div>
 
             {[
               {

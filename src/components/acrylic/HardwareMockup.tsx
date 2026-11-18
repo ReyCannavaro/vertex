@@ -541,10 +541,11 @@ const LaptopUnit: React.FC<{
   maxWidth: number;
   maxDepth: number;
 }> = ({ position, maxWidth, maxDepth }) => {
-  const padW = Math.min(315, maxWidth - 26);
-  const padD = Math.min(245, maxDepth - 40);
-  const lapW = padW - 14;
-  const lapD = padD - 18;
+  // True 15.6" Laptop (e.g., Acer Aspire 5: ~363 x 242mm) with side cable clearance
+  const lapW = Math.min(360, maxWidth - 38);
+  const lapD = Math.min(242, maxDepth - 48);
+  const padW = lapW + 10;
+  const padD = lapD + 12;
 
   return (
     <group position={position}>
@@ -657,37 +658,56 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
       {/* ================= REAR WIRING CHAMBER CABLE HARNESS ================= */}
       {showWiring && <RearWiringHarness3D dims={dims} />}
 
-      {/* ================= LEFT BAY: PC SERVER HARDWARE ================= */}
+      {/* ================= LEFT BAY: FULL FRONTAL SHOWCASE MICRO-ATX PC (244x244mm) ================= */}
       <group>
-        {/* Motherboard (mounted vertically on back-left standoffs) */}
-        <group position={[pcBayCenterX, legH + H * 0.62, -W * 0.16]}>
+        {/* True-Scale Micro-ATX Motherboard (244 x 244mm) facing forward cleanly above ATX PSU */}
+        <group position={[pcBayCenterX - 6, legH + H * 0.62, -halfW + 34]}>
+          {/* Matte-Black mATX PCB (244 x 244mm) */}
           <mesh>
-            <boxGeometry args={[Math.min(180, pcBayWidth - 24), Math.min(200, H * 0.48), 4]} />
+            <boxGeometry args={[Math.min(244, pcBayWidth - 26), Math.min(244, H * 0.58), 4]} />
             <meshStandardMaterial color="#141820" roughness={0.55} metalness={0.25} />
           </mesh>
-          <mesh position={[-Math.min(62, pcBayWidth * 0.28), 32, 14]}>
-            <boxGeometry args={[32, 95, 24]} />
+          {/* Rear I/O + VRM Heatsink Shroud with subtle Ice-Blue accent */}
+          <mesh position={[-Math.min(88, pcBayWidth * 0.32), 42, 14]}>
+            <boxGeometry args={[36, 118, 24]} />
             <meshStandardMaterial color="#1f2735" roughness={0.35} metalness={0.55} />
           </mesh>
-          <group position={[0, 30, 24]}>
+          {/* Top VRM Heatsink */}
+          <mesh position={[-12, 98, 12]}>
+            <boxGeometry args={[102, 20, 18]} />
+            <meshStandardMaterial color="#273142" roughness={0.32} metalness={0.6} />
+          </mesh>
+          {/* CPU Cooler with glowing ring accent */}
+          <group position={[-10, 38, 26]}>
             <mesh rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[36, 38, 34, 24]} />
+              <cylinderGeometry args={[42, 44, 38, 28]} />
               <meshStandardMaterial color="#181d26" roughness={0.45} metalness={0.4} />
             </mesh>
-            <mesh position={[0, 0, 18]} rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[12, 12, 3, 18]} />
+            <mesh position={[0, 0, 19.5]}>
+              <torusGeometry args={[34, 2.2, 8, 28]} />
+              <meshStandardMaterial
+                color={ledEnabled ? ledColor : '#38bdf8'}
+                emissive={ledEnabled ? ledColor : '#38bdf8'}
+                emissiveIntensity={ledEnabled ? 1.8 : 0.2}
+                toneMapped={false}
+              />
+            </mesh>
+            <mesh position={[0, 0, 20]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[14, 14, 3, 18]} />
               <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.25} />
             </mesh>
           </group>
-          {[48, 57].map((rx, i) => (
-            <mesh key={i} position={[rx, 30, 16]}>
-              <boxGeometry args={[5, 86, 22]} />
+          {/* 4x DDR4/DDR5 RAM DIMM Sticks */}
+          {[56, 65, 74, 83].map((rx, i) => (
+            <mesh key={i} position={[rx, 38, 18]}>
+              <boxGeometry args={[5.5, 102, 24]} />
               <meshStandardMaterial color="#11161f" roughness={0.3} metalness={0.6} />
             </mesh>
           ))}
-          <mesh position={[6, -34, 38]}>
-            <boxGeometry args={[Math.min(160, pcBayWidth - 34), 22, 72]} />
-            <meshStandardMaterial color="#1c222d" roughness={0.4} metalness={0.5} />
+          {/* Horizontal Dual-Fan PCIe GPU Card */}
+          <mesh position={[4, -46, 52]}>
+            <boxGeometry args={[Math.min(220, pcBayWidth - 36), 34, 96]} />
+            <meshStandardMaterial color="#1c222d" roughness={0.38} metalness={0.5} />
           </mesh>
         </group>
 

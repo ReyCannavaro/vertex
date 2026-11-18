@@ -534,11 +534,11 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
 }
 
 const DEFAULT_CASE_DIMS: CaseDimensions = {
-  length: 600,
+  length: 700, // Opsi 2 Full Showcase (70 cm): 28.5 cm PC Bay (mATX 24.4cm frontal) + 41.5 cm Laptop Bay (15.6" + colokan samping)
   width: 360,
   height: 420,
   thickness: 5,
-  dividerX: 220,
+  dividerX: 285,
   middleTrayY: 205,
   legHeight: 38,
   wiringDepth: 48,

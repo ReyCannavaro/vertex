@@ -444,7 +444,7 @@ export const Preview3DAssembly: React.FC = () => {
       </div>
 
       <Canvas
-        camera={{ position: [590, 420, 690], fov: 36, near: 1, far: 5000 }}
+        camera={{ position: [660, 440, 770], fov: 36, near: 1, far: 5000 }}
         dpr={[1, 2]}
         gl={{ antialias: true }}
       >
