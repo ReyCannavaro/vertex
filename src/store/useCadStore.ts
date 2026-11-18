@@ -395,9 +395,8 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         // Pull Handle (2x M3)
         { id: `${spec.id}-hdl1`, type: 'm3', label: 'Handle Atas (M3)', x: handleX, y: midY - 26, diameter: m3 },
         { id: `${spec.id}-hdl2`, type: 'm3', label: 'Handle Bawah (M3)', x: handleX, y: midY + 26, diameter: m3 },
-        // Magnetic Catch Strike Plate + MC-38 Magnet Block (2x M3 near top edge)
+        // Magnetic Catch Strike Plate (1x M3 near top inner edge; MC-38 Door Magnet mounts cleanly via pre-applied 3M VHB tape without drilling front door!)
         { id: `${spec.id}-mag1`, type: 'm3', label: 'Pelat Magnet Catch (M3)', x: handleX, y: 26, diameter: m3 },
-        { id: `${spec.id}-mc38`, type: 'm3', label: 'Magnet Sensor MC-38 (M3)', x: isLeft ? width - 30 : 30, y: 12, diameter: m3 },
       ];
     } else if (spec.id === 'left' || spec.id === 'right') {
       // 4 outer corner M3 holes (above chamfered leg arch)
@@ -516,10 +515,17 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         { id: 'back-comb-1', type: 'm3', label: 'Mount Cable Comb #1', x: 24, y: combY, diameter: m3 },
         { id: 'back-comb-2', type: 'm3', label: 'Mount Cable Comb #2', x: Math.round(width / 2), y: combY, diameter: m3 },
         { id: 'back-comb-3', type: 'm3', label: 'Mount Cable Comb #3', x: width - 24, y: combY, diameter: m3 },
-        // 3x DHT22 Sensor Mounting Screw Holes (PC Bay, Laptop Top, Laptop Bottom)
-        { id: 'back-dht-pc', type: 'm3', label: 'Mount DHT22 PC', x: width - 34, y: 42, diameter: m3 },
-        { id: 'back-dht-lt', type: 'm3', label: 'Mount DHT22 Lap Atas', x: Math.round(lapSpan - 34), y: 42, diameter: m3 },
-        { id: 'back-dht-lb', type: 'm3', label: 'Mount DHT22 Lap Bawah', x: Math.round(lapSpan - 34), y: shelfY + 38, diameter: m3 },
+        // 3x DHT21 / AM2301 Sensor Mounting M3 Holes + Ø8mm Wire Pass-Throughs (zero hanging cables!)
+        // PC Bay DHT21 mounted horizontally above Micro-ATX board (clear of motherboard standoffs!)
+        { id: 'back-dht-pc-m3', type: 'm3', label: 'Mount DHT21 PC (M3)', x: pcX + 30, y: 26, diameter: m3 },
+        { id: 'back-dht-pc-wire', type: 'm3', label: 'Kabel DHT21 PC (Ø8mm)', x: pcX - 32, y: 26, diameter: 8 },
+        // Laptop Top & Bottom DHT21 mounted vertically on Back Partition (clear of cable slots & MQ-2)
+        { id: 'back-dht-lt-m3', type: 'm3', label: 'Mount DHT21 Lap Atas (M3)', x: Math.round(lapSpan - 66), y: 32, diameter: m3 },
+        { id: 'back-dht-lt-wire', type: 'm3', label: 'Kabel DHT21 Lap Atas (Ø8mm)', x: Math.round(lapSpan - 66), y: 94, diameter: 8 },
+        { id: 'back-dht-lb-m3', type: 'm3', label: 'Mount DHT21 Lap Bawah (M3)', x: Math.round(lapSpan - 66), y: shelfY + 34, diameter: m3 },
+        { id: 'back-dht-lb-wire', type: 'm3', label: 'Kabel DHT21 Lap Bawah (Ø8mm)', x: Math.round(lapSpan - 66), y: shelfY + 96, diameter: 8 },
+        // 1x MQ-2 Smoke Sensor Cable Pass-Through (directly behind ceiling MQ-2 rear pin header)
+        { id: 'back-mq2-wire', type: 'm3', label: 'Kabel MQ-2 Asap (Ø8mm)', x: Math.round(lapSpan - 27), y: 18, diameter: 8 },
         // 6x M3 Adaptor Cradle Mounting Holes (for 3x 3D-Printed Power Brick Cradles on Rear Side of Back Partition!)
         { id: 'back-cradle-1a', type: 'm3', label: 'Cradle Adaptor 12V #1', x: Math.round(width * 0.48 - 36), y: height - 30, diameter: m3 },
         { id: 'back-cradle-1b', type: 'm3', label: 'Cradle Adaptor 12V #2', x: Math.round(width * 0.48 + 36), y: height - 30, diameter: m3 },
@@ -699,14 +705,16 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         // Divider Top T-Bracket M3 Holes (front & rear of main chamber)
         { id: 'top-div-f', type: 'm3', label: 'Braket T Divider Depan', x: dividerX, y: height - 14, diameter: m3 },
         { id: 'top-div-b', type: 'm3', label: 'Braket T Divider Belakang', x: dividerX, y: wiringDepth + 14, diameter: m3 },
-        // 2x MC-38 Door Reed Switch Mounting Holes (above Left PC Door & Right Laptop Door)
-        { id: 'top-mc38-pc1', type: 'm3', label: 'Sensor Pintu PC #1', x: dividerX - 38, y: height - 14, diameter: m3 },
-        { id: 'top-mc38-pc2', type: 'm3', label: 'Sensor Pintu PC #2', x: dividerX - 18, y: height - 14, diameter: m3 },
-        { id: 'top-mc38-lap1', type: 'm3', label: 'Sensor Pintu Laptop #1', x: dividerX + 18, y: height - 14, diameter: m3 },
-        { id: 'top-mc38-lap2', type: 'm3', label: 'Sensor Pintu Laptop #2', x: dividerX + 38, y: height - 14, diameter: m3 },
-        // MQ-2 Smoke Sensor Ceiling Mount Holes (2x M3)
-        { id: 'top-mq2-1', type: 'm3', label: 'Mount Sensor Asap MQ-2 #1', x: dividerX + 18, y: mainCenterY - 20, diameter: m3 },
-        { id: 'top-mq2-2', type: 'm3', label: 'Mount Sensor Asap MQ-2 #2', x: dividerX + 34, y: mainCenterY - 20, diameter: m3 },
+        // 2x MC-38 Door Reed Switch Mounting Holes (18mm pitch aligned 1:1 with Door Magnets at dividerX ± 44!)
+        { id: 'top-mc38-pc1', type: 'm3', label: 'MC-38 Pintu PC #1 (M3)', x: dividerX - 53, y: height - 16, diameter: m3 },
+        { id: 'top-mc38-pc2', type: 'm3', label: 'MC-38 Pintu PC #2 (M3)', x: dividerX - 35, y: height - 16, diameter: m3 },
+        { id: 'top-mc38-lap1', type: 'm3', label: 'MC-38 Pintu Lap #1 (M3)', x: dividerX + 35, y: height - 16, diameter: m3 },
+        { id: 'top-mc38-lap2', type: 'm3', label: 'MC-38 Pintu Lap #2 (M3)', x: dividerX + 53, y: height - 16, diameter: m3 },
+        // 1x MQ-2 Smoke Sensor 4-Corner M3 Standoff Mount Holes (exact 14×26mm pitch for 20×32mm blue PCB, thermal air-gap!)
+        { id: 'top-mq2-1', type: 'm3', label: 'Standoff MQ-2 TL (M3)', x: dividerX + 20, y: wiringDepth + 43, diameter: m3 },
+        { id: 'top-mq2-2', type: 'm3', label: 'Standoff MQ-2 TR (M3)', x: dividerX + 34, y: wiringDepth + 43, diameter: m3 },
+        { id: 'top-mq2-3', type: 'm3', label: 'Standoff MQ-2 BR (M3)', x: dividerX + 34, y: wiringDepth + 69, diameter: m3 },
+        { id: 'top-mq2-4', type: 'm3', label: 'Standoff MQ-2 BL (M3)', x: dividerX + 20, y: wiringDepth + 69, diameter: m3 },
         // Top Exhaust Fans (1x 140mm PC + 2x 120mm Laptop)
         {
           id: 'top-pc-fan140',
@@ -1284,8 +1292,8 @@ export const useCadStore = create<CadStoreState>()(
   },
 }),
     {
-      name: 'vertex-cad-project-v3',
-      version: 3,
+      name: 'vertex-cad-project-v4',
+      version: 4,
       partialize: (state) => ({
         caseDims: state.caseDims,
         panels: state.panels,

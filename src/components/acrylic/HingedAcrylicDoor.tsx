@@ -228,17 +228,29 @@ export const HingedAcrylicDoor: React.FC<HingedAcrylicDoorProps> = ({
           <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.25} />
         </mesh>
 
-        {/* Matching White MC-38 Door Magnet Block at Top Inner Edge (mates cleanly with MC-38 Reed Switch on Top!) */}
-        <mesh
+        {/* Matching White MC-38 Door Magnet Block via 3M VHB Foam Pad (Zero Drilled Holes on Front Door!) */}
+        <group
           position={[
             isLeft ? panel.width - 42 : -panel.width + 42,
-            panel.height / 2 - 10,
-            meshOffsetZ - t / 2 - 4,
+            panel.height / 2 - 11,
+            meshOffsetZ - t / 2,
           ]}
         >
-          <boxGeometry args={[26, 8, 8]} />
-          <meshStandardMaterial color="#f1f5f9" roughness={0.45} />
-        </mesh>
+          {/* Thin Cream 3M VHB Foam Adhesive Strip glued cleanly to inside door surface */}
+          <mesh position={[0, 0, -0.6]}>
+            <boxGeometry args={[27, 14, 1.2]} />
+            <meshStandardMaterial color="#e7e0c9" roughness={0.85} />
+          </mesh>
+          {/* White ABS Magnet Housing (27 × 7.5 × 8 mm) + Lower Flange Lip */}
+          <mesh position={[0, 2.5, -5.0]}>
+            <boxGeometry args={[27, 7.5, 7.6]} />
+            <meshStandardMaterial color="#f1f5f9" roughness={0.42} />
+          </mesh>
+          <mesh position={[0, -3.5, -2.6]}>
+            <boxGeometry args={[27, 5.5, 2.8]} />
+            <meshStandardMaterial color="#f1f5f9" roughness={0.42} />
+          </mesh>
+        </group>
       </group>
     </group>
   );
