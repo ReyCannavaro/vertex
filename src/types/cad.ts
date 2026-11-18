@@ -119,13 +119,15 @@ export interface BracketParams {
   type: BracketType;
   /** Arm length from corner/center in mm */
   armLength: number;
-  /** Bracket body thickness in mm */
+  /** Bracket body thickness / sleeve depth in mm */
   thickness: number;
   /** Width of each bracket arm in mm */
   armWidth: number;
+  /** Acrylic sheet slot clearance width for Slotted T / Cross Clamps (5.2mm for 5mm acrylic, 3.2mm for 3mm) */
+  acrylicGap: number;
   /** M3/M4 screw clearance hole diameter in mm (3.4mm recommended for M3) */
   screwDiameter: number;
-  /** Distance from corner/center to screw hole center in mm (matches 14mm margin in Module 1) */
+  /** Distance from corner/center to screw hole center in mm */
   holeOffset: number;
   /** Show preview M3 silver bolts in 3D viewport (not exported to STL) */
   showPreviewBolts: boolean;

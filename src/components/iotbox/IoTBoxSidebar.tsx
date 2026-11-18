@@ -30,10 +30,10 @@ const BRACKET_SPECS: Array<{
   qty: string;
   usage: string;
 }> = [
-  { id: 'corner-3way', label: 'Corner 3-Way', qty: 'Cetak 8×', usage: '8 sudut luar rangka utama' },
-  { id: 't-bracket', label: 'T-Bracket', qty: 'Cetak 6×', usage: 'Sekat tengah & tepi rak laptop' },
-  { id: 'cross-bracket', label: 'Cross (+) 4-Way', qty: 'Cetak 2×', usage: 'Pertemuan Divider × Middle Shelf' },
-  { id: 'l-bracket', label: 'L-Bracket Siku', qty: 'Cetak 10×', usage: 'Belakang rak, kaki tengah, comb' },
+  { id: 'l-bracket', label: 'L-Bracket Siku (Utama Dalam)', qty: 'Cetak 22×', usage: 'Semua joint dalam & depan (bebas ganjel pintu & MC-38!)' },
+  { id: 'corner-3way', label: 'Corner 3-Way (Sudut Belakang)', qty: 'Cetak 4×', usage: '4 sudut luar Rear Wiring Chamber (Thumb-Screw M3)' },
+  { id: 't-bracket', label: 'Slotted T-Clamp (Opsional)', qty: 'Opsional', usage: 'Klip selip 5.2mm (hanya jika tanpa pintu depan)' },
+  { id: 'cross-bracket', label: 'Slotted Cross (+) (Opsional)', qty: 'Opsional', usage: 'Klip selip 5.2mm (hanya jika tanpa pintu depan)' },
 ];
 
 export const IoTBoxSidebar: React.FC = () => {
@@ -212,6 +212,27 @@ export const IoTBoxSidebar: React.FC = () => {
                 className="w-full cursor-pointer"
               />
             </div>
+
+            {(bracketParams.type === 't-bracket' ||
+              bracketParams.type === 'cross-bracket') && (
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-300">Celah Slot Akrilik (5mm → 5.2)</span>
+                  <span className="font-mono text-amber-300">
+                    {bracketParams.acrylicGap.toFixed(1)} mm
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={3.1}
+                  max={6.0}
+                  step={0.1}
+                  value={bracketParams.acrylicGap}
+                  onChange={(e) => updateBracketParams({ acrylicGap: Number(e.target.value) })}
+                  className="w-full cursor-pointer"
+                />
+              </div>
+            )}
 
             <div className="space-y-1">
               <div className="flex justify-between">

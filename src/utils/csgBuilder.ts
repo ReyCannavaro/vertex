@@ -626,7 +626,8 @@ export function getBracketBoltPositions(params: BracketParams): BracketBoltSpec[
 
   if (type === 't-bracket') {
     const topY = arm + w / 2;
-    const z = t / 2 + 0.7;
+    const sleeveDepth = Math.max(12, t + 10);
+    const z = sleeveDepth / 2 + 0.6;
     return [
       { position: [-off, topY, z], rotation: [Math.PI / 2, 0, 0] },
       { position: [off, topY, z], rotation: [Math.PI / 2, 0, 0] },
@@ -636,7 +637,8 @@ export function getBracketBoltPositions(params: BracketParams): BracketBoltSpec[
 
   if (type === 'cross-bracket') {
     const cy = arm;
-    const z = t / 2 + 0.7;
+    const sleeveDepth = Math.max(12, t + 10);
+    const z = sleeveDepth / 2 + 0.6;
     return [
       { position: [-off, cy, z], rotation: [Math.PI / 2, 0, 0] },
       { position: [off, cy, z], rotation: [Math.PI / 2, 0, 0] },
@@ -676,50 +678,69 @@ export function getBracketBoltPositions(params: BracketParams): BracketBoltSpec[
  * Units: 1 Three.js unit = 1 mm. Bottom sits cleanly at Y = 0.
  */
 export function buildBracketGeometry(params: BracketParams): THREE.BufferGeometry {
-  const { type, armLength: arm, thickness: t, armWidth: w, screwDiameter: dia, holeOffset } =
-    params;
+  const {
+    type,
+    armLength: arm,
+    thickness: t,
+    armWidth: w,
+    acrylicGap,
+    screwDiameter: dia,
+    holeOffset,
+  } = params;
   const rHole = Math.max(1.2, dia / 2);
   const rHead = rHole + 1.45;
   const off = Math.min(Math.max(w * 0.65, holeOffset), arm - 4.5);
+  const slotGap = Math.max(3.0, Math.min(acrylicGap, w - 4));
 
   if (type === 't-bracket') {
+    // Slotted Edge Clamp: front cap + rear-opening 5.2mm U-channel grooves so 5mm acrylic slides right in!
     const topY = arm + w / 2;
+    const sleeveDepth = Math.max(12, t + 10);
+    const grooveDepth = sleeveDepth - Math.max(3.2, t * 0.55);
+
     const hBar = makeTransformedGeo(
-      createRoundedBlockGeo(arm * 2, w, t, 3, 0.5),
+      createRoundedBlockGeo(arm * 2, w, sleeveDepth, 3, 0.5),
       [0, topY, 0]
     );
     const vStem = makeTransformedGeo(
-      createRoundedBlockGeo(w, arm + w * 0.5, t, 3, 0.5),
+      createRoundedBlockGeo(w, arm + w * 0.5, sleeveDepth, 3, 0.5),
       [0, (arm + w * 0.5) / 2, 0]
     );
 
     let body = makeBrushFromGeo(hBar);
     body = unionMerged(body, [vStem]);
 
+    // Cut rear-opening T-shaped 5.2mm acrylic slide grooves (back face -Z)
+    const grooveZ = -sleeveDepth / 2 + grooveDepth / 2 - 1;
+    const cutters: THREE.BufferGeometry[] = [
+      // Horizontal acrylic groove along top T bar
+      makeTransformedGeo(
+        new THREE.BoxGeometry(arm * 2 + 6, slotGap, grooveDepth + 2),
+        [0, topY, grooveZ]
+      ),
+      // Vertical acrylic groove down the T stem
+      makeTransformedGeo(
+        new THREE.BoxGeometry(slotGap, arm + w * 0.5 + 4, grooveDepth + 2),
+        [0, (arm + w * 0.5) / 2 - 2, grooveZ]
+      ),
+    ];
+
+    // Optional front decorative/set-screw dimples on front cap (+Z)
     const holePts: [number, number][] = [
       [-off, topY],
       [off, topY],
       [0, topY - off],
     ];
-    const cutters: THREE.BufferGeometry[] = [];
     for (const [hx, hy] of holePts) {
       cutters.push(
-        // M3 clearance shaft
         makeTransformedGeo(
-          new THREE.CylinderGeometry(rHole, rHole, t + 6, 18),
-          [hx, hy, 0],
+          new THREE.CylinderGeometry(rHead * 0.72, rHead * 0.72, 1.8, 16),
+          [hx, hy, sleeveDepth / 2 - 0.3],
           [Math.PI / 2, 0, 0]
-        ),
-        // Front countersunk M3 bolt-head recess (+Z)
-        makeTransformedGeo(
-          new THREE.CylinderGeometry(rHead, rHead, 2.2, 18),
-          [hx, hy, t / 2 - 0.4],
-          [Math.PI / 2, 0, 0]
-        ),
-        // Rear hexagonal M3 captive nut pocket (-Z)
-        makeM3HexPocketGeo([hx, hy, -t / 2 + 0.7], [Math.PI / 2, 0, 0], 2.4)
+        )
       );
     }
+
     body = subtractMerged(body, cutters);
     const out = body.geometry.clone();
     out.computeVertexNormals();
@@ -728,18 +749,36 @@ export function buildBracketGeometry(params: BracketParams): THREE.BufferGeometr
   }
 
   if (type === 'cross-bracket') {
+    // Slotted 4-Way (+) Edge Clamp: slides cleanly over Divider x Middle Shelf front intersection (5.2mm slot!)
     const cy = arm;
+    const sleeveDepth = Math.max(12, t + 10);
+    const grooveDepth = sleeveDepth - Math.max(3.2, t * 0.55);
+
     const hBar = makeTransformedGeo(
-      createRoundedBlockGeo(arm * 2, w, t, 3, 0.5),
+      createRoundedBlockGeo(arm * 2, w, sleeveDepth, 3, 0.5),
       [0, cy, 0]
     );
     const vBar = makeTransformedGeo(
-      createRoundedBlockGeo(w, arm * 2, t, 3, 0.5),
+      createRoundedBlockGeo(w, arm * 2, sleeveDepth, 3, 0.5),
       [0, cy, 0]
     );
 
     let body = makeBrushFromGeo(hBar);
     body = unionMerged(body, [vBar]);
+
+    const grooveZ = -sleeveDepth / 2 + grooveDepth / 2 - 1;
+    const cutters: THREE.BufferGeometry[] = [
+      // Horizontal groove (Middle Shelf 5mm edge)
+      makeTransformedGeo(
+        new THREE.BoxGeometry(arm * 2 + 6, slotGap, grooveDepth + 2),
+        [0, cy, grooveZ]
+      ),
+      // Vertical groove (Divider 5mm edge)
+      makeTransformedGeo(
+        new THREE.BoxGeometry(slotGap, arm * 2 + 6, grooveDepth + 2),
+        [0, cy, grooveZ]
+      ),
+    ];
 
     const holePts: [number, number][] = [
       [-off, cy],
@@ -747,25 +786,16 @@ export function buildBracketGeometry(params: BracketParams): THREE.BufferGeometr
       [0, cy + off],
       [0, cy - off],
     ];
-    const cutters: THREE.BufferGeometry[] = [];
     for (const [hx, hy] of holePts) {
       cutters.push(
-        // M3 clearance shaft
         makeTransformedGeo(
-          new THREE.CylinderGeometry(rHole, rHole, t + 6, 18),
-          [hx, hy, 0],
+          new THREE.CylinderGeometry(rHead * 0.72, rHead * 0.72, 1.8, 16),
+          [hx, hy, sleeveDepth / 2 - 0.3],
           [Math.PI / 2, 0, 0]
-        ),
-        // Front countersunk M3 bolt-head recess (+Z)
-        makeTransformedGeo(
-          new THREE.CylinderGeometry(rHead, rHead, 2.2, 18),
-          [hx, hy, t / 2 - 0.4],
-          [Math.PI / 2, 0, 0]
-        ),
-        // Rear hexagonal M3 captive nut pocket (-Z)
-        makeM3HexPocketGeo([hx, hy, -t / 2 + 0.7], [Math.PI / 2, 0, 0], 2.4)
+        )
       );
     }
+
     body = subtractMerged(body, cutters);
     const out = body.geometry.clone();
     out.computeVertexNormals();

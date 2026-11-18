@@ -877,10 +877,10 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
           </mesh>
         </group>
 
-        {/* 2x MC-38 Magnetic Door Reed Switches mounted on Top Front Inner Frame */}
+        {/* 2x MC-38 Magnetic Door Reed Switches mounted cleanly on Top Front Inner Frame (clear of Center Catch & Brackets!) */}
         {[
-          { key: 'mc38-pc', x: pcBayRight - 28, open: doorPcOpen },
-          { key: 'mc38-lap', x: lapBayLeft + 28, open: doorLapOpen },
+          { key: 'mc38-pc', x: pcBayRight - 42, open: doorPcOpen },
+          { key: 'mc38-lap', x: lapBayLeft + 42, open: doorLapOpen },
         ].map((reed) => (
           <group key={reed.key} position={[reed.x, legH + H - t - 7, halfW - 14]}>
             <mesh>

@@ -10,9 +10,15 @@ import { HardwareMockup } from './HardwareMockup';
 import { computeEffectiveIoTState } from '../../utils/iotSimulation';
 
 /**
- * Matte-black industrial exterior Corner, T-Joint, and Cross (+) Brackets with M3 screws.
- * Elevated cleanly above the integrated acrylic legs (y = legHeight .. legHeight + H)
- * and spanning back to cover the Rear Wiring Chamber.
+ * Door-safe, flush-clearance 3D-printed matte-black structural brackets:
+ * - ZERO brackets protruding past the front door plane (+halfW), so the Hinged French Doors
+ *   close 100% flush and never clash with the 2x MC-38 magnetic door sensors or magnetic catch!
+ * - ALL interior & front structural joints use recessed Heavy-Duty L-Brackets bolted through wide 5mm faces:
+ *     * 6x Underside L-Brackets for Middle Laptop Shelf (2 Left Divider + 2 Right Wall + 2 Back)
+ *     * 4x Interior L-Brackets for Divider (2 Top + 2 Bottom)
+ *     * 4x Interior Front Corner L-Brackets (Left/Right x Top/Bottom, recessed behind door hinge plane)
+ *     * 2x Underside L-Brackets for Center Anti-Sag Foot
+ * - 4x Rear Outer Corner 3-Way Brackets on the back corners of the Rear Wiring Chamber (Thumb-Screw ready).
  */
 const StructuralFrameBrackets: React.FC = () => {
   const dims = useCadStore((s) => s.caseDims);
@@ -23,6 +29,7 @@ const StructuralFrameBrackets: React.FC = () => {
     length: L,
     width: W,
     height: H,
+    thickness: t,
     dividerX,
     middleTrayY,
     legHeight: legH,
@@ -43,34 +50,34 @@ const StructuralFrameBrackets: React.FC = () => {
     <meshStandardMaterial color="#cbd5e1" roughness={0.22} metalness={0.92} />
   );
 
-  // Helper: 3-way outer corner bracket
-  const renderCorner = (sx: number, sy: number, zPos: number, szDir: number, key: string) => {
+  // Rear 3-way outer corner bracket (only on rear wiring chamber corners, clear of front doors!)
+  const renderRearCorner = (sx: number, sy: number, key: string) => {
     const cx = sx * (halfL + 1);
     const cy = sy > 0 ? legH + H + 1 : legH - 1;
-    const cz = zPos + szDir * 1;
+    const cz = rearZ - 1;
     return (
       <group key={key} position={[cx, cy, cz]}>
         <mesh>
           <boxGeometry args={[12, 12, 12]} />
           {bracketMat}
         </mesh>
-        <mesh position={[-sx * (arm / 2), -sy * 3, -szDir * 3]}>
+        <mesh position={[-sx * (arm / 2), -sy * 3, 3]}>
           <boxGeometry args={[arm, thick, thick]} />
           {bracketMat}
         </mesh>
-        <mesh position={[-sx * 3, -sy * (arm / 2), -szDir * 3]}>
+        <mesh position={[-sx * 3, -sy * (arm / 2), 3]}>
           <boxGeometry args={[thick, arm, thick]} />
           {bracketMat}
         </mesh>
-        <mesh position={[-sx * 3, -sy * 3, -szDir * (arm / 2)]}>
+        <mesh position={[-sx * 3, -sy * 3, arm / 2]}>
           <boxGeometry args={[thick, thick, arm]} />
           {bracketMat}
         </mesh>
-        <mesh position={[-sx * (arm - 6), -sy * 3, szDir * 1.2]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh position={[-sx * (arm - 6), -sy * 3, -1.2]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[2.1, 2.1, 2.5, 10]} />
           {screwMat}
         </mesh>
-        <mesh position={[-sx * 3, -sy * (arm - 6), szDir * 1.2]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh position={[-sx * 3, -sy * (arm - 6), -1.2]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[2.1, 2.1, 2.5, 10]} />
           {screwMat}
         </mesh>
@@ -78,132 +85,116 @@ const StructuralFrameBrackets: React.FC = () => {
     );
   };
 
-  const renderTBracket = (
+  // Recessed Heavy-Duty Internal L-Bracket with silver M3 bolt heads
+  const renderInternalL = (
     pos: [number, number, number],
-    rotZ: number,
-    sz: number,
+    size: [number, number, number],
     key: string
   ) => (
-    <group key={key} position={pos} rotation={[0, 0, rotZ]}>
-      <mesh>
-        <boxGeometry args={[arm * 1.85, 11, thick]} />
-        {bracketMat}
-      </mesh>
-      <mesh position={[0, -arm * 0.48, 0]}>
-        <boxGeometry args={[11, arm * 0.95, thick]} />
-        {bracketMat}
-      </mesh>
-      {[-arm * 0.65, arm * 0.65].map((ox, i) => (
-        <mesh key={i} position={[ox, 0, sz * 3.6]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[2.1, 2.1, 2, 10]} />
-          {screwMat}
-        </mesh>
-      ))}
-      <mesh position={[0, -arm * 0.72, sz * 3.6]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[2.1, 2.1, 2, 10]} />
-        {screwMat}
-      </mesh>
-    </group>
-  );
-
-  const renderCrossBracket = (pos: [number, number, number], sz: number, key: string) => (
     <group key={key} position={pos}>
       <mesh>
-        <boxGeometry args={[arm * 1.85, 12, thick]} />
+        <boxGeometry args={size} />
         {bracketMat}
       </mesh>
-      <mesh>
-        <boxGeometry args={[12, arm * 1.85, thick]} />
-        {bracketMat}
-      </mesh>
-      {[
-        [-arm * 0.65, 0],
-        [arm * 0.65, 0],
-        [0, -arm * 0.65],
-        [0, arm * 0.65],
-      ].map(([ox, oy], i) => (
-        <mesh key={i} position={[ox, oy, sz * 3.6]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[2.1, 2.1, 2, 10]} />
-          {screwMat}
-        </mesh>
-      ))}
     </group>
   );
 
   return (
     <group>
-      {/* 4 Front Outer Corner Brackets (z = +halfW) + 4 Rear Outer Corner Brackets (z = -halfW - wDepth) */}
+      {/* 4x Rear Outer Corner 3-Way Brackets (at back of Rear Wiring Chamber) */}
       {[-1, 1].map((sx) =>
-        [-1, 1].map((sy) => (
-          <React.Fragment key={`corners-${sx}-${sy}`}>
-            {renderCorner(sx, sy, halfW, 1, `cf-${sx}-${sy}`)}
-            {renderCorner(sx, sy, rearZ, -1, `cr-${sx}-${sy}`)}
-          </React.Fragment>
-        ))
+        [-1, 1].map((sy) => renderRearCorner(sx, sy, `cr-${sx}-${sy}`))
       )}
 
-      {/* 4 Divider T-Brackets (Top & Bottom, Front & Back of Main Chamber) */}
+      {/* 4x Recessed Front Interior Corner L-Brackets (clear of Hinged Doors & MC-38 Sensors!) */}
+      {[-1, 1].map((sx) =>
+        [-1, 1].map((sy) =>
+          renderInternalL(
+            [
+              sx * (halfL - t - 10),
+              sy > 0 ? legH + H - t - 10 : legH + t + 10,
+              halfW - 34, // recessed 34mm back from front door plane!
+            ],
+            [18, 18, 16],
+            `front-int-l-${sx}-${sy}`
+          )
+        )
+      )}
+
+      {/* 4x Recessed Interior L-Brackets anchoring Divider to Top & Bottom (2 Top + 2 Bottom) */}
       {dividerEnabled && (
         <>
-          {renderTBracket([divX, legH + H - 3, halfW + 1], 0, 1, 'dt-top-f')}
-          {renderTBracket([divX, legH + 3, halfW + 1], Math.PI, 1, 'dt-bot-f')}
-          {renderTBracket([divX, legH + H - 3, -halfW - 1], 0, -1, 'dt-top-b')}
-          {renderTBracket([divX, legH + 3, -halfW - 1], Math.PI, -1, 'dt-bot-b')}
+          {[halfW - 36, -halfW + 32].map((dz, idx) => (
+            <React.Fragment key={`div-l-${idx}`}>
+              {/* Top Divider L-Bracket */}
+              {renderInternalL(
+                [divX + 11, legH + H - t - 10, dz],
+                [16, 16, 18],
+                `div-top-l-${idx}`
+              )}
+              {/* Bottom Divider L-Bracket */}
+              {renderInternalL(
+                [divX + 11, legH + t + 10, dz],
+                [16, 16, 18],
+                `div-bot-l-${idx}`
+              )}
+            </React.Fragment>
+          ))}
         </>
       )}
 
-      {/* 2 Cross (+)-Brackets where Divider intersects Middle Laptop Shelf */}
-      {dividerEnabled && middleEnabled && (
-        <>
-          {renderCrossBracket([divX, legH + middleTrayY, halfW + 1], 1, 'cross-f')}
-          {renderCrossBracket([divX, legH + middleTrayY, -halfW - 1], -1, 'cross-b')}
-        </>
-      )}
-
-      {/* 2 Right-Wall T-Brackets + 2 Rear Anti-Sag L-Brackets supporting the 41cm Middle Laptop Shelf (3-side support!) */}
+      {/* 6x Heavy-Duty Underside L-Brackets supporting Middle Laptop Shelf on 3 sides (2 Left Divider + 2 Right Wall + 2 Back) */}
       {middleEnabled && (
         <>
-          {renderTBracket([halfL - 3, legH + middleTrayY, halfW + 1], -Math.PI / 2, 1, 'rt-mid-f')}
-          {renderTBracket([halfL - 3, legH + middleTrayY, -halfW - 1], -Math.PI / 2, -1, 'rt-mid-b')}
+          {/* 2x Left-Side Underside L-Brackets bolted to Divider wide face (recessed behind doors!) */}
+          {[halfW - 32, -halfW + 32].map((bz, idx) =>
+            renderInternalL(
+              [divX + 11, legH + middleTrayY - 10, bz],
+              [16, 16, 18],
+              `mid-left-l-${idx}`
+            )
+          )}
+
+          {/* 2x Right-Side Underside L-Brackets bolted to Right Wall wide face (recessed behind doors!) */}
+          {[halfW - 32, -halfW + 32].map((bz, idx) =>
+            renderInternalL(
+              [halfL - t - 10, legH + middleTrayY - 10, bz],
+              [16, 16, 18],
+              `mid-right-l-${idx}`
+            )
+          )}
+
+          {/* 2x Rear Anti-Sag Underside L-Brackets bolted to Back Partition wide face */}
           {[0.32, 0.72].map((ratio, idx) => {
             const bx = divX + (halfL - divX) * ratio;
-            return (
-              <group key={`mid-rear-l-${idx}`} position={[bx, legH + middleTrayY - 9, -halfW + 12]}>
-                <mesh>
-                  <boxGeometry args={[22, 14, 14]} />
-                  {bracketMat}
-                </mesh>
-              </group>
+            return renderInternalL(
+              [bx, legH + middleTrayY - 10, -halfW + t + 10],
+              [20, 16, 16],
+              `mid-rear-l-${idx}`
             );
           })}
         </>
       )}
 
-      {/* 2 Underside Support Clips anchoring the Center Anti-Sag Foot beneath the E-Track Center Spine */}
-      {legH > 12 && (
-        <>
-          {[halfW - 36, -halfW + 36].map((fz, i) => (
-            <mesh key={`cf-clip-${i}`} position={[divX, legH - 11, fz]}>
-              <boxGeometry args={[16, 10, 18]} />
-              {bracketMat}
-            </mesh>
-          ))}
-        </>
-      )}
+      {/* 2x Underside L-Brackets anchoring the Center Anti-Sag Foot beneath the E-Track Center Spine */}
+      {legH > 12 &&
+        [halfW - 36, -halfW + 36].map((fz, i) =>
+          renderInternalL([divX, legH - 11, fz], [16, 10, 18], `cf-clip-${i}`)
+        )}
 
-      {/* Center Magnetic Door Catch Latch mounted at Top-Front of Divider */}
+      {/* Center Magnetic Door Catch Latch mounted cleanly at Top-Front of Divider (100% unobstructed!) */}
       {dividerEnabled && (
         <group position={[divX, legH + H - 28, halfW - 11]}>
           <mesh>
-            <boxGeometry args={[32, 12, 14]} />
+            <boxGeometry args={[28, 12, 14]} />
             {bracketMat}
           </mesh>
-          <mesh position={[-9, 0, 7.2]}>
-            <boxGeometry args={[10, 8, 1.5]} />
+          <mesh position={[-8, 0, 7.2]}>
+            <boxGeometry args={[9, 8, 1.5]} />
             {screwMat}
           </mesh>
-          <mesh position={[9, 0, 7.2]}>
-            <boxGeometry args={[10, 8, 1.5]} />
+          <mesh position={[8, 0, 7.2]}>
+            <boxGeometry args={[9, 8, 1.5]} />
             {screwMat}
           </mesh>
         </group>

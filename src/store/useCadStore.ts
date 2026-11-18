@@ -409,9 +409,9 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         { id: 'right-hinge-t2', type: 'm3', label: 'Engsel Pintu Laptop Atas #2', x: 15, y: topHingeY + 11, diameter: m3 },
         { id: 'right-hinge-b1', type: 'm3', label: 'Engsel Pintu Laptop Bawah #1', x: 15, y: botHingeY - 11, diameter: m3 },
         { id: 'right-hinge-b2', type: 'm3', label: 'Engsel Pintu Laptop Bawah #2', x: 15, y: botHingeY + 11, diameter: m3 },
-        // Middle Laptop Shelf T-Bracket Mounts (2x M3)
-        { id: 'right-shelf-f', type: 'm3', label: 'Braket T Rak Laptop Depan', x: 24, y: shelfY, diameter: m3 },
-        { id: 'right-shelf-b', type: 'm3', label: 'Braket T Rak Laptop Belakang', x: W - 24, y: shelfY, diameter: m3 },
+        // Middle Laptop Shelf Underside L-Bracket Mounts (2x M3 matching middle shelf!)
+        { id: 'right-shelf-f', type: 'm3', label: 'L-Bracket Bawah Rak Depan', x: 28, y: shelfY + 14, diameter: m3 },
+        { id: 'right-shelf-b', type: 'm3', label: 'L-Bracket Bawah Rak Belakang', x: W - 28, y: shelfY + 14, diameter: m3 },
         // Back Partition L-Bracket Mounts (2x M3)
         { id: 'right-back-m3-t', type: 'm3', label: 'Braket Back Partition Atas', x: W - 14, y: 36, diameter: m3 },
         { id: 'right-back-m3-b', type: 'm3', label: 'Braket Back Partition Bawah', x: W - 14, y: mainH - 36, diameter: m3 },
@@ -436,9 +436,9 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
     } else if (spec.id === 'divider') {
       const shelfY = Math.round(height - middleTrayY + t);
       holes.push(
-        // Cross (+) Bracket Mounts for Middle Laptop Shelf (front & rear)
-        { id: 'div-cross-f', type: 'm3', label: 'Braket Cross (+) Depan', x: width - 16, y: shelfY, diameter: m3 },
-        { id: 'div-cross-b', type: 'm3', label: 'Braket Cross (+) Belakang', x: 16, y: shelfY, diameter: m3 },
+        // Underside L-Bracket Mounts supporting Middle Laptop Shelf (2x M3 matching middle shelf!)
+        { id: 'div-shelf-f', type: 'm3', label: 'L-Bracket Bawah Rak Depan', x: width - 28, y: shelfY + 14, diameter: m3 },
+        { id: 'div-shelf-b', type: 'm3', label: 'L-Bracket Bawah Rak Belakang', x: 28, y: shelfY + 14, diameter: m3 },
         // Magnetic Door Catch Mounts near top-front edge (2x M3)
         { id: 'div-catch-1', type: 'm3', label: 'Magnetic Catch Atas', x: width - 14, y: 22, diameter: m3 },
         { id: 'div-catch-2', type: 'm3', label: 'Magnetic Catch Bawah', x: width - 14, y: 36, diameter: m3 },
@@ -575,10 +575,14 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         }
       );
     } else if (spec.id === 'middle') {
+      // 6x Underside Heavy-Duty L-Bracket M3 Holes (3-side load-bearing support: 2 Left + 2 Right + 2 Rear!)
       holes.push(
-        // 2x Rear Anti-Sag L-Bracket M3 Holes (3-side shelf support!)
-        { id: 'mid-rear-l1', type: 'm3', label: 'L-Bracket Belakang #1', x: Math.round(width * 0.32), y: 14, diameter: m3 },
-        { id: 'mid-rear-l2', type: 'm3', label: 'L-Bracket Belakang #2', x: Math.round(width * 0.72), y: 14, diameter: m3 },
+        { id: 'mid-l-left-f', type: 'm3', label: 'L-Bracket Kiri Depan (Divider)', x: 14, y: height - 28, diameter: m3 },
+        { id: 'mid-l-left-b', type: 'm3', label: 'L-Bracket Kiri Belakang (Divider)', x: 14, y: 28, diameter: m3 },
+        { id: 'mid-l-right-f', type: 'm3', label: 'L-Bracket Kanan Depan (Right Wall)', x: width - 14, y: height - 28, diameter: m3 },
+        { id: 'mid-l-right-b', type: 'm3', label: 'L-Bracket Kanan Belakang (Right Wall)', x: width - 14, y: 28, diameter: m3 },
+        { id: 'mid-rear-l1', type: 'm3', label: 'L-Bracket Belakang #1 (Back)', x: Math.round(width * 0.32), y: 14, diameter: m3 },
+        { id: 'mid-rear-l2', type: 'm3', label: 'L-Bracket Belakang #2 (Back)', x: Math.round(width * 0.72), y: 14, diameter: m3 },
         // 2x 120mm vertical chimney airflow cutouts
         {
           id: 'middle-cooling-vent-1',
@@ -781,10 +785,11 @@ export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
 };
 
 const DEFAULT_BRACKET_PARAMS: BracketParams = {
-  type: 'corner-3way',
+  type: 'l-bracket',
   armLength: 28,
   thickness: 6,
-  armWidth: 15,
+  armWidth: 16,
+  acrylicGap: 5.2, // 5mm Cast Acrylic + 0.2mm snug 3D-print slide tolerance
   screwDiameter: 3.4,
   holeOffset: 16,
   showPreviewBolts: true,

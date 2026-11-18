@@ -227,6 +227,18 @@ export const HingedAcrylicDoor: React.FC<HingedAcrylicDoorProps> = ({
           <boxGeometry args={[18, 10, 2]} />
           <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.25} />
         </mesh>
+
+        {/* Matching White MC-38 Door Magnet Block at Top Inner Edge (mates cleanly with MC-38 Reed Switch on Top!) */}
+        <mesh
+          position={[
+            isLeft ? panel.width - 42 : -panel.width + 42,
+            panel.height / 2 - 10,
+            meshOffsetZ - t / 2 - 4,
+          ]}
+        >
+          <boxGeometry args={[26, 8, 8]} />
+          <meshStandardMaterial color="#f1f5f9" roughness={0.45} />
+        </mesh>
       </group>
     </group>
   );
