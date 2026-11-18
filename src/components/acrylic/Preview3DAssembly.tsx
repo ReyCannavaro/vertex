@@ -182,6 +182,15 @@ const StructuralFrameBrackets: React.FC = () => {
           renderInternalL([divX, legH - 11, fz], [16, 10, 18], `cf-clip-${i}`)
         )}
 
+      {/* 2x Underside L-Brackets supporting the Rear Chamber Floor (holds Mini PDU & 3x Power Bricks) */}
+      {[-1, 1].map((sx) =>
+        renderInternalL(
+          [sx * (halfL - t - 10), legH - 9, -halfW - wDepth * 0.5],
+          [16, 14, 18],
+          `rf-sup-${sx}`
+        )
+      )}
+
       {/* Center Magnetic Door Catch Latch mounted cleanly at Top-Front of Divider (100% unobstructed!) */}
       {dividerEnabled && (
         <group position={[divX, legH + H - 28, halfW - 11]}>

@@ -252,6 +252,11 @@ export function getPanelAssemblyTransform(
         position: [0, legH + H * 0.52, -halfW - (wDepth - t) / 2 - e * 0.85],
         rotation: [-Math.PI / 2, 0, 0],
       };
+    case 'rear-floor':
+      return {
+        position: [0, legH + t / 2 - e * 0.5, -halfW - (wDepth - t) / 2 - e * 0.55],
+        rotation: [-Math.PI / 2, 0, 0],
+      };
     case 'rear-cover':
       return {
         position: [0, legH + wallH / 2, -halfW - wDepth + t / 2 - e * 1.4],

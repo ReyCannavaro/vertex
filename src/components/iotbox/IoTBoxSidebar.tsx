@@ -30,9 +30,10 @@ const BRACKET_SPECS: Array<{
   qty: string;
   usage: string;
 }> = [
-  { id: 'l-bracket', label: 'L-Bracket Siku (Utama Dalam)', qty: 'Cetak 22×', usage: 'Semua joint dalam & depan (bebas ganjel pintu & MC-38!)' },
+  { id: 'l-bracket', label: 'L-Bracket Siku (Utama Dalam)', qty: 'Cetak 24×', usage: 'Semua joint dalam, rak laptop, rear floor & kaki tengah' },
   { id: 'corner-3way', label: 'Corner 3-Way (Sudut Belakang)', qty: 'Cetak 4×', usage: '4 sudut luar Rear Wiring Chamber (Thumb-Screw M3)' },
   { id: 'handle-m3', label: 'Door Pull Handle M3 (52mm)', qty: 'Cetak 2×', usage: 'Pitch 52mm + slot mur M3 dalam (klop 1:1 pintu depan!)' },
+  { id: 'brick-cradle', label: 'Adaptor / Charger Cradle M3', qty: 'Cetak 3×', usage: 'Sarung U + bibir penahan bawah (2× Laptop + 12V IoT)' },
   { id: 't-bracket', label: 'Slotted T-Clamp (Opsional)', qty: 'Opsional', usage: 'Klip selip 5.2mm (hanya jika tanpa pintu depan)' },
   { id: 'cross-bracket', label: 'Slotted Cross (+) (Opsional)', qty: 'Opsional', usage: 'Klip selip 5.2mm (hanya jika tanpa pintu depan)' },
 ];
@@ -214,6 +215,49 @@ export const IoTBoxSidebar: React.FC = () => {
               />
             </div>
 
+            {bracketParams.type === 'brick-cradle' && (
+              <>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-slate-300">Lebar Kotak Adaptor</span>
+                    <span className="font-mono text-amber-300">
+                      {bracketParams.brickWidth} mm
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={30}
+                    max={76}
+                    step={1}
+                    value={bracketParams.brickWidth}
+                    onChange={(e) =>
+                      updateBracketParams({ brickWidth: Number(e.target.value) })
+                    }
+                    className="w-full cursor-pointer"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-slate-300">Tebal Kotak Adaptor</span>
+                    <span className="font-mono text-amber-300">
+                      {bracketParams.brickDepth} mm
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={20}
+                    max={48}
+                    step={1}
+                    value={bracketParams.brickDepth}
+                    onChange={(e) =>
+                      updateBracketParams({ brickDepth: Number(e.target.value) })
+                    }
+                    className="w-full cursor-pointer"
+                  />
+                </div>
+              </>
+            )}
+
             {(bracketParams.type === 't-bracket' ||
               bracketParams.type === 'cross-bracket') && (
               <div className="space-y-1">
@@ -285,6 +329,10 @@ export const IoTBoxSidebar: React.FC = () => {
             {bracketParams.type === 'handle-m3' ? (
               <>
                 <strong>Kompatibel 1:1 Pintu Depan:</strong> Jarak 2 lubang baut tepat <strong>52 mm</strong> (klop dengan lubang handle di Pintu PC & Laptop). Selipkan 2 mur segi-6 M3 ke celah samping kaki handle, lalu baut M3×12mm dari sisi dalam pintu!
+              </>
+            ) : bracketParams.type === 'brick-cradle' ? (
+              <>
+                <strong>Anti-Jatuh + Berventilasi:</strong> Ukur lebar & tebal charger Acer Aspire 5 / Adaptor 12V-mu lalu sesuaikan slider di atas (+1.2mm toleransi otomatis). Ada bibir penahan bawah & 2 kuping baut M3 + slot mur segi-6 untuk dibaut ke <em>Back Partition</em>!
               </>
             ) : (
               <>

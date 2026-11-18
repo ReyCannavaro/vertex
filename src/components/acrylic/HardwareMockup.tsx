@@ -900,24 +900,23 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
           </group>
         ))}
 
-      {/* ================= REAR CHAMBER POWER BRICKS (MINI PDU + 12V IOT + 2x LAPTOP CHARGERS) ================= */}
-      {/* All-in-One 1-Cable Server Look: 3 bricks neatly strap-mounted inside the 62mm Rear Wiring Chamber */}
+      {/* ================= REAR CHAMBER POWER BRICKS (SEATED ON REAR FLOOR + 3x 3D-PRINTED CRADLES!) ================= */}
+      {/* Zero floating! Mini PDU & 3x Power Bricks rest solidly on the ventilated Rear Floor acrylic shelf
+          and are held tightly against Back Partition by 3D-printed matte-black U-Cradle Holsters + M3 bolts. */}
       {showWiring && (
-        <group position={[0, legH, -halfW - Math.min(26, wiringDepth * 0.45)]}>
-          {/* 1. Mini 4-Outlet PDU Power Strip (Left-Bottom Rear Chamber) */}
-          <group position={[-halfL + 130, 74, 0]}>
+        <group position={[0, legH + t, -halfW - Math.min(22, wiringDepth * 0.38)]}>
+          {/* 1. Mini 4-Outlet PDU Power Strip seated squarely on Rear Floor (bottom touches Y = 0!) */}
+          <group position={[-halfL + 128, 24, 0]}>
             <mesh>
               <boxGeometry args={[175, 46, 28]} />
               <meshStandardMaterial color="#181c24" roughness={0.5} metalness={0.22} />
             </mesh>
-            {/* 4x Recessed AC Socket Outlets */}
             {[-54, -18, 18, 54].map((sx, i) => (
               <mesh key={`sock-${i}`} position={[sx, 0, -14.5]}>
                 <cylinderGeometry args={[11, 11, 1.5, 16]} />
                 <meshStandardMaterial color="#0b0e14" roughness={0.85} />
               </mesh>
             ))}
-            {/* Glowing Red Master Power Rocker Switch */}
             <mesh position={[-76, 0, -14.4]}>
               <boxGeometry args={[10, 16, 2.2]} />
               <meshStandardMaterial
@@ -927,28 +926,29 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
                 toneMapped={false}
               />
             </mesh>
-            {/* 2x Matte-Black Retention Mounting Straps */}
+            {/* 2x Floor-Seated Mounting Clamps */}
             {[-64, 64].map((rx, i) => (
-              <mesh key={`pdu-s-${i}`} position={[rx, 0, -2]}>
-                <boxGeometry args={[8, 52, 32]} />
+              <mesh key={`pdu-s-${i}`} position={[rx, -1, 2]}>
+                <boxGeometry args={[10, 48, 32]} />
                 <meshStandardMaterial color="#0f172a" roughness={0.75} />
               </mesh>
             ))}
           </group>
 
-          {/* 2. Three Neatly Spaced Power Bricks: IoT 12V 5A + Laptop #1 (65W) + Laptop #2 (65W) */}
+          {/* 2. Three Vertically-Seated Power Bricks inside 3D-Printed U-Cradle Holsters resting ON Rear Floor */}
           {[
-            { key: 'brick-iot', x: 18, w: 102, h: 48, d: 28, led: '#22c55e' },
-            { key: 'brick-lap1', x: 148, w: 98, h: 44, d: 26, led: '#38bdf8' },
-            { key: 'brick-lap2', x: 266, w: 98, h: 44, d: 26, led: '#38bdf8' },
+            { key: 'brick-iot', x: 16, w: 50, h: 106, d: 30, led: '#22c55e' },
+            { key: 'brick-lap1', x: 146, w: 46, h: 100, d: 28, led: '#38bdf8' },
+            { key: 'brick-lap2', x: 266, w: 46, h: 100, d: 28, led: '#38bdf8' },
           ].map((b) => (
-            <group key={b.key} position={[b.x, 82, 0]}>
-              <mesh>
+            <group key={b.key} position={[b.x, 0, 0]}>
+              {/* Solid Power Brick sitting on the cradle bottom stop ledge (Y = 4 .. h + 4) */}
+              <mesh position={[0, b.h / 2 + 4, 0]}>
                 <boxGeometry args={[b.w, b.h, b.d]} />
                 <meshStandardMaterial color="#141820" roughness={0.48} metalness={0.25} />
               </mesh>
               {/* Status Power LED on brick */}
-              <mesh position={[b.w / 2 - 12, b.h / 2 - 10, -b.d / 2 - 0.6]}>
+              <mesh position={[b.w / 2 - 9, b.h - 8, -b.d / 2 - 0.6]}>
                 <sphereGeometry args={[1.8, 10, 10]} />
                 <meshStandardMaterial
                   color={b.led}
@@ -957,18 +957,48 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
                   toneMapped={false}
                 />
               </mesh>
-              {/* 2x Velcro / 3D-Printed Retention Clips anchoring brick to Back Partition */}
-              {[-b.w * 0.28, b.w * 0.28].map((rx, i) => (
-                <mesh key={`strap-${i}`} position={[rx, 0, -1]}>
-                  <boxGeometry args={[8, b.h + 6, b.d + 3]} />
-                  <meshStandardMaterial color="#0f172a" roughness={0.75} />
+
+              {/* 3D-Printed Matte-Black U-Cradle Holster (Bottom Ledge + Side Walls + 2x M3 Mounting Ears!) */}
+              <group position={[0, 20, 0]}>
+                {/* Bottom Stop Ledge resting directly on Rear Floor */}
+                <mesh position={[0, -18, 0]}>
+                  <boxGeometry args={[b.w + 8, 4, b.d + 6]} />
+                  <meshStandardMaterial color="#1e2430" roughness={0.48} metalness={0.2} />
                 </mesh>
-              ))}
+                {/* Left & Right Holster Retaining Walls */}
+                {[-1, 1].map((side) => (
+                  <mesh key={side} position={[side * (b.w / 2 + 2.2), 0, 0]}>
+                    <boxGeometry args={[3.8, 40, b.d + 6]} />
+                    <meshStandardMaterial color="#1e2430" roughness={0.48} metalness={0.2} />
+                  </mesh>
+                ))}
+                {/* Front Retaining Strap Bar */}
+                <mesh position={[0, -4, -b.d / 2 - 2.2]}>
+                  <boxGeometry args={[b.w + 8, 18, 3.6]} />
+                  <meshStandardMaterial color="#1e2430" roughness={0.48} metalness={0.2} />
+                </mesh>
+                {/* Back Mounting Plate + 2x M3 Mounting Ears bolted to Back Partition */}
+                <mesh position={[0, 0, b.d / 2 + 2.2]}>
+                  <boxGeometry args={[b.w + 34, 40, 4.2]} />
+                  <meshStandardMaterial color="#1a202c" roughness={0.5} metalness={0.2} />
+                </mesh>
+                {/* 2x Silver M3 Bolts anchoring Cradle to Back Partition */}
+                {[-1, 1].map((side) => (
+                  <mesh
+                    key={`cr-m3-${side}`}
+                    position={[side * (b.w / 2 + 12), 0, b.d / 2 - 0.5]}
+                    rotation={[Math.PI / 2, 0, 0]}
+                  >
+                    <cylinderGeometry args={[2.1, 2.1, 2.0, 10]} />
+                    <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.2} />
+                  </mesh>
+                ))}
+              </group>
             </group>
           ))}
 
           {/* Single Clean Main AC Power Cord exiting out Rear Cover bottom exit */}
-          <mesh position={[-24, 34, -wiringDepth * 0.5 - 12]} rotation={[Math.PI / 2, 0, 0]}>
+          <mesh position={[-24, 24, -wiringDepth * 0.5 - 12]} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[4.4, 4.4, 36, 12]} />
             <meshStandardMaterial color="#0f1218" roughness={0.75} />
           </mesh>

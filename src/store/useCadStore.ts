@@ -201,6 +201,14 @@ export function getPanelGeometrySpec(
         height: combDepth,
         outline: makeCableCombOutline(innerL, combDepth),
       };
+    case 'rear-floor': {
+      const rearFloorDepth = Math.max(20, wiringDepth - t);
+      return {
+        width: innerL,
+        height: rearFloorDepth,
+        outline: makeRectOutline(innerL, rearFloorDepth),
+      };
+    }
   }
 }
 
@@ -295,6 +303,12 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
       enabled: true,
     },
     {
+      id: 'rear-floor',
+      name: 'Rear Floor (Lantai Adaptor)',
+      description: 'Lantai berventilasi ruang belakang untuk dudukan Mini PDU & 3 Adaptor',
+      enabled: true,
+    },
+    {
       id: 'rear-cover',
       name: 'Rear Wiring Cover (Tutup Belakang)',
       description: 'Penutup ruang kabel belakang + jalur keluar AC & LAN',
@@ -346,6 +360,21 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         { id: 'cc-m3-l', type: 'm3', label: 'Comb L-Bracket Kiri', x: 14, y: height - 8, diameter: m3 },
         { id: 'cc-m3-m', type: 'm3', label: 'Comb L-Bracket Tengah', x: Math.round(width / 2), y: height - 8, diameter: m3 },
         { id: 'cc-m3-r', type: 'm3', label: 'Comb L-Bracket Kanan', x: width - 14, y: height - 8, diameter: m3 },
+      ];
+    } else if (spec.id === 'rear-floor') {
+      // Ventilated Rear Chamber Floor supporting Mini PDU & 3x Power Bricks (IoT 12V + 2x Laptop 65W)
+      const midY = Math.round(height / 2);
+      const ventH = Math.max(12, Math.min(26, height - 22));
+      holes = [
+        { id: 'rf-m3-fl', type: 'm3', label: 'L-Bracket Kiri Depan', x: 14, y: height - 10, diameter: m3 },
+        { id: 'rf-m3-bl', type: 'm3', label: 'L-Bracket Kiri Belakang', x: 14, y: 10, diameter: m3 },
+        { id: 'rf-m3-fr', type: 'm3', label: 'L-Bracket Kanan Depan', x: width - 14, y: height - 10, diameter: m3 },
+        { id: 'rf-m3-br', type: 'm3', label: 'L-Bracket Kanan Belakang', x: width - 14, y: 10, diameter: m3 },
+        { id: 'rf-m3-mid', type: 'm3', label: 'L-Bracket Tengah Belakang', x: Math.round(width / 2), y: height - 10, diameter: m3 },
+        // 3x Bottom Cool-Air Intake Slots directly underneath the 3 Charger/Adaptor Bricks
+        { id: 'rf-vent-iot', type: 'vent', label: 'Ventilasi Adaptor 12V IoT', x: Math.round(width * 0.52), y: midY, width: 76, height: ventH, cornerRadius: 5 },
+        { id: 'rf-vent-lap1', type: 'vent', label: 'Ventilasi Charger Laptop #1', x: Math.round(width * 0.71), y: midY, width: 76, height: ventH, cornerRadius: 5 },
+        { id: 'rf-vent-lap2', type: 'vent', label: 'Ventilasi Charger Laptop #2', x: Math.round(width * 0.88), y: midY, width: 76, height: ventH, cornerRadius: 5 },
       ];
     } else if (spec.id === 'front-left' || spec.id === 'front-right') {
       // Exact M3 screw holes for 2x Butterfly Hinges + Pull Handle + Magnetic Catch + MC-38 Door Magnet
@@ -491,6 +520,13 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         { id: 'back-dht-pc', type: 'm3', label: 'Mount DHT22 PC', x: width - 34, y: 42, diameter: m3 },
         { id: 'back-dht-lt', type: 'm3', label: 'Mount DHT22 Lap Atas', x: Math.round(lapSpan - 34), y: 42, diameter: m3 },
         { id: 'back-dht-lb', type: 'm3', label: 'Mount DHT22 Lap Bawah', x: Math.round(lapSpan - 34), y: shelfY + 38, diameter: m3 },
+        // 6x M3 Adaptor Cradle Mounting Holes (for 3x 3D-Printed Power Brick Cradles on Rear Side of Back Partition!)
+        { id: 'back-cradle-1a', type: 'm3', label: 'Cradle Adaptor 12V #1', x: Math.round(width * 0.48 - 36), y: height - 30, diameter: m3 },
+        { id: 'back-cradle-1b', type: 'm3', label: 'Cradle Adaptor 12V #2', x: Math.round(width * 0.48 + 36), y: height - 30, diameter: m3 },
+        { id: 'back-cradle-2a', type: 'm3', label: 'Cradle Charger Lap #1A', x: Math.round(width * 0.29 - 36), y: height - 30, diameter: m3 },
+        { id: 'back-cradle-2b', type: 'm3', label: 'Cradle Charger Lap #1B', x: Math.round(width * 0.29 + 36), y: height - 30, diameter: m3 },
+        { id: 'back-cradle-3a', type: 'm3', label: 'Cradle Charger Lap #2A', x: Math.round(width * 0.12 - 36), y: height - 30, diameter: m3 },
+        { id: 'back-cradle-3b', type: 'm3', label: 'Cradle Charger Lap #2B', x: Math.round(width * 0.12 + 36), y: height - 30, diameter: m3 },
         // Cable Grommet Cutouts into Rear Wiring Chamber
         {
           id: 'back-pc-io',
@@ -805,6 +841,8 @@ const DEFAULT_BRACKET_PARAMS: BracketParams = {
   thickness: 6,
   armWidth: 16,
   acrylicGap: 5.2, // 5mm Cast Acrylic + 0.2mm snug 3D-print slide tolerance
+  brickWidth: 48, // Standard 45W-65W Laptop Charger & 12V 5A Adaptor width
+  brickDepth: 32, // Standard charger brick thickness
   screwDiameter: 3.4,
   holeOffset: 16,
   showPreviewBolts: true,
@@ -1246,8 +1284,8 @@ export const useCadStore = create<CadStoreState>()(
   },
 }),
     {
-      name: 'vertex-cad-project-v2',
-      version: 2,
+      name: 'vertex-cad-project-v3',
+      version: 3,
       partialize: (state) => ({
         caseDims: state.caseDims,
         panels: state.panels,

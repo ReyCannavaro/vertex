@@ -237,8 +237,9 @@ export const IoTBox3DPreview: React.FC = () => {
     'corner-3way': 'Corner 3-Way Bracket (Cetak 4× Belakang)',
     't-bracket': 'Slotted T-Clamp 5.2mm (Opsional)',
     'cross-bracket': 'Slotted Cross (+) 5.2mm (Opsional)',
-    'l-bracket': 'Heavy-Duty L-Bracket Gusset (Cetak 22×)',
+    'l-bracket': 'Heavy-Duty L-Bracket Gusset (Cetak 24×)',
     'handle-m3': 'Door Pull Handle M3 — Pitch 52mm (Cetak 2×)',
+    'brick-cradle': `Adaptor / Charger Cradle ${bracketParams.brickWidth}×${bracketParams.brickDepth}mm (Cetak 3×)`,
   };
 
   return (
@@ -295,7 +296,9 @@ export const IoTBox3DPreview: React.FC = () => {
             <span className="px-2 py-1 rounded bg-slate-900/85 border border-slate-800">
               {bracketParams.type === 'handle-m3'
                 ? 'Pitch Baut 52mm (±26mm) • Slot Mur Hex M3 • Klop 1:1 Pintu Depan'
-                : `Lubang M3 (Ø${bracketParams.screwDiameter.toFixed(1)}mm) • Jarak ${bracketParams.holeOffset}mm`}
+                : bracketParams.type === 'brick-cradle'
+                  ? `Slot Adaptor ${bracketParams.brickWidth}×${bracketParams.brickDepth}mm (+1.2mm) • Bibir Bawah Anti-Jatuh + 2× Mur M3`
+                  : `Lubang M3 (Ø${bracketParams.screwDiameter.toFixed(1)}mm) • Jarak ${bracketParams.holeOffset}mm`}
             </span>
           </>
         ) : (

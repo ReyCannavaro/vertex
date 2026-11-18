@@ -45,6 +45,7 @@ const PANEL_ORDER: PanelId[] = [
   'middle',
   'back',
   'cable-comb',
+  'rear-floor',
   'rear-cover',
 ];
 

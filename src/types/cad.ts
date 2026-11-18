@@ -41,6 +41,7 @@ export type PanelId =
   | 'middle'
   | 'center-foot'
   | 'filter-rail'
+  | 'rear-floor'
   | 'rear-cover'
   | 'cable-comb';
 
@@ -114,7 +115,8 @@ export type BracketType =
   | 't-bracket'
   | 'cross-bracket'
   | 'l-bracket'
-  | 'handle-m3';
+  | 'handle-m3'
+  | 'brick-cradle';
 
 export interface BracketParams {
   type: BracketType;
@@ -126,6 +128,10 @@ export interface BracketParams {
   armWidth: number;
   /** Acrylic sheet slot clearance width for Slotted T / Cross Clamps (5.2mm for 5mm acrylic, 3.2mm for 3mm) */
   acrylicGap: number;
+  /** Power brick width (mm) for 3D-printable Adaptor / Charger Cradle */
+  brickWidth: number;
+  /** Power brick thickness/depth (mm) for 3D-printable Adaptor / Charger Cradle */
+  brickDepth: number;
   /** M3/M4 screw clearance hole diameter in mm (3.4mm recommended for M3) */
   screwDiameter: number;
   /** Distance from corner/center to screw hole center in mm */

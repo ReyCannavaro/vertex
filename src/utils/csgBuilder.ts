@@ -672,6 +672,16 @@ export function getBracketBoltPositions(params: BracketParams): BracketBoltSpec[
     ];
   }
 
+  if (type === 'brick-cradle') {
+    const bw = Math.max(30, params.brickWidth);
+    const earX = bw / 2 + 12;
+    const cy = 20;
+    return [
+      { position: [-earX, cy, 4.8], rotation: [Math.PI / 2, 0, 0] },
+      { position: [earX, cy, 4.8], rotation: [Math.PI / 2, 0, 0] },
+    ];
+  }
+
   // corner-3way
   const half = arm / 2;
   const off3 = Math.min(Math.max(t + 6, holeOffset), arm - 5);
@@ -927,6 +937,75 @@ export function buildBracketGeometry(params: BracketParams): THREE.BufferGeometr
         )
       );
     }
+
+    body = subtractMerged(body, cutters);
+    const out = body.geometry.clone();
+    out.computeVertexNormals();
+    body.geometry.dispose();
+    return out;
+  }
+
+  if (type === 'brick-cradle') {
+    // 3D-Printable Power Brick / Laptop Charger Wall Cradle (U-Holster + Bottom Stop Ledge + 2x M3 Mounting Ears)
+    // Bolts cleanly onto Back Partition inside the 62mm Rear Wiring Chamber so bricks never slip or fall!
+    const bw = Math.max(30, params.brickWidth) + 1.2; // +1.2mm slide-in tolerance
+    const bd = Math.max(20, params.brickDepth) + 1.2;
+    const wall = 3.6;
+    const cradleH = 40;
+    const backT = 4.5;
+    const earW = 16;
+    const outerW = bw + wall * 2;
+    const totalPlateW = outerW + earW * 2;
+    const earX = bw / 2 + 12;
+
+    // 1. Rear mounting backplate with left & right M3 mounting ears
+    const backPlate = makeTransformedGeo(
+      createRoundedBlockGeo(totalPlateW, cradleH, backT, 4, 0.4),
+      [0, cradleH / 2, backT / 2]
+    );
+
+    // 2. U-Holster outer sleeve + solid bottom stop ledge protruding forward (+Z)
+    const outerCage = makeTransformedGeo(
+      createRoundedBlockGeo(outerW, cradleH, bd + wall, 4, 0.4),
+      [0, cradleH / 2, backT + (bd + wall) / 2 - 0.5]
+    );
+
+    let body = makeBrushFromGeo(backPlate);
+    body = unionMerged(body, [outerCage]);
+
+    // 3. Subtract inner brick cavity (leaving a solid 3.8mm bottom stop ledge so brick can't drop out!)
+    const bottomStopH = 3.8;
+    const innerCavityH = cradleH - bottomStopH + 6;
+    const cutters: THREE.BufferGeometry[] = [
+      // Brick drop-in pocket
+      makeTransformedGeo(
+        new THREE.BoxGeometry(bw, innerCavityH, bd),
+        [0, bottomStopH + innerCavityH / 2, backT + bd / 2]
+      ),
+      // Front ventilation / zip-tie inspection window on front strap face
+      makeTransformedGeo(
+        new THREE.BoxGeometry(bw * 0.58, cradleH * 0.48, wall + 6),
+        [0, cradleH * 0.58, backT + bd + wall / 2]
+      ),
+      // Bottom cooling airflow slot through the bottom stop ledge
+      makeTransformedGeo(
+        new THREE.BoxGeometry(bw * 0.52, bottomStopH + 6, bd * 0.55),
+        [0, bottomStopH / 2, backT + bd / 2]
+      ),
+      // 2x M3 Mounting Ear Bolt Holes + Rear Captive M3 Hex Nut Pockets (DIN 934)
+      makeTransformedGeo(
+        new THREE.CylinderGeometry(rHole, rHole, backT + 8, 18),
+        [-earX, cradleH / 2, backT / 2],
+        [Math.PI / 2, 0, 0]
+      ),
+      makeM3HexPocketGeo([-earX, cradleH / 2, 1.0], [Math.PI / 2, 0, 0], 2.5),
+      makeTransformedGeo(
+        new THREE.CylinderGeometry(rHole, rHole, backT + 8, 18),
+        [earX, cradleH / 2, backT / 2],
+        [Math.PI / 2, 0, 0]
+      ),
+      makeM3HexPocketGeo([earX, cradleH / 2, 1.0], [Math.PI / 2, 0, 0], 2.5),
+    ];
 
     body = subtractMerged(body, cutters);
     const out = body.geometry.clone();
