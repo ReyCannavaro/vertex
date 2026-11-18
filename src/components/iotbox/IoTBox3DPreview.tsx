@@ -60,15 +60,46 @@ const GlowingPodFan: React.FC<{
 const ParametricIoTBoxMesh: React.FC = () => {
   const iotBox = useCadStore((s) => s.iotBox);
 
-  const boxGeometry = useMemo(() => buildIoTBoxGeometry(iotBox), [iotBox]);
+  // Exclude animation/visual-only flags (lidExploded, showVisualHardware) from CSG geometry deps
+  // so toggling "Buka / Tutup Faceplate" NEVER freezes the frame with a heavy CSG rebuild!
+  const csgDepsKey = [
+    iotBox.length,
+    iotBox.width,
+    iotBox.height,
+    iotBox.wallThickness,
+    iotBox.cornerRadius,
+    iotBox.hasOled,
+    iotBox.hasStandoffs,
+    iotBox.standoffSpacingX,
+    iotBox.standoffSpacingZ,
+    iotBox.hasSideVents,
+    iotBox.hasFan40,
+    iotBox.fanPlacement,
+    iotBox.fanSize,
+    iotBox.throughAirflow,
+    iotBox.hasUsbCable,
+    iotBox.hasWallMount,
+    iotBox.hasLid,
+  ].join('|');
+
+  const boxGeometry = useMemo(
+    () => buildIoTBoxGeometry(iotBox),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [csgDepsKey]
+  );
 
   const lidGeometry = useMemo(() => {
     if (!iotBox.hasLid) return null;
     return buildIoTBoxLidGeometry(iotBox);
-  }, [iotBox]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [csgDepsKey]);
 
   const oledTex = useMemo(() => createOledScreenTexture(), []);
-  const screwOffsets = useMemo(() => getFaceplateScrewOffsets(iotBox), [iotBox]);
+  const screwOffsets = useMemo(
+    () => getFaceplateScrewOffsets(iotBox),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [iotBox.length, iotBox.height, iotBox.wallThickness, iotBox.cornerRadius]
+  );
 
   useEffect(() => {
     return () => {
@@ -82,9 +113,31 @@ const ParametricIoTBoxMesh: React.FC = () => {
     };
   }, [lidGeometry]);
 
+  useEffect(() => {
+    return () => {
+      oledTex.dispose();
+    };
+  }, [oledTex]);
+
   // Faceplate Z aligns cleanly flush with front of the rounded pod housing
   const lidBaseZ = iotBox.width / 2 - iotBox.wallThickness / 2;
-  const lidZ = iotBox.lidExploded ? lidBaseZ + 32 : lidBaseZ;
+  const targetLidZ = iotBox.lidExploded ? lidBaseZ + 40 : lidBaseZ;
+  const lidGroupRef = useRef<THREE.Group>(null);
+  const currentLidZRef = useRef(targetLidZ);
+
+  // Silky-smooth 60fps spring-damped faceplate open/close animation
+  useFrame((_, delta) => {
+    currentLidZRef.current = THREE.MathUtils.damp(
+      currentLidZRef.current,
+      targetLidZ,
+      7.5,
+      Math.min(delta, 0.05)
+    );
+    if (lidGroupRef.current) {
+      lidGroupRef.current.position.z = currentLidZRef.current;
+    }
+  });
+
   const centerY = iotBox.height / 2;
 
   const fanMaxDia = Math.min(iotBox.length, iotBox.height) - iotBox.wallThickness * 2 - 10;
@@ -123,9 +176,9 @@ const ParametricIoTBoxMesh: React.FC = () => {
         />
       )}
 
-      {/* Matching Rounded Front Faceplate + Visual Hardware */}
+      {/* Matching Rounded Front Faceplate + Visual Hardware (60fps smooth damped glide!) */}
       {lidGeometry && (
-        <group position={[0, 0, lidZ]}>
+        <group ref={lidGroupRef} position={[0, 0, currentLidZRef.current]}>
           <mesh geometry={lidGeometry} castShadow receiveShadow>
             <meshStandardMaterial
               color="#1c212b"
@@ -191,14 +244,27 @@ const ParametricIoTBoxMesh: React.FC = () => {
 const ParametricBracketMesh: React.FC = () => {
   const bracketParams = useCadStore((s) => s.bracketParams);
 
+  const bracketCsgKey = [
+    bracketParams.type,
+    bracketParams.armLength,
+    bracketParams.armWidth,
+    bracketParams.thickness,
+    bracketParams.screwDiameter,
+    bracketParams.acrylicGap,
+    bracketParams.brickWidth,
+    bracketParams.brickDepth,
+  ].join('|');
+
   const bracketGeo = useMemo(
     () => buildBracketGeometry(bracketParams),
-    [bracketParams]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bracketCsgKey]
   );
 
   const bolts = useMemo(
     () => getBracketBoltPositions(bracketParams),
-    [bracketParams]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bracketCsgKey]
   );
 
   useEffect(() => {
