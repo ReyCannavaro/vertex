@@ -1,5 +1,39 @@
-export type ActiveModule = 'acrylic' | 'iot-box';
+export type ActiveModule = 'acrylic' | 'iot-box' | 'iot-visualizer';
 export type AcrylicViewMode = '2d' | 'split' | '3d';
+export type WireCategory = 'all' | 'power' | 'sensors' | 'fans' | 'ui';
+
+export interface IoTSimState {
+  /** Simulated DHT22 #1 temperature in PC Bay (°C) */
+  tempPc: number;
+  /** Simulated DHT22 #2 temperature in Upper Laptop Bay (°C) */
+  tempLapTop: number;
+  /** Simulated DHT22 #3 temperature in Lower Laptop Bay (°C) */
+  tempLapBot: number;
+  /** Simulated ambient humidity (%) */
+  humidity: number;
+  /** Simulated MQ-2 Smoke/Gas sensor reading (ppm, alarm >= 450) */
+  smokePpm: number;
+  /** Automatic thermal PWM curve + fire cut-off mode */
+  autoMode: boolean;
+  /** Manual Relay CH1: 12V PC Bay 2x140mm Fans */
+  relayPcFans: boolean;
+  /** Manual Relay CH2: 12V Laptop Bay 4x120mm Fans */
+  relayLapFans: boolean;
+  /** Manual Relay CH3: 5V IoT Box 40mm Fan */
+  relayIotFan: boolean;
+  /** Manual Relay CH4: 5V WS2812B LED Strip */
+  relayLedPower: boolean;
+  /** Manual PWM speed % for PC Bay 140mm fans (0..100) */
+  pwmPc: number;
+  /** Manual PWM speed % for Laptop Bay 120mm fans (0..100) */
+  pwmLap: number;
+  /** Manual PWM speed % for IoT Box 5V 40mm fan (0..100) */
+  pwmIot: number;
+  /** Active wire category filter in 2D schematic */
+  wireFilter: WireCategory;
+  /** Selected component node ID in 2D schematic */
+  selectedNodeId: string | null;
+}
 
 export type PanelId =
   | 'bottom'

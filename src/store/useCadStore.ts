@@ -7,6 +7,7 @@ import {
   HoleType,
   IoTBoxParams,
   IoTBoxPreset,
+  IoTSimState,
   PanelHole,
   PanelId,
   Point2D,
@@ -610,9 +611,28 @@ export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
   },
 };
 
+const DEFAULT_IOT_SIM: IoTSimState = {
+  tempPc: 38,
+  tempLapTop: 42,
+  tempLapBot: 39,
+  humidity: 52,
+  smokePpm: 115,
+  autoMode: true,
+  relayPcFans: true,
+  relayLapFans: true,
+  relayIotFan: true,
+  relayLedPower: true,
+  pwmPc: 55,
+  pwmLap: 65,
+  pwmIot: 50,
+  wireFilter: 'all',
+  selectedNodeId: 'esp32',
+};
+
 interface CadStoreState {
   activeModule: ActiveModule;
   acrylicViewMode: AcrylicViewMode;
+  iotVizViewMode: AcrylicViewMode;
 
   // Module 1: Dual-Bay Acrylic Case Builder
   caseDims: CaseDimensions;
@@ -634,9 +654,13 @@ interface CadStoreState {
   // Module 2: Parametric IoT Box Builder
   iotBox: IoTBoxParams;
 
+  // Module 3: Live IoT Electronics & Wiring Visualizer
+  iotSim: IoTSimState;
+
   // Actions
   setActiveModule: (module: ActiveModule) => void;
   setAcrylicViewMode: (mode: AcrylicViewMode) => void;
+  setIotVizViewMode: (mode: AcrylicViewMode) => void;
   setActivePanelId: (id: PanelId) => void;
   setSelectedHoleId: (id: string | null) => void;
   setGridSize: (size: number) => void;
@@ -665,11 +689,16 @@ interface CadStoreState {
   updateIoTBox: (patch: Partial<IoTBoxParams>) => void;
   applyIoTPreset: (preset: IoTBoxPreset) => void;
   resetIoTBox: () => void;
+
+  updateIoTSim: (patch: Partial<IoTSimState>) => void;
+  toggleSmokeTest: () => void;
+  resetIoTSim: () => void;
 }
 
 export const useCadStore = create<CadStoreState>((set) => ({
   activeModule: 'acrylic',
   acrylicViewMode: 'split',
+  iotVizViewMode: 'split',
 
   caseDims: DEFAULT_CASE_DIMS,
   panels: createInitialPanels(DEFAULT_CASE_DIMS),
@@ -688,9 +717,11 @@ export const useCadStore = create<CadStoreState>((set) => ({
   showWiring: true,
 
   iotBox: IOT_PRESETS['controller-pod'],
+  iotSim: DEFAULT_IOT_SIM,
 
   setActiveModule: (activeModule) => set({ activeModule }),
   setAcrylicViewMode: (acrylicViewMode) => set({ acrylicViewMode }),
+  setIotVizViewMode: (iotVizViewMode) => set({ iotVizViewMode }),
   setActivePanelId: (activePanelId) => set({ activePanelId, selectedHoleId: null }),
   setSelectedHoleId: (selectedHoleId) => set({ selectedHoleId }),
   setGridSize: (gridSize) => set({ gridSize }),
@@ -921,4 +952,22 @@ export const useCadStore = create<CadStoreState>((set) => ({
     }),
 
   resetIoTBox: () => set({ iotBox: { ...IOT_PRESETS['controller-pod'] } }),
+
+  updateIoTSim: (patch) =>
+    set((state) => ({
+      iotSim: {
+        ...state.iotSim,
+        ...patch,
+      },
+    })),
+
+  toggleSmokeTest: () =>
+    set((state) => ({
+      iotSim: {
+        ...state.iotSim,
+        smokePpm: state.iotSim.smokePpm >= 450 ? 115 : 680,
+      },
+    })),
+
+  resetIoTSim: () => set({ iotSim: { ...DEFAULT_IOT_SIM } }),
 }));
