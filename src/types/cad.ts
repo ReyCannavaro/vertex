@@ -8,6 +8,7 @@ export type PanelId =
   | 'back'
   | 'left'
   | 'right'
+  | 'divider'
   | 'middle';
 
 export type HoleType = 'm3' | 'fan120' | 'vent';
@@ -50,7 +51,7 @@ export interface AcrylicPanel {
 }
 
 export interface CaseDimensions {
-  /** Case length along X-axis in mm */
+  /** Total dual-bay case length along X-axis in mm */
   length: number;
   /** Case depth/width along Z-axis in mm */
   width: number;
@@ -58,33 +59,47 @@ export interface CaseDimensions {
   height: number;
   /** Acrylic sheet thickness in mm (3mm or 5mm) */
   thickness: 3 | 5;
-  /** Height of optional middle laptop/motherboard tray from bottom in mm */
+  /** Distance from left edge to center vertical divider separating PC Bay & Laptop Bay (mm) */
+  dividerX: number;
+  /** Height of right-bay middle laptop shelf from bottom in mm */
   middleTrayY: number;
 }
+
+export type IoTBoxPreset = 'controller-pod' | 'fan-pod';
 
 export interface IoTBoxParams {
   /** Outer length (X) in mm */
   length: number;
-  /** Outer width/depth (Z) in mm */
+  /** Outer depth/width (Z) in mm */
   width: number;
   /** Outer height (Y) in mm */
   height: number;
   /** Shell wall thickness in mm */
   wallThickness: number;
-  /** 0.96" I2C OLED display cutout on front panel */
+  /** Exterior corner fillet radius in mm (rounded pod aesthetic) */
+  cornerRadius: number;
+  /** 0.96" I2C OLED display cutout on front faceplate */
   hasOled: boolean;
-  /** 4x Screw terminal ESP32 standoffs on inner floor */
+  /** 4x Screw terminal ESP32 standoffs on inner floor/backplate */
   hasStandoffs: boolean;
   /** X spacing between standoffs in mm */
   standoffSpacingX: number;
   /** Z spacing between standoffs in mm */
   standoffSpacingZ: number;
-  /** 40mm cooling fan cutout on right panel */
+  /** Side louver ventilation slots along left & right walls */
+  hasSideVents: boolean;
+  /** Cooling fan cutout (40mm or 80mm on front/side) */
   hasFan40: boolean;
-  /** USB / sensor cable cutout on left/back panel */
+  /** Fan diameter preset (40mm or 80mm) */
+  fanSize: 40 | 80;
+  /** USB / sensor cable pass-through ports */
   hasUsbCable: boolean;
-  /** Generate matching removable lid */
+  /** Rear/Bottom M3 mounting holes to bolt pod onto the acrylic case wall */
+  hasWallMount: boolean;
+  /** Generate matching rounded faceplate/lid with 4 corner M3 screw recesses */
   hasLid: boolean;
-  /** Elevate lid in 3D view to inspect interior */
+  /** Elevate/separate faceplate in 3D view to inspect interior */
   lidExploded: boolean;
+  /** Show simulated glowing Ice Blue OLED telemetry & corner screws in 3D preview */
+  showVisualHardware: boolean;
 }

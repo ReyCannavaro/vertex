@@ -171,11 +171,18 @@ export function getPanelAssemblyTransform(
   dims: CaseDimensions,
   explodeAmount: number
 ): { position: [number, number, number]; rotation: [number, number, number] } {
-  const { length: L, width: W, height: H, thickness: t, middleTrayY } = dims;
+  const { length: L, width: W, height: H, thickness: t, dividerX, middleTrayY } = dims;
   const halfL = L / 2;
   const halfW = W / 2;
   const centerY = H / 2;
   const e = explodeAmount;
+
+  // Center X of vertical divider wall separating Left PC Bay & Right Laptop Bay
+  const divCenterX = -halfL + dividerX;
+  // Center X of Right-Bay Middle Laptop Shelf (spans from divider right face to right outer wall inner face)
+  const rightInnerStart = divCenterX + t / 2;
+  const rightInnerEnd = halfL - t;
+  const middleCenterX = (rightInnerStart + rightInnerEnd) / 2;
 
   switch (panelId) {
     case 'bottom':
@@ -188,9 +195,14 @@ export function getPanelAssemblyTransform(
         position: [0, H - t / 2 + e, 0],
         rotation: [-Math.PI / 2, 0, 0],
       };
+    case 'divider':
+      return {
+        position: [divCenterX, centerY, 0],
+        rotation: [0, Math.PI / 2, 0],
+      };
     case 'middle':
       return {
-        position: [0, middleTrayY + e * 0.25, 0],
+        position: [middleCenterX + e * 0.35, middleTrayY, 0],
         rotation: [-Math.PI / 2, 0, 0],
       };
     case 'front':

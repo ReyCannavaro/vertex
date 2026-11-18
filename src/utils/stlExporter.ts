@@ -2,8 +2,11 @@ import * as THREE from 'three';
 import { STLExporter } from 'three-stdlib';
 
 /**
- * Exports a Three.js BufferGeometry as a binary .STL file oriented Z-up for 3D slicers
- * (Cura, Bambu Studio, PrusaSlicer) with 1 unit = 1 mm.
+ * Exports a Three.js BufferGeometry as a binary .STL file oriented flat on Z = 0
+ * for support-free 3D printing (Cura, Bambu Studio, PrusaSlicer) at 1 unit = 1 mm.
+ *
+ * Our rounded pod housing and front faceplate both lie in X-Y with walls/depth extruded along +Z,
+ * so keeping Z-up and grounding min.z -> 0 places the flat rear wall / faceplate cleanly on the bed.
  */
 export function exportGeometryToStl(
   geometry: THREE.BufferGeometry,
@@ -11,14 +14,12 @@ export function exportGeometryToStl(
 ): void {
   const exporter = new STLExporter();
 
-  // Clone and rotate +90 deg around X so Three.js Y-up maps cleanly to Slicer Z-up
   const cloned = geometry.clone();
-  cloned.rotateX(Math.PI / 2);
-
-  // Shift so lowest Z sits cleanly on the print bed (z = 0)
   cloned.computeBoundingBox();
   if (cloned.boundingBox) {
-    cloned.translate(0, 0, -cloned.boundingBox.min.z);
+    const cx = (cloned.boundingBox.min.x + cloned.boundingBox.max.x) / 2;
+    const cy = (cloned.boundingBox.min.y + cloned.boundingBox.max.y) / 2;
+    cloned.translate(-cx, -cy, -cloned.boundingBox.min.z);
   }
 
   const mesh = new THREE.Mesh(cloned);

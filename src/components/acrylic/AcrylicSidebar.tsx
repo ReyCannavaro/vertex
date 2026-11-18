@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   CircleDot,
+  Cpu,
   Fan,
   Square,
   Eye,
@@ -24,11 +25,12 @@ import {
 const PANEL_ORDER: PanelId[] = [
   'bottom',
   'top',
+  'divider',
   'middle',
-  'front',
-  'back',
-  'left',
   'right',
+  'left',
+  'back',
+  'front',
 ];
 
 export const AcrylicSidebar: React.FC = () => {
@@ -38,11 +40,13 @@ export const AcrylicSidebar: React.FC = () => {
   const selectedHoleId = useCadStore((s) => s.selectedHoleId);
   const gridSize = useCadStore((s) => s.gridSize);
   const showBrackets = useCadStore((s) => s.showBrackets);
+  const showHardwareMockup = useCadStore((s) => s.showHardwareMockup);
   const ledEnabled = useCadStore((s) => s.ledEnabled);
 
   const setActivePanelId = useCadStore((s) => s.setActivePanelId);
   const setGridSize = useCadStore((s) => s.setGridSize);
   const setShowBrackets = useCadStore((s) => s.setShowBrackets);
+  const setShowHardwareMockup = useCadStore((s) => s.setShowHardwareMockup);
   const setLedEnabled = useCadStore((s) => s.setLedEnabled);
   const updateCaseDims = useCadStore((s) => s.updateCaseDims);
   const togglePanelEnabled = useCadStore((s) => s.togglePanelEnabled);
@@ -148,17 +152,38 @@ export const AcrylicSidebar: React.FC = () => {
           </div>
         </div>
 
+        {/* Dual-Bay Divider X Slider (PC Bay vs Laptop Bay Split) */}
+        {panels.divider.enabled && (
+          <div className="space-y-1 pt-1">
+            <div className="flex justify-between text-[11px]">
+              <span className="text-slate-400">Sekat PC / Laptop (X)</span>
+              <span className="font-mono text-sky-300">
+                PC {caseDims.dividerX}mm | Lap {caseDims.length - caseDims.dividerX}mm
+              </span>
+            </div>
+            <input
+              type="range"
+              min={150}
+              max={caseDims.length - 200}
+              step={5}
+              value={caseDims.dividerX}
+              onChange={(e) => updateCaseDims({ dividerX: Number(e.target.value) })}
+              className="w-full cursor-pointer"
+            />
+          </div>
+        )}
+
         {/* Middle Tray Height Slider */}
         {panels.middle.enabled && (
           <div className="space-y-1 pt-1">
             <div className="flex justify-between text-[11px]">
-              <span className="text-slate-400">Tinggi Rak Tengah (Laptop)</span>
+              <span className="text-slate-400">Tinggi Rak Laptop (Y)</span>
               <span className="font-mono text-sky-300">{caseDims.middleTrayY} mm</span>
             </div>
             <input
               type="range"
-              min={caseDims.thickness + 25}
-              max={caseDims.height - caseDims.thickness - 25}
+              min={caseDims.thickness + 60}
+              max={caseDims.height - caseDims.thickness - 60}
               step={5}
               value={caseDims.middleTrayY}
               onChange={(e) => updateCaseDims({ middleTrayY: Number(e.target.value) })}
@@ -410,13 +435,26 @@ export const AcrylicSidebar: React.FC = () => {
         <label className="flex items-center justify-between cursor-pointer py-0.5">
           <span className="flex items-center gap-1.5 text-slate-300">
             <Box className="w-3.5 h-3.5 text-slate-400" />
-            Tampilkan L-Bracket & Standoff
+            Braket Sudut, T & Cross (+) M3
           </span>
           <input
             type="checkbox"
             checked={showBrackets}
             onChange={(e) => setShowBrackets(e.target.checked)}
             className="rounded accent-sky-400"
+          />
+        </label>
+
+        <label className="flex items-center justify-between cursor-pointer py-0.5">
+          <span className="flex items-center gap-1.5 text-slate-300">
+            <Cpu className="w-3.5 h-3.5 text-emerald-400" />
+            Mockup Hardware (PC + 2 Laptop)
+          </span>
+          <input
+            type="checkbox"
+            checked={showHardwareMockup}
+            onChange={(e) => setShowHardwareMockup(e.target.checked)}
+            className="rounded accent-emerald-400"
           />
         </label>
 
