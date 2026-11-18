@@ -96,14 +96,16 @@ export function buildPanelExtrudeGeometry(
       if (isCircleInsidePanel(hole.x, hole.y, r, width, height)) {
         shape.holes.push(createCirclePath(cx, cy, r));
       }
-    } else if (hole.type === 'fan120') {
-      const mainR = Math.max(10, (hole.diameter ?? 115) / 2);
+    } else if (hole.type === 'fan120' || hole.type === 'fan140') {
+      const is140 = hole.type === 'fan140';
+      const defaultDia = is140 ? 135 : 115;
+      const pitchHalf = is140 ? 62.25 : 52.5; // 124.5mm pitch for 140mm fan, 105mm for 120mm fan
+      const mainR = Math.max(10, (hole.diameter ?? defaultDia) / 2);
       if (isCircleInsidePanel(hole.x, hole.y, mainR, width, height)) {
         shape.holes.push(createCirclePath(cx, cy, mainR));
       }
-      // 4x M4 mounting holes at standard 105mm x 105mm fan pitch (±52.5mm)
+      // 4x M4 mounting holes at standard fan pitch
       if (hole.includeMountHoles !== false) {
-        const pitchHalf = 52.5;
         const mountR = 2.25; // 4.5mm M4 clearance
         const offsets = [
           [-pitchHalf, -pitchHalf],

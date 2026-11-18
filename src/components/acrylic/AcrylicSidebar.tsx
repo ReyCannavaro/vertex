@@ -276,8 +276,19 @@ export const AcrylicSidebar: React.FC = () => {
           >
             <Fan className="w-4 h-4 text-cyan-400 shrink-0" />
             <div>
-              <div className="font-medium">Kipas 120mm (Smart)</div>
-              <div className="text-[10px] text-slate-400">Lubang Ø115mm + 4x M4 (105mm)</div>
+              <div className="font-medium">Kipas 120mm (Laptop Bay)</div>
+              <div className="text-[10px] text-slate-400">Lubang Ø115mm + 4× M4 (105mm)</div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => addHoleToActivePanel('fan140')}
+            className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-200 transition text-left"
+          >
+            <Fan className="w-4 h-4 text-indigo-400 shrink-0" />
+            <div>
+              <div className="font-medium">Kipas 140mm (PC Bay Besar)</div>
+              <div className="text-[10px] text-slate-400">Lubang Ø135mm + 4× M4 (124.5mm)</div>
             </div>
           </button>
 
@@ -384,14 +395,23 @@ export const AcrylicSidebar: React.FC = () => {
               </div>
             )}
 
-            {(selectedHole.type === 'm3' || selectedHole.type === 'fan120') && (
+            {(selectedHole.type === 'm3' ||
+              selectedHole.type === 'fan120' ||
+              selectedHole.type === 'fan140') && (
               <label className="block space-y-1">
                 <span className="text-[10px] text-slate-400">Diameter Lubang (mm)</span>
                 <input
                   type="number"
                   min={2}
                   step={0.5}
-                  value={selectedHole.diameter ?? (selectedHole.type === 'm3' ? 3 : 115)}
+                  value={
+                    selectedHole.diameter ??
+                    (selectedHole.type === 'm3'
+                      ? 3
+                      : selectedHole.type === 'fan140'
+                        ? 135
+                        : 115)
+                  }
                   onChange={(e) =>
                     updateHole(activePanelId, selectedHole.id, {
                       diameter: Math.max(2, Number(e.target.value) || 3),

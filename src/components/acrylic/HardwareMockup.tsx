@@ -1,7 +1,7 @@
 import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { CaseDimensions } from '../../types/cad';
+import { CaseDimensions, PanelHole } from '../../types/cad';
 
 /**
  * Generates a crisp procedural CanvasTexture simulating a live 0.96" Ice Blue OLED readout.
@@ -125,11 +125,82 @@ const LaptopUnit: React.FC<{
   );
 };
 
+/**
+ * Realistic 3D Horizontal Case Fan (120mm or 140mm) with matte-black outer frame,
+ * recessed circular fan shroud, 4 silver mounting screws, and spinning Ice-Blue LED blades.
+ */
+const MountedCaseFan3D: React.FC<{
+  size: 120 | 140;
+  position: [number, number, number];
+  ledColor: string;
+  ledEnabled: boolean;
+}> = ({ size, position, ledColor, ledEnabled }) => {
+  const frameH = 18;
+  const half = size / 2;
+  const barW = 10;
+  const bladeR = size === 140 ? 63 : 53;
+  const mountPitch = size === 140 ? 62.25 : 52.5;
+  const activeColor = ledEnabled ? ledColor : '#38bdf8';
+
+  return (
+    <group position={position}>
+      {/* 4 Outer Frame Rails forming square fan housing */}
+      <mesh position={[0, 0, -half + barW / 2]}>
+        <boxGeometry args={[size, frameH, barW]} />
+        <meshStandardMaterial color="#141820" roughness={0.48} metalness={0.25} />
+      </mesh>
+      <mesh position={[0, 0, half - barW / 2]}>
+        <boxGeometry args={[size, frameH, barW]} />
+        <meshStandardMaterial color="#141820" roughness={0.48} metalness={0.25} />
+      </mesh>
+      <mesh position={[-half + barW / 2, 0, 0]}>
+        <boxGeometry args={[barW, frameH, size - barW * 2]} />
+        <meshStandardMaterial color="#141820" roughness={0.48} metalness={0.25} />
+      </mesh>
+      <mesh position={[half - barW / 2, 0, 0]}>
+        <boxGeometry args={[barW, frameH, size - barW * 2]} />
+        <meshStandardMaterial color="#141820" roughness={0.48} metalness={0.25} />
+      </mesh>
+
+      {/* Glowing Inner LED Accent Ring */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[bladeR + 2.5, 2.2, 10, 36]} />
+        <meshStandardMaterial
+          color={activeColor}
+          emissive={activeColor}
+          emissiveIntensity={ledEnabled ? 2.4 : 0.4}
+          toneMapped={false}
+        />
+      </mesh>
+
+      {/* Spinning Fan Rotor oriented horizontally (air flowing vertically along Y) */}
+      <group rotation={[-Math.PI / 2, 0, 0]}>
+        <SpinningFanBlades radius={bladeR} ledColor={activeColor} />
+      </group>
+
+      {/* 4 Silver M4 Mounting Screws */}
+      {[
+        [-mountPitch, -mountPitch],
+        [mountPitch, -mountPitch],
+        [mountPitch, mountPitch],
+        [-mountPitch, mountPitch],
+      ].map(([sx, sz], i) => (
+        <mesh key={i} position={[sx, 0, sz]}>
+          <cylinderGeometry args={[2.3, 2.3, frameH + 2.5, 10]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.25} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
 interface HardwareMockupProps {
   dims: CaseDimensions;
   ledEnabled: boolean;
   ledColor: string;
   middleEnabled: boolean;
+  bottomHoles: PanelHole[];
+  topHoles: PanelHole[];
 }
 
 export const HardwareMockup: React.FC<HardwareMockupProps> = ({
@@ -137,9 +208,21 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
   ledEnabled,
   ledColor,
   middleEnabled,
+  bottomHoles,
+  topHoles,
 }) => {
   const { length: L, width: W, height: H, thickness: t, dividerX, middleTrayY } = dims;
   const halfL = L / 2;
+  const halfW = W / 2;
+
+  const bottomFans = useMemo(
+    () => bottomHoles.filter((h) => h.type === 'fan120' || h.type === 'fan140'),
+    [bottomHoles]
+  );
+  const topFans = useMemo(
+    () => topHoles.filter((h) => h.type === 'fan120' || h.type === 'fan140'),
+    [topHoles]
+  );
 
   const pcBayLeft = -halfL + t;
   const pcBayRight = -halfL + dividerX - t / 2;
@@ -208,10 +291,10 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
           </mesh>
         </group>
 
-        {/* ATX PSU sitting on Bottom Floor */}
-        <group position={[pcBayLeft + Math.min(82, pcBayWidth * 0.42), t + 42, 35]}>
+        {/* ATX PSU sitting cleanly at the back of Bottom Floor (clear of 140mm front intake fan) */}
+        <group position={[pcBayCenterX, t + 42, -halfW + 78]}>
           <mesh>
-            <boxGeometry args={[Math.min(136, pcBayWidth - 40), 82, 140]} />
+            <boxGeometry args={[Math.min(144, pcBayWidth - 36), 82, 134]} />
             <meshStandardMaterial color="#161a22" roughness={0.55} metalness={0.35} />
           </mesh>
           {/* Top PSU Fan Grille */}
@@ -221,24 +304,49 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
           </mesh>
         </group>
 
-        {/* 3.5" / 2.5" HDD sitting next to PSU */}
-        <group position={[pcBayRight - 36, t + 11, 88]}>
+        {/* 3.5" / 2.5" HDD mounted neatly beside PSU */}
+        <group position={[pcBayRight - 34, t + 11, halfW - 58]}>
           <mesh>
-            <boxGeometry args={[56, 20, 96]} />
+            <boxGeometry args={[52, 20, 88]} />
             <meshStandardMaterial color="#1a1f28" roughness={0.4} metalness={0.6} />
           </mesh>
           <mesh position={[0, 10.4, 0]}>
-            <boxGeometry args={[46, 1, 78]} />
+            <boxGeometry args={[42, 1, 70]} />
             <meshStandardMaterial color="#cbd5e1" roughness={0.3} metalness={0.75} />
           </mesh>
         </group>
       </group>
 
+      {/* ================= TOP & BOTTOM SYNCED CASE FANS (1x 140mm PC + 2x 120mm LAPTOP) ================= */}
+      <group>
+        {/* Bottom Intake Fans (synced live to 2D Bottom Panel fan holes!) */}
+        {bottomFans.map((hole) => (
+          <MountedCaseFan3D
+            key={`bot-fan-${hole.id}`}
+            size={hole.type === 'fan140' ? 140 : 120}
+            position={[hole.x - halfL, t + 9.5, hole.y - halfW]}
+            ledColor={ledColor}
+            ledEnabled={ledEnabled}
+          />
+        ))}
+
+        {/* Top Exhaust Fans (synced live to 2D Top Panel fan holes!) */}
+        {topFans.map((hole) => (
+          <MountedCaseFan3D
+            key={`top-fan-${hole.id}`}
+            size={hole.type === 'fan140' ? 140 : 120}
+            position={[hole.x - halfL, H - t - 9.5, hole.y - halfW]}
+            ledColor={ledColor}
+            ledEnabled={ledEnabled}
+          />
+        ))}
+      </group>
+
       {/* ================= RIGHT BAY: DUAL-TIER LAPTOP SERVERS ================= */}
       <group>
-        {/* Bottom Laptop on Cooling Pad */}
+        {/* Bottom Laptop elevated cleanly above the 2x 120mm Bottom Intake Fans */}
         <LaptopUnit
-          position={[lapBayCenterX, t, 8]}
+          position={[lapBayCenterX, t + 21, 6]}
           maxWidth={lapBayWidth}
           maxDepth={W - t * 2}
         />

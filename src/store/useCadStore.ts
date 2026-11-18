@@ -220,24 +220,84 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         cornerRadius: 8,
       });
     } else if (spec.id === 'middle') {
-      // Ventilation cutout under top laptop cooling pad
+      // 2x 120mm vertical chimney airflow cutouts aligned directly between Laptop Bay bottom & top fans
       holes.push({
-        id: 'middle-cooling-vent',
+        id: 'middle-cooling-vent-1',
         type: 'fan120',
-        label: 'Laptop Cooling Vent 120mm',
-        x: Math.round(width * 0.5),
+        label: 'Laptop Airflow Pass #1 (120mm)',
+        x: Math.round(width * 0.28),
+        y: Math.round(height * 0.5),
+        diameter: 115,
+        includeMountHoles: false,
+      });
+      holes.push({
+        id: 'middle-cooling-vent-2',
+        type: 'fan120',
+        label: 'Laptop Airflow Pass #2 (120mm)',
+        x: Math.round(width * 0.72),
+        y: Math.round(height * 0.5),
+        diameter: 115,
+        includeMountHoles: false,
+      });
+    } else if (spec.id === 'bottom') {
+      const rightSpan = dims.length - dims.dividerX;
+      // 1x Big 140mm Bottom Intake Fan for PC Bay (left)
+      holes.push({
+        id: 'bottom-pc-fan140',
+        type: 'fan140',
+        label: 'PC Bay Intake 140mm',
+        x: Math.round(dims.dividerX * 0.5),
+        y: Math.round(height * 0.62),
+        diameter: 135,
+        includeMountHoles: true,
+      });
+      // 2x 120mm Bottom Intake Fans for Laptop Bay (right)
+      holes.push({
+        id: 'bottom-lap-fan120-1',
+        type: 'fan120',
+        label: 'Laptop Intake 120mm #1',
+        x: Math.round(dims.dividerX + rightSpan * 0.28),
         y: Math.round(height * 0.5),
         diameter: 115,
         includeMountHoles: true,
       });
-    } else if (spec.id === 'bottom') {
-      // Bottom intake under PC PSU
       holes.push({
-        id: 'bottom-psu-intake',
+        id: 'bottom-lap-fan120-2',
         type: 'fan120',
-        label: 'PSU Intake 120mm',
-        x: Math.round(dims.dividerX * 0.52),
-        y: Math.round(height * 0.55),
+        label: 'Laptop Intake 120mm #2',
+        x: Math.round(dims.dividerX + rightSpan * 0.72),
+        y: Math.round(height * 0.5),
+        diameter: 115,
+        includeMountHoles: true,
+      });
+    } else if (spec.id === 'top') {
+      const rightSpan = dims.length - dims.dividerX;
+      // 1x Big 140mm Top Exhaust Fan for PC Bay (left)
+      holes.push({
+        id: 'top-pc-fan140',
+        type: 'fan140',
+        label: 'PC Bay Exhaust 140mm',
+        x: Math.round(dims.dividerX * 0.5),
+        y: Math.round(height * 0.5),
+        diameter: 135,
+        includeMountHoles: true,
+      });
+      // 2x 120mm Top Exhaust Fans for Laptop Bay (right)
+      holes.push({
+        id: 'top-lap-fan120-1',
+        type: 'fan120',
+        label: 'Laptop Exhaust 120mm #1',
+        x: Math.round(dims.dividerX + rightSpan * 0.28),
+        y: Math.round(height * 0.5),
+        diameter: 115,
+        includeMountHoles: true,
+      });
+      holes.push({
+        id: 'top-lap-fan120-2',
+        type: 'fan120',
+        label: 'Laptop Exhaust 120mm #2',
+        x: Math.round(dims.dividerX + rightSpan * 0.72),
+        y: Math.round(height * 0.5),
         diameter: 115,
         includeMountHoles: true,
       });
@@ -361,7 +421,7 @@ export const useCadStore = create<CadStoreState>((set) => ({
 
   caseDims: DEFAULT_CASE_DIMS,
   panels: createInitialPanels(DEFAULT_CASE_DIMS),
-  activePanelId: 'right',
+  activePanelId: 'top',
   selectedHoleId: null,
   gridSize: 10,
   snapToGrid: true,
@@ -458,6 +518,16 @@ export const useCadStore = create<CadStoreState>((set) => ({
           x: cx,
           y: cy,
           diameter: 115,
+          includeMountHoles: true,
+        };
+      } else if (type === 'fan140') {
+        newHole = {
+          id: uid,
+          type: 'fan140',
+          label: `Fan 140mm #${panel.holes.filter((h) => h.type === 'fan140').length + 1}`,
+          x: cx,
+          y: cy,
+          diameter: 135,
           includeMountHoles: true,
         };
       } else {

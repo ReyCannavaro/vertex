@@ -382,58 +382,67 @@ export const Canvas2DEditor: React.FC = () => {
                   </>
                 )}
 
-                {hole.type === 'fan120' && (
-                  <>
-                    {/* 120x120mm outer fan frame reference guide */}
-                    <Rect
-                      x={-60}
-                      y={-60}
-                      width={120}
-                      height={120}
-                      cornerRadius={6}
-                      stroke={isSelected ? '#facc15' : '#38bdf8'}
-                      strokeWidth={1 / zoom}
-                      dash={[4 / zoom, 4 / zoom]}
-                      fill="rgba(56, 189, 248, 0.04)"
-                    />
-                    {/* Main 115mm air cutout */}
-                    <Circle
-                      radius={(hole.diameter ?? 115) / 2}
-                      fill="#020617"
-                      stroke={strokeColor}
-                      strokeWidth={1.8 / zoom}
-                    />
-                    {/* 4x M4 mounting holes at 105mm pitch (±52.5mm) */}
-                    {hole.includeMountHoles !== false &&
-                      [
-                        [-52.5, -52.5],
-                        [52.5, -52.5],
-                        [52.5, 52.5],
-                        [-52.5, 52.5],
-                      ].map(([ox, oy], idx) => (
-                        <Circle
-                          key={idx}
-                          x={ox}
-                          y={oy}
-                          radius={2.25}
-                          fill="#020617"
-                          stroke={strokeColor}
-                          strokeWidth={1.3 / zoom}
-                        />
-                      ))}
-                    <Text
-                      x={-55}
-                      y={-6 / zoom}
-                      width={110}
-                      align="center"
-                      text={`FAN Ø${hole.diameter ?? 115}mm`}
-                      fontSize={10 / zoom}
-                      fontFamily="monospace"
-                      fill={isSelected ? '#fde047' : '#94a3b8'}
-                      listening={false}
-                    />
-                  </>
-                )}
+                {(hole.type === 'fan120' || hole.type === 'fan140') && (() => {
+                  const is140 = hole.type === 'fan140';
+                  const frameSize = is140 ? 140 : 120;
+                  const halfFrame = frameSize / 2;
+                  const defaultDia = is140 ? 135 : 115;
+                  const pitchHalf = is140 ? 62.25 : 52.5;
+                  const actualDia = hole.diameter ?? defaultDia;
+
+                  return (
+                    <>
+                      {/* Outer fan frame reference guide (120x120mm or 140x140mm) */}
+                      <Rect
+                        x={-halfFrame}
+                        y={-halfFrame}
+                        width={frameSize}
+                        height={frameSize}
+                        cornerRadius={6}
+                        stroke={isSelected ? '#facc15' : is140 ? '#818cf8' : '#38bdf8'}
+                        strokeWidth={1.1 / zoom}
+                        dash={[4 / zoom, 4 / zoom]}
+                        fill={is140 ? 'rgba(129, 140, 248, 0.05)' : 'rgba(56, 189, 248, 0.04)'}
+                      />
+                      {/* Main air cutout */}
+                      <Circle
+                        radius={actualDia / 2}
+                        fill="#020617"
+                        stroke={strokeColor}
+                        strokeWidth={1.8 / zoom}
+                      />
+                      {/* 4x M4 mounting holes */}
+                      {hole.includeMountHoles !== false &&
+                        [
+                          [-pitchHalf, -pitchHalf],
+                          [pitchHalf, -pitchHalf],
+                          [pitchHalf, pitchHalf],
+                          [-pitchHalf, pitchHalf],
+                        ].map(([ox, oy], idx) => (
+                          <Circle
+                            key={idx}
+                            x={ox}
+                            y={oy}
+                            radius={2.25}
+                            fill="#020617"
+                            stroke={strokeColor}
+                            strokeWidth={1.3 / zoom}
+                          />
+                        ))}
+                      <Text
+                        x={-halfFrame + 4}
+                        y={-6 / zoom}
+                        width={frameSize - 8}
+                        align="center"
+                        text={`FAN ${frameSize} (Ø${actualDia}mm)`}
+                        fontSize={10 / zoom}
+                        fontFamily="monospace"
+                        fill={isSelected ? '#fde047' : '#94a3b8'}
+                        listening={false}
+                      />
+                    </>
+                  );
+                })()}
 
                 {hole.type === 'vent' && (
                   <>

@@ -414,6 +414,8 @@ export const Preview3DAssembly: React.FC = () => {
             ledEnabled={ledEnabled}
             ledColor={ledColor}
             middleEnabled={panels.middle.enabled}
+            bottomHoles={panels.bottom.holes}
+            topHoles={panels.top.holes}
           />
         )}
 

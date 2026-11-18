@@ -11,7 +11,7 @@ export type PanelId =
   | 'divider'
   | 'middle';
 
-export type HoleType = 'm3' | 'fan120' | 'vent';
+export type HoleType = 'm3' | 'fan120' | 'fan140' | 'vent';
 
 export interface Point2D {
   x: number;

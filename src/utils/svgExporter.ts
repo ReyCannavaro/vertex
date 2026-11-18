@@ -9,11 +9,13 @@ function renderHoleSvg(hole: PanelHole, offsetX: number, offsetY: number): strin
     return `    <circle cx="${cx}" cy="${cy}" r="${r}" />`;
   }
 
-  if (hole.type === 'fan120') {
-    const mainR = ((hole.diameter ?? 115) / 2).toFixed(3);
+  if (hole.type === 'fan120' || hole.type === 'fan140') {
+    const is140 = hole.type === 'fan140';
+    const defaultDia = is140 ? 135 : 115;
+    const pitchHalf = is140 ? 62.25 : 52.5;
+    const mainR = ((hole.diameter ?? defaultDia) / 2).toFixed(3);
     const lines = [`    <circle cx="${cx}" cy="${cy}" r="${mainR}" />`];
     if (hole.includeMountHoles !== false) {
-      const pitchHalf = 52.5;
       const mountR = '2.250'; // 4.5mm M4 mounting hole
       const offsets = [
         [-pitchHalf, -pitchHalf],
