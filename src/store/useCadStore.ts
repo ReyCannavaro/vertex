@@ -219,10 +219,10 @@ function makeCornerM3Holes(
   return coords.map((c, idx) => ({
     id: `${panelId}-m3-${c.tag}-${idx}`,
     type: 'm3' as const,
-    label: `M3 ${c.tag}`,
+    label: `Braket M3 ${c.tag}`,
     x: Math.round(c.x),
     y: Math.round(c.y),
-    diameter: 3,
+    diameter: 3.2, // M3 clearance hole for laser-cut 5mm cast acrylic
   }));
 }
 
@@ -314,7 +314,8 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
   ];
 
   const panels = {} as Record<PanelId, AcrylicPanel>;
-  const { length: L, width: W, thickness: t, dividerX, legHeight, wiringDepth } = dims;
+  const { length: L, width: W, height: H, thickness: t, dividerX, middleTrayY, legHeight, wiringDepth } = dims;
+  const m3 = 3.2; // Standard M3 bolt clearance diameter (mm)
 
   for (const spec of specs) {
     const { width, height, outline } = getPanelGeometrySpec(spec.id, dims);
@@ -322,28 +323,31 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
 
     if (spec.id === 'filter-rail') {
       const splitX = Math.round(dividerX - t);
-      // M3 mounting holes along left, center spine, and right rail arms
+      // 6x M3 mounting holes aligned 1:1 with Bottom panel through-holes
       holes = [
-        { id: 'fr-m3-1', type: 'm3', label: 'Rail M3 FL', x: 9, y: height - 18, diameter: 3 },
-        { id: 'fr-m3-2', type: 'm3', label: 'Rail M3 FR', x: width - 9, y: height - 18, diameter: 3 },
-        { id: 'fr-m3-3', type: 'm3', label: 'Rail M3 BL', x: 9, y: 9, diameter: 3 },
-        { id: 'fr-m3-4', type: 'm3', label: 'Rail M3 BR', x: width - 9, y: 9, diameter: 3 },
-        { id: 'fr-m3-c1', type: 'm3', label: 'Center Spine Front', x: splitX, y: height - 18, diameter: 3 },
-        { id: 'fr-m3-c2', type: 'm3', label: 'Center Spine Rear', x: splitX, y: 9, diameter: 3 },
+        { id: 'fr-m3-1', type: 'm3', label: 'Rail M3 Depan-Kiri', x: 9, y: height - 18, diameter: m3 },
+        { id: 'fr-m3-2', type: 'm3', label: 'Rail M3 Depan-Kanan', x: width - 9, y: height - 18, diameter: m3 },
+        { id: 'fr-m3-3', type: 'm3', label: 'Rail M3 Belakang-Kiri', x: 9, y: 9, diameter: m3 },
+        { id: 'fr-m3-4', type: 'm3', label: 'Rail M3 Belakang-Kanan', x: width - 9, y: 9, diameter: m3 },
+        { id: 'fr-m3-c1', type: 'm3', label: 'Rail Tengah Depan', x: splitX, y: height - 18, diameter: m3 },
+        { id: 'fr-m3-c2', type: 'm3', label: 'Rail Tengah Belakang', x: splitX, y: 9, diameter: m3 },
       ];
     } else if (spec.id === 'center-foot') {
-      // M3 bracket mounting holes on the front & rear solid feet of the center support runner
+      // M3 L-Bracket mounting holes on front & rear solid feet of center anti-sag runner
       holes = [
-        { id: 'cf-m3-f', type: 'm3', label: 'Center Foot Front M3', x: 24, y: Math.min(10, Math.round(height * 0.3)), diameter: 3 },
-        { id: 'cf-m3-b', type: 'm3', label: 'Center Foot Rear M3', x: width - 24, y: Math.min(10, Math.round(height * 0.3)), diameter: 3 },
+        { id: 'cf-m3-f1', type: 'm3', label: 'Kaki Tengah Depan #1', x: 18, y: Math.min(10, Math.round(height * 0.3)), diameter: m3 },
+        { id: 'cf-m3-f2', type: 'm3', label: 'Kaki Tengah Depan #2', x: 34, y: Math.min(10, Math.round(height * 0.3)), diameter: m3 },
+        { id: 'cf-m3-b1', type: 'm3', label: 'Kaki Tengah Belakang #1', x: width - 34, y: Math.min(10, Math.round(height * 0.3)), diameter: m3 },
+        { id: 'cf-m3-b2', type: 'm3', label: 'Kaki Tengah Belakang #2', x: width - 18, y: Math.min(10, Math.round(height * 0.3)), diameter: m3 },
       ];
     } else if (spec.id === 'cable-comb') {
       holes = [
-        { id: 'cc-m3-l', type: 'm3', label: 'Comb Mount L', x: 12, y: height - 8, diameter: 3 },
-        { id: 'cc-m3-r', type: 'm3', label: 'Comb Mount R', x: width - 12, y: height - 8, diameter: 3 },
+        { id: 'cc-m3-l', type: 'm3', label: 'Comb L-Bracket Kiri', x: 14, y: height - 8, diameter: m3 },
+        { id: 'cc-m3-m', type: 'm3', label: 'Comb L-Bracket Tengah', x: Math.round(width / 2), y: height - 8, diameter: m3 },
+        { id: 'cc-m3-r', type: 'm3', label: 'Comb L-Bracket Kanan', x: width - 14, y: height - 8, diameter: m3 },
       ];
     } else if (spec.id === 'front-left' || spec.id === 'front-right') {
-      // Exact M3 screw holes for 2x Butterfly Hinges (hinged edge) + 1x Pull Handle (center edge)
+      // Exact M3 screw holes for 2x Butterfly Hinges + Pull Handle + Magnetic Catch + MC-38 Door Magnet
       const isLeft = spec.id === 'front-left';
       const hingeX = isLeft ? 16 : width - 16;
       const handleX = isLeft ? width - 20 : 20;
@@ -352,29 +356,68 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
       const midY = Math.round(height * 0.5);
 
       holes = [
-        // Upper Hinge (2x M3)
-        { id: `${spec.id}-h1a`, type: 'm3', label: 'Engsel Atas #1', x: hingeX, y: topHingeY - 12, diameter: 3 },
-        { id: `${spec.id}-h1b`, type: 'm3', label: 'Engsel Atas #2', x: hingeX, y: topHingeY + 12, diameter: 3 },
-        // Lower Hinge (2x M3)
-        { id: `${spec.id}-h2a`, type: 'm3', label: 'Engsel Bawah #1', x: hingeX, y: botHingeY - 12, diameter: 3 },
-        { id: `${spec.id}-h2b`, type: 'm3', label: 'Engsel Bawah #2', x: hingeX, y: botHingeY + 12, diameter: 3 },
+        // Upper Butterfly Hinge (2x M3)
+        { id: `${spec.id}-h1a`, type: 'm3', label: 'Engsel Atas #1 (M3)', x: hingeX, y: topHingeY - 12, diameter: m3 },
+        { id: `${spec.id}-h1b`, type: 'm3', label: 'Engsel Atas #2 (M3)', x: hingeX, y: topHingeY + 12, diameter: m3 },
+        // Lower Butterfly Hinge (2x M3)
+        { id: `${spec.id}-h2a`, type: 'm3', label: 'Engsel Bawah #1 (M3)', x: hingeX, y: botHingeY - 12, diameter: m3 },
+        { id: `${spec.id}-h2b`, type: 'm3', label: 'Engsel Bawah #2 (M3)', x: hingeX, y: botHingeY + 12, diameter: m3 },
         // Pull Handle (2x M3)
-        { id: `${spec.id}-hdl1`, type: 'm3', label: 'Handle Atas', x: handleX, y: midY - 26, diameter: 3 },
-        { id: `${spec.id}-hdl2`, type: 'm3', label: 'Handle Bawah', x: handleX, y: midY + 26, diameter: 3 },
+        { id: `${spec.id}-hdl1`, type: 'm3', label: 'Handle Atas (M3)', x: handleX, y: midY - 26, diameter: m3 },
+        { id: `${spec.id}-hdl2`, type: 'm3', label: 'Handle Bawah (M3)', x: handleX, y: midY + 26, diameter: m3 },
+        // Magnetic Catch Strike Plate + MC-38 Magnet Block (2x M3 near top edge)
+        { id: `${spec.id}-mag1`, type: 'm3', label: 'Pelat Magnet Catch (M3)', x: handleX, y: 26, diameter: m3 },
+        { id: `${spec.id}-mc38`, type: 'm3', label: 'Magnet Sensor MC-38 (M3)', x: isLeft ? width - 30 : 30, y: 12, diameter: m3 },
       ];
     } else if (spec.id === 'left' || spec.id === 'right') {
-      // Keep bottom corner M3 holes above the chamfered leg cutout!
+      // 4 outer corner M3 holes (above chamfered leg arch)
       holes = makeCornerM3Holes(spec.id, width, height, 14, legHeight + 14);
     } else {
       holes = makeCornerM3Holes(spec.id, width, height, 14);
     }
 
-    if (spec.id === 'right') {
-      // Single unified IoT Controller Box mounting pattern (centered on Right Wall main area)
+    if (spec.id === 'left') {
+      // On Left wall (rotated -90° Y): Konva x=0 is REAR (-Z), x=totalW is FRONT (+Z)!
+      const mainH = height - legHeight;
+      const topHingeY = Math.round(mainH * 0.22);
+      const botHingeY = Math.round(mainH * 0.78);
+      const frontHingeX = width - 15;
+      const backPartX = wiringDepth + 14;
+      holes.push(
+        // Stationary Butterfly Hinge Mounts for Front Left PC Door (4x M3)
+        { id: 'left-hinge-t1', type: 'm3', label: 'Engsel Pintu PC Atas #1', x: frontHingeX, y: topHingeY - 11, diameter: m3 },
+        { id: 'left-hinge-t2', type: 'm3', label: 'Engsel Pintu PC Atas #2', x: frontHingeX, y: topHingeY + 11, diameter: m3 },
+        { id: 'left-hinge-b1', type: 'm3', label: 'Engsel Pintu PC Bawah #1', x: frontHingeX, y: botHingeY - 11, diameter: m3 },
+        { id: 'left-hinge-b2', type: 'm3', label: 'Engsel Pintu PC Bawah #2', x: frontHingeX, y: botHingeY + 11, diameter: m3 },
+        // Back Partition L-Bracket Mounts (2x M3)
+        { id: 'left-back-m3-t', type: 'm3', label: 'Braket Back Partition Atas', x: backPartX, y: 36, diameter: m3 },
+        { id: 'left-back-m3-b', type: 'm3', label: 'Braket Back Partition Bawah', x: backPartX, y: mainH - 36, diameter: m3 },
+        // Cable Comb Side Mount (1x M3)
+        { id: 'left-comb-m3', type: 'm3', label: 'Mount Cable Comb', x: Math.round(wiringDepth * 0.5), y: Math.round(mainH * 0.48), diameter: m3 }
+      );
+    } else if (spec.id === 'right') {
+      // On Right wall (rotated +90° Y): Konva x=0 is FRONT (+Z), x=totalW is REAR (-Z)!
       const mainCenterX = Math.round(W * 0.5);
       const mainH = height - legHeight;
       const mountY = Math.round(mainH * 0.5);
+      const topHingeY = Math.round(mainH * 0.22);
+      const botHingeY = Math.round(mainH * 0.78);
+      const shelfY = Math.round(mainH - middleTrayY);
       holes.push(
+        // Stationary Butterfly Hinge Mounts for Front Right Laptop Door (4x M3)
+        { id: 'right-hinge-t1', type: 'm3', label: 'Engsel Pintu Laptop Atas #1', x: 15, y: topHingeY - 11, diameter: m3 },
+        { id: 'right-hinge-t2', type: 'm3', label: 'Engsel Pintu Laptop Atas #2', x: 15, y: topHingeY + 11, diameter: m3 },
+        { id: 'right-hinge-b1', type: 'm3', label: 'Engsel Pintu Laptop Bawah #1', x: 15, y: botHingeY - 11, diameter: m3 },
+        { id: 'right-hinge-b2', type: 'm3', label: 'Engsel Pintu Laptop Bawah #2', x: 15, y: botHingeY + 11, diameter: m3 },
+        // Middle Laptop Shelf T-Bracket Mounts (2x M3)
+        { id: 'right-shelf-f', type: 'm3', label: 'Braket T Rak Laptop Depan', x: 24, y: shelfY, diameter: m3 },
+        { id: 'right-shelf-b', type: 'm3', label: 'Braket T Rak Laptop Belakang', x: W - 24, y: shelfY, diameter: m3 },
+        // Back Partition L-Bracket Mounts (2x M3)
+        { id: 'right-back-m3-t', type: 'm3', label: 'Braket Back Partition Atas', x: W - 14, y: 36, diameter: m3 },
+        { id: 'right-back-m3-b', type: 'm3', label: 'Braket Back Partition Bawah', x: W - 14, y: mainH - 36, diameter: m3 },
+        // Cable Comb Side Mount (1x M3)
+        { id: 'right-comb-m3', type: 'm3', label: 'Mount Cable Comb', x: Math.round(W + wiringDepth * 0.5), y: Math.round(mainH * 0.48), diameter: m3 },
+        // Single unified IoT Box mounting pattern (cable pass-through + 4x M3 matching IoT Box captive hex nuts!)
         {
           id: 'right-iot-cable',
           type: 'vent',
@@ -385,39 +428,69 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
           height: 20,
           cornerRadius: 6,
         },
-        // 4x M3 rear wall mounting holes matching the IoT Box rear mounting pitch (±38mm x ±22mm)
-        { id: 'right-iot-m3-1', type: 'm3', label: 'IoT Mount TL', x: mainCenterX - 38, y: mountY - 22, diameter: 3 },
-        { id: 'right-iot-m3-2', type: 'm3', label: 'IoT Mount TR', x: mainCenterX + 38, y: mountY - 22, diameter: 3 },
-        { id: 'right-iot-m3-3', type: 'm3', label: 'IoT Mount BR', x: mainCenterX + 38, y: mountY + 22, diameter: 3 },
-        { id: 'right-iot-m3-4', type: 'm3', label: 'IoT Mount BL', x: mainCenterX - 38, y: mountY + 22, diameter: 3 }
+        { id: 'right-iot-m3-1', type: 'm3', label: 'IoT Box Mount TL (M3)', x: mainCenterX - 38, y: mountY - 22, diameter: m3 },
+        { id: 'right-iot-m3-2', type: 'm3', label: 'IoT Box Mount TR (M3)', x: mainCenterX + 38, y: mountY - 22, diameter: m3 },
+        { id: 'right-iot-m3-3', type: 'm3', label: 'IoT Box Mount BR (M3)', x: mainCenterX + 38, y: mountY + 22, diameter: m3 },
+        { id: 'right-iot-m3-4', type: 'm3', label: 'IoT Box Mount BL (M3)', x: mainCenterX - 38, y: mountY + 22, diameter: m3 }
       );
     } else if (spec.id === 'divider') {
-      holes.push({
-        id: 'divider-cable-upper',
-        type: 'vent',
-        label: 'Kabel Laptop Atas -> PC',
-        x: Math.round(width * 0.78),
-        y: Math.round(height * 0.32),
-        width: 36,
-        height: 55,
-        cornerRadius: 8,
-      });
-      holes.push({
-        id: 'divider-cable-lower',
-        type: 'vent',
-        label: 'Kabel Power PSU -> Laptop',
-        x: Math.round(width * 0.78),
-        y: Math.round(height * 0.74),
-        width: 36,
-        height: 55,
-        cornerRadius: 8,
-      });
-    } else if (spec.id === 'back') {
-      // Back wall is rotated 180° around Y: Konva left (small X) = Right Laptop Bay, Konva right (large X) = Left PC Bay
-      const pcX = Math.round(width - (dividerX - t) * 0.52);
-      const lapLeftX = Math.round((L - dividerX - t) * 0.32);
-      const lapRightX = Math.round((L - dividerX - t) * 0.72);
+      const shelfY = Math.round(height - middleTrayY + t);
       holes.push(
+        // Cross (+) Bracket Mounts for Middle Laptop Shelf (front & rear)
+        { id: 'div-cross-f', type: 'm3', label: 'Braket Cross (+) Depan', x: width - 16, y: shelfY, diameter: m3 },
+        { id: 'div-cross-b', type: 'm3', label: 'Braket Cross (+) Belakang', x: 16, y: shelfY, diameter: m3 },
+        // Magnetic Door Catch Mounts near top-front edge (2x M3)
+        { id: 'div-catch-1', type: 'm3', label: 'Magnetic Catch Atas', x: width - 14, y: 22, diameter: m3 },
+        { id: 'div-catch-2', type: 'm3', label: 'Magnetic Catch Bawah', x: width - 14, y: 36, diameter: m3 },
+        // Inter-bay cable routing slots
+        {
+          id: 'divider-cable-upper',
+          type: 'vent',
+          label: 'Kabel Laptop Atas -> PC',
+          x: Math.round(width * 0.78),
+          y: Math.round(height * 0.32),
+          width: 36,
+          height: 55,
+          cornerRadius: 8,
+        },
+        {
+          id: 'divider-cable-lower',
+          type: 'vent',
+          label: 'Kabel Power PSU -> Laptop',
+          x: Math.round(width * 0.78),
+          y: Math.round(height * 0.74),
+          width: 36,
+          height: 55,
+          cornerRadius: 8,
+        }
+      );
+    } else if (spec.id === 'back') {
+      // Back wall is rotated 180° around Y: Konva left (small X) = Laptop Bay, Konva right (large X) = PC Bay
+      const pcX = Math.round(width - (dividerX - t) * 0.52);
+      const lapSpan = L - dividerX - t;
+      const lapLeftX = Math.round(lapSpan * 0.32);
+      const lapRightX = Math.round(lapSpan * 0.72);
+      const shelfY = Math.round(height - middleTrayY);
+      const combY = Math.round(height * 0.48);
+
+      holes.push(
+        // 4x Micro-ATX Motherboard Brass Standoff Mounting Holes (standard 203x215mm span on PC Bay!)
+        { id: 'back-matx-1', type: 'm3', label: 'Standoff mATX TL', x: pcX - 95, y: 65, diameter: m3 },
+        { id: 'back-matx-2', type: 'm3', label: 'Standoff mATX TR', x: pcX + 95, y: 65, diameter: m3 },
+        { id: 'back-matx-3', type: 'm3', label: 'Standoff mATX BR', x: pcX + 95, y: 255, diameter: m3 },
+        { id: 'back-matx-4', type: 'm3', label: 'Standoff mATX BL', x: pcX - 95, y: 255, diameter: m3 },
+        // 2x Rear Anti-Sag L-Bracket Holes supporting Middle Laptop Shelf
+        { id: 'back-shelf-l1', type: 'm3', label: 'L-Bracket Rak Laptop #1', x: lapLeftX, y: shelfY + 12, diameter: m3 },
+        { id: 'back-shelf-l2', type: 'm3', label: 'L-Bracket Rak Laptop #2', x: lapRightX, y: shelfY + 12, diameter: m3 },
+        // 3x Cable Comb Rear L-Bracket Mounts
+        { id: 'back-comb-1', type: 'm3', label: 'Mount Cable Comb #1', x: 24, y: combY, diameter: m3 },
+        { id: 'back-comb-2', type: 'm3', label: 'Mount Cable Comb #2', x: Math.round(width / 2), y: combY, diameter: m3 },
+        { id: 'back-comb-3', type: 'm3', label: 'Mount Cable Comb #3', x: width - 24, y: combY, diameter: m3 },
+        // 3x DHT22 Sensor Mounting Screw Holes (PC Bay, Laptop Top, Laptop Bottom)
+        { id: 'back-dht-pc', type: 'm3', label: 'Mount DHT22 PC', x: width - 34, y: 42, diameter: m3 },
+        { id: 'back-dht-lt', type: 'm3', label: 'Mount DHT22 Lap Atas', x: Math.round(lapSpan - 34), y: 42, diameter: m3 },
+        { id: 'back-dht-lb', type: 'm3', label: 'Mount DHT22 Lap Bawah', x: Math.round(lapSpan - 34), y: shelfY + 38, diameter: m3 },
+        // Cable Grommet Cutouts into Rear Wiring Chamber
         {
           id: 'back-pc-io',
           type: 'vent',
@@ -461,7 +534,7 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         {
           id: 'back-iot-wire-slot',
           type: 'vent',
-          label: 'Slot Kabel Fan & IoT Pod',
+          label: 'Slot Kabel Fan & IoT Box',
           x: lapRightX,
           y: Math.round(height * 0.54),
           width: 44,
@@ -470,8 +543,16 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         }
       );
     } else if (spec.id === 'rear-cover') {
-      // Rear outer cover of the Wiring Chamber: clean bottom main exit + top rear vent
+      // Rear outer cover: 4 corner Thumb-Screw M3 + Main Exit + DC 12V 5A Barrel Jack (Ø11mm) + Upper Vent
       holes.push(
+        {
+          id: 'rear-dc-jack-12v',
+          type: 'm3',
+          label: 'DC Jack 12V 5A (Ø11mm)',
+          x: Math.round(width * 0.5 + 88),
+          y: Math.round(height - 32),
+          diameter: 11, // Standard 5.5x2.1mm panel-mount DC barrel jack nut hole
+        },
         {
           id: 'rear-main-exit',
           type: 'vent',
@@ -495,6 +576,10 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
       );
     } else if (spec.id === 'middle') {
       holes.push(
+        // 2x Rear Anti-Sag L-Bracket M3 Holes (3-side shelf support!)
+        { id: 'mid-rear-l1', type: 'm3', label: 'L-Bracket Belakang #1', x: Math.round(width * 0.32), y: 14, diameter: m3 },
+        { id: 'mid-rear-l2', type: 'm3', label: 'L-Bracket Belakang #2', x: Math.round(width * 0.72), y: 14, diameter: m3 },
+        // 2x 120mm vertical chimney airflow cutouts
         {
           id: 'middle-cooling-vent-1',
           type: 'fan120',
@@ -517,7 +602,16 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
     } else if (spec.id === 'bottom') {
       const pcSpan = dividerX - t;
       const rightSpan = width - pcSpan;
+      const splitX = Math.round(pcSpan);
       holes.push(
+        // 6x E-Track Dust Filter Rail & Divider Through-Bolt M3 Holes (1:1 aligned with filter-rail!)
+        { id: 'bot-rail-fl', type: 'm3', label: 'Filter Rail M3 FL', x: 9, y: height - 18, diameter: m3 },
+        { id: 'bot-rail-fr', type: 'm3', label: 'Filter Rail M3 FR', x: width - 9, y: height - 18, diameter: m3 },
+        { id: 'bot-rail-bl', type: 'm3', label: 'Filter Rail M3 BL', x: 9, y: 9, diameter: m3 },
+        { id: 'bot-rail-br', type: 'm3', label: 'Filter Rail M3 BR', x: width - 9, y: 9, diameter: m3 },
+        { id: 'bot-div-f', type: 'm3', label: 'Divider & Rail Tengah Depan', x: splitX, y: height - 18, diameter: m3 },
+        { id: 'bot-div-b', type: 'm3', label: 'Divider & Rail Tengah Belakang', x: splitX, y: 9, diameter: m3 },
+        // Bottom Intake Fans (1x 140mm PC + 2x 120mm Laptop)
         {
           id: 'bottom-pc-fan140',
           type: 'fan140',
@@ -547,10 +641,22 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         }
       );
     } else if (spec.id === 'top') {
-      // Top spans full depth (W + wiringDepth): Konva y=0 is Rear (-W/2 - wiringDepth), so main chamber starts at y = wiringDepth!
+      // Top spans full depth (W + wiringDepth): Konva y=0 is Rear (-W/2 - wiringDepth), y=height is Front (+W/2)
       const rightSpan = L - dividerX;
       const mainCenterY = Math.round(wiringDepth + W * 0.5);
       holes.push(
+        // Divider Top T-Bracket M3 Holes (front & rear of main chamber)
+        { id: 'top-div-f', type: 'm3', label: 'Braket T Divider Depan', x: dividerX, y: height - 14, diameter: m3 },
+        { id: 'top-div-b', type: 'm3', label: 'Braket T Divider Belakang', x: dividerX, y: wiringDepth + 14, diameter: m3 },
+        // 2x MC-38 Door Reed Switch Mounting Holes (above Left PC Door & Right Laptop Door)
+        { id: 'top-mc38-pc1', type: 'm3', label: 'Sensor Pintu PC #1', x: dividerX - 38, y: height - 14, diameter: m3 },
+        { id: 'top-mc38-pc2', type: 'm3', label: 'Sensor Pintu PC #2', x: dividerX - 18, y: height - 14, diameter: m3 },
+        { id: 'top-mc38-lap1', type: 'm3', label: 'Sensor Pintu Laptop #1', x: dividerX + 18, y: height - 14, diameter: m3 },
+        { id: 'top-mc38-lap2', type: 'm3', label: 'Sensor Pintu Laptop #2', x: dividerX + 38, y: height - 14, diameter: m3 },
+        // MQ-2 Smoke Sensor Ceiling Mount Holes (2x M3)
+        { id: 'top-mq2-1', type: 'm3', label: 'Mount Sensor Asap MQ-2 #1', x: dividerX + 18, y: mainCenterY - 20, diameter: m3 },
+        { id: 'top-mq2-2', type: 'm3', label: 'Mount Sensor Asap MQ-2 #2', x: dividerX + 34, y: mainCenterY - 20, diameter: m3 },
+        // Top Exhaust Fans (1x 140mm PC + 2x 120mm Laptop)
         {
           id: 'top-pc-fan140',
           type: 'fan140',
@@ -893,7 +999,7 @@ export const useCadStore = create<CadStoreState>((set) => ({
           label: `M3 Screw #${panel.holes.filter((h) => h.type === 'm3').length + 1}`,
           x: cx,
           y: cy,
-          diameter: 3,
+          diameter: 3.2,
         };
       } else if (type === 'fan120') {
         newHole = {
