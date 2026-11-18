@@ -4,7 +4,8 @@ export type AcrylicViewMode = '2d' | 'split' | '3d';
 export type PanelId =
   | 'bottom'
   | 'top'
-  | 'front'
+  | 'front-left'
+  | 'front-right'
   | 'back'
   | 'left'
   | 'right'
@@ -72,7 +73,11 @@ export interface CaseDimensions {
   wiringDepth: number;
 }
 
-export type IoTBoxPreset = 'controller-pod' | 'fan-pod';
+export type IoTBoxPreset =
+  | 'controller-pod'
+  | 'fan-pod'
+  | 'fan-shroud-120'
+  | 'fan-shroud-140';
 
 export interface IoTBoxParams {
   /** Outer length (X) in mm */
@@ -95,10 +100,12 @@ export interface IoTBoxParams {
   standoffSpacingZ: number;
   /** Side louver ventilation slots along left & right walls */
   hasSideVents: boolean;
-  /** Cooling fan cutout (40mm or 80mm on front/side) */
+  /** Cooling fan cutout on faceplate (40 / 80 / 120 / 140mm) */
   hasFan40: boolean;
-  /** Fan diameter preset (40mm or 80mm) */
-  fanSize: 40 | 80;
+  /** Fan diameter preset (40, 80, 120, or 140mm) */
+  fanSize: 40 | 80 | 120 | 140;
+  /** Cut matching circular airflow pass-through on rear wall (for slim top/bottom fan shrouds) */
+  throughAirflow: boolean;
   /** USB / sensor cable pass-through ports */
   hasUsbCable: boolean;
   /** Rear/Bottom M3 mounting holes to bolt pod onto the acrylic case wall */

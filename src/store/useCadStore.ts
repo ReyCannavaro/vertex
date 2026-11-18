@@ -117,7 +117,16 @@ export function getPanelGeometrySpec(
         height: innerW,
         outline: makeUFilterRailOutline(innerL, innerW, 20),
       };
-    case 'front':
+    case 'front-left': {
+      const doorW = Math.max(60, Math.round(dividerX - t - 1));
+      const doorH = Math.max(80, wallH - 2);
+      return { width: doorW, height: doorH, outline: makeRectOutline(doorW, doorH) };
+    }
+    case 'front-right': {
+      const doorW = Math.max(80, Math.round(L - dividerX - t - 1));
+      const doorH = Math.max(80, wallH - 2);
+      return { width: doorW, height: doorH, outline: makeRectOutline(doorW, doorH) };
+    }
     case 'back':
     case 'rear-cover':
       return { width: innerL, height: wallH, outline: makeRectOutline(innerL, wallH) };
@@ -236,10 +245,16 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
       enabled: true,
     },
     {
-      id: 'front',
-      name: 'Front Panel (Kaca Depan)',
-      description: 'Panel kaca depan showcase (opsional buka/tutup)',
-      enabled: false,
+      id: 'front-left',
+      name: 'Front Door PC (Engsel Kiri)',
+      description: 'Pintu kaca berengsel khusus Bay PC + handle magnet',
+      enabled: true,
+    },
+    {
+      id: 'front-right',
+      name: 'Front Door Laptop (Engsel Kanan)',
+      description: 'Pintu kaca berengsel khusus Bay Laptop + handle magnet',
+      enabled: true,
     },
   ];
 
@@ -262,6 +277,26 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
       holes = [
         { id: 'cc-m3-l', type: 'm3', label: 'Comb Mount L', x: 12, y: height - 8, diameter: 3 },
         { id: 'cc-m3-r', type: 'm3', label: 'Comb Mount R', x: width - 12, y: height - 8, diameter: 3 },
+      ];
+    } else if (spec.id === 'front-left' || spec.id === 'front-right') {
+      // Exact M3 screw holes for 2x Butterfly Hinges (hinged edge) + 1x Pull Handle (center edge)
+      const isLeft = spec.id === 'front-left';
+      const hingeX = isLeft ? 16 : width - 16;
+      const handleX = isLeft ? width - 20 : 20;
+      const topHingeY = Math.round(height * 0.22);
+      const botHingeY = Math.round(height * 0.78);
+      const midY = Math.round(height * 0.5);
+
+      holes = [
+        // Upper Hinge (2x M3)
+        { id: `${spec.id}-h1a`, type: 'm3', label: 'Engsel Atas #1', x: hingeX, y: topHingeY - 12, diameter: 3 },
+        { id: `${spec.id}-h1b`, type: 'm3', label: 'Engsel Atas #2', x: hingeX, y: topHingeY + 12, diameter: 3 },
+        // Lower Hinge (2x M3)
+        { id: `${spec.id}-h2a`, type: 'm3', label: 'Engsel Bawah #1', x: hingeX, y: botHingeY - 12, diameter: 3 },
+        { id: `${spec.id}-h2b`, type: 'm3', label: 'Engsel Bawah #2', x: hingeX, y: botHingeY + 12, diameter: 3 },
+        // Pull Handle (2x M3)
+        { id: `${spec.id}-hdl1`, type: 'm3', label: 'Handle Atas', x: handleX, y: midY - 26, diameter: 3 },
+        { id: `${spec.id}-hdl2`, type: 'm3', label: 'Handle Bawah', x: handleX, y: midY + 26, diameter: 3 },
       ];
     } else if (spec.id === 'left' || spec.id === 'right') {
       // Keep bottom corner M3 holes above the chamfered leg cutout!
@@ -523,6 +558,7 @@ export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
     hasSideVents: true,
     hasFan40: false,
     fanSize: 40,
+    throughAirflow: false,
     hasUsbCable: true,
     hasWallMount: true,
     hasLid: true,
@@ -542,8 +578,49 @@ export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
     hasSideVents: true,
     hasFan40: true,
     fanSize: 80,
+    throughAirflow: true,
     hasUsbCable: true,
     hasWallMount: true,
+    hasLid: true,
+    lidExploded: false,
+    showVisualHardware: true,
+  },
+  'fan-shroud-120': {
+    length: 134,
+    width: 28,
+    height: 134,
+    wallThickness: 2.6,
+    cornerRadius: 11,
+    hasOled: false,
+    hasStandoffs: false,
+    standoffSpacingX: 90,
+    standoffSpacingZ: 90,
+    hasSideVents: false,
+    hasFan40: true,
+    fanSize: 120,
+    throughAirflow: true,
+    hasUsbCable: true,
+    hasWallMount: false,
+    hasLid: true,
+    lidExploded: false,
+    showVisualHardware: true,
+  },
+  'fan-shroud-140': {
+    length: 154,
+    width: 28,
+    height: 154,
+    wallThickness: 2.8,
+    cornerRadius: 12,
+    hasOled: false,
+    hasStandoffs: false,
+    standoffSpacingX: 105,
+    standoffSpacingZ: 105,
+    hasSideVents: false,
+    hasFan40: true,
+    fanSize: 140,
+    throughAirflow: true,
+    hasUsbCable: true,
+    hasWallMount: false,
     hasLid: true,
     lidExploded: false,
     showVisualHardware: true,
@@ -563,6 +640,8 @@ interface CadStoreState {
   snapToGrid: boolean;
   explodeAmount: number;
   dustFilterSlide: number; // 0 = seated under bottom, >0 = slid forward out of slot
+  doorLeftAngle: number; // degrees (0 = closed, 130 = wide open outward)
+  doorRightAngle: number; // degrees (0 = closed, 130 = wide open outward)
   ledEnabled: boolean;
   ledColor: string;
   showBrackets: boolean;
@@ -581,6 +660,10 @@ interface CadStoreState {
   setSnapToGrid: (snap: boolean) => void;
   setExplodeAmount: (amount: number) => void;
   setDustFilterSlide: (slide: number) => void;
+  setDoorLeftAngle: (deg: number) => void;
+  setDoorRightAngle: (deg: number) => void;
+  toggleAllDoors: () => void;
+  toggleDemoMaintenance: () => void;
   setLedEnabled: (enabled: boolean) => void;
   setLedColor: (color: string) => void;
   setShowBrackets: (show: boolean) => void;
@@ -612,7 +695,9 @@ export const useCadStore = create<CadStoreState>((set) => ({
   gridSize: 10,
   snapToGrid: true,
   explodeAmount: 0,
-  dustFilterSlide: 45, // Slightly pulled forward by default so user immediately sees the dust filter slot!
+  dustFilterSlide: 0,
+  doorLeftAngle: 0,
+  doorRightAngle: 0,
   ledEnabled: true,
   ledColor: '#A0E6FF',
   showBrackets: true,
@@ -629,6 +714,26 @@ export const useCadStore = create<CadStoreState>((set) => ({
   setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
   setExplodeAmount: (explodeAmount) => set({ explodeAmount }),
   setDustFilterSlide: (dustFilterSlide) => set({ dustFilterSlide }),
+  setDoorLeftAngle: (doorLeftAngle) => set({ doorLeftAngle }),
+  setDoorRightAngle: (doorRightAngle) => set({ doorRightAngle }),
+  toggleAllDoors: () =>
+    set((state) => {
+      const anyOpen = state.doorLeftAngle > 10 || state.doorRightAngle > 10;
+      return {
+        doorLeftAngle: anyOpen ? 0 : 118,
+        doorRightAngle: anyOpen ? 0 : 118,
+      };
+    }),
+  toggleDemoMaintenance: () =>
+    set((state) => {
+      const isOpen =
+        state.doorLeftAngle > 10 || state.doorRightAngle > 10 || state.dustFilterSlide > 10;
+      return {
+        doorLeftAngle: isOpen ? 0 : 122,
+        doorRightAngle: isOpen ? 0 : 122,
+        dustFilterSlide: isOpen ? 0 : 125,
+      };
+    }),
   setLedEnabled: (ledEnabled) => set({ ledEnabled }),
   setLedColor: (ledColor) => set({ ledColor }),
   setShowBrackets: (showBrackets) => set({ showBrackets }),
@@ -814,7 +919,9 @@ export const useCadStore = create<CadStoreState>((set) => ({
       panels: createInitialPanels(DEFAULT_CASE_DIMS),
       selectedHoleId: null,
       explodeAmount: 0,
-      dustFilterSlide: 45,
+      dustFilterSlide: 0,
+      doorLeftAngle: 0,
+      doorRightAngle: 0,
     }),
 
   updateIoTBox: (patch) =>

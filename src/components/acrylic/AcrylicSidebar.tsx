@@ -3,7 +3,9 @@ import {
   Cable,
   CircleDot,
   Cpu,
+  DoorOpen,
   Fan,
+  Play,
   Square,
   Eye,
   EyeOff,
@@ -24,6 +26,8 @@ import {
 } from '../../utils/svgExporter';
 
 const PANEL_ORDER: PanelId[] = [
+  'front-left',
+  'front-right',
   'left',
   'right',
   'bottom',
@@ -34,7 +38,6 @@ const PANEL_ORDER: PanelId[] = [
   'back',
   'cable-comb',
   'rear-cover',
-  'front',
 ];
 
 export const AcrylicSidebar: React.FC = () => {
@@ -44,6 +47,8 @@ export const AcrylicSidebar: React.FC = () => {
   const selectedHoleId = useCadStore((s) => s.selectedHoleId);
   const gridSize = useCadStore((s) => s.gridSize);
   const dustFilterSlide = useCadStore((s) => s.dustFilterSlide);
+  const doorLeftAngle = useCadStore((s) => s.doorLeftAngle);
+  const doorRightAngle = useCadStore((s) => s.doorRightAngle);
   const showBrackets = useCadStore((s) => s.showBrackets);
   const showHardwareMockup = useCadStore((s) => s.showHardwareMockup);
   const showWiring = useCadStore((s) => s.showWiring);
@@ -52,6 +57,10 @@ export const AcrylicSidebar: React.FC = () => {
   const setActivePanelId = useCadStore((s) => s.setActivePanelId);
   const setGridSize = useCadStore((s) => s.setGridSize);
   const setDustFilterSlide = useCadStore((s) => s.setDustFilterSlide);
+  const setDoorLeftAngle = useCadStore((s) => s.setDoorLeftAngle);
+  const setDoorRightAngle = useCadStore((s) => s.setDoorRightAngle);
+  const toggleAllDoors = useCadStore((s) => s.toggleAllDoors);
+  const toggleDemoMaintenance = useCadStore((s) => s.toggleDemoMaintenance);
   const setShowBrackets = useCadStore((s) => s.setShowBrackets);
   const setShowHardwareMockup = useCadStore((s) => s.setShowHardwareMockup);
   const setShowWiring = useCadStore((s) => s.setShowWiring);
@@ -247,6 +256,64 @@ export const AcrylicSidebar: React.FC = () => {
             step={5}
             value={dustFilterSlide}
             onChange={(e) => setDustFilterSlide(Number(e.target.value))}
+            className="w-full cursor-pointer"
+          />
+        </div>
+      </section>
+
+      <div className="border-t border-slate-800" />
+
+      {/* Section 1B: Smooth Hinged Front Doors (Demo & Maintenance Access) */}
+      <section className="space-y-2.5">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          Bukaan Pintu Depan (Engsel Kupu-Kupu)
+        </h3>
+
+        <div className="grid grid-cols-2 gap-1.5">
+          <button
+            onClick={toggleAllDoors}
+            className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 text-sky-200 font-medium transition"
+          >
+            <DoorOpen className="w-3.5 h-3.5" />
+            <span>{doorLeftAngle > 10 || doorRightAngle > 10 ? 'Tutup Pintu' : 'Buka Pintu'}</span>
+          </button>
+          <button
+            onClick={toggleDemoMaintenance}
+            className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/40 text-indigo-200 font-medium transition"
+          >
+            <Play className="w-3.5 h-3.5" />
+            <span>Demo Akses</span>
+          </button>
+        </div>
+
+        <div className="space-y-1">
+          <div className="flex justify-between text-[11px]">
+            <span className="text-slate-400">Pintu PC (Engsel Kiri)</span>
+            <span className="font-mono text-sky-300">{doorLeftAngle}°</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={135}
+            step={1}
+            value={doorLeftAngle}
+            onChange={(e) => setDoorLeftAngle(Number(e.target.value))}
+            className="w-full cursor-pointer"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <div className="flex justify-between text-[11px]">
+            <span className="text-slate-400">Pintu Laptop (Engsel Kanan)</span>
+            <span className="font-mono text-sky-300">{doorRightAngle}°</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={135}
+            step={1}
+            value={doorRightAngle}
+            onChange={(e) => setDoorRightAngle(Number(e.target.value))}
             className="w-full cursor-pointer"
           />
         </div>

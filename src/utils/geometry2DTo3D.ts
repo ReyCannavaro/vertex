@@ -221,11 +221,20 @@ export function getPanelAssemblyTransform(
         position: [middleCenterX + e * 0.35, legH + middleTrayY, 0],
         rotation: [-Math.PI / 2, 0, 0],
       };
-    case 'front':
+    case 'front-left': {
+      const doorW = Math.max(40, dividerX - t - 1);
       return {
-        position: [0, legH + wallH / 2, halfW - t / 2 + e],
+        position: [-halfL + t + doorW / 2, legH + wallH / 2, halfW - t / 2 + e],
         rotation: [0, 0, 0],
       };
+    }
+    case 'front-right': {
+      const doorW = Math.max(40, L - dividerX - t - 1);
+      return {
+        position: [halfL - t - doorW / 2, legH + wallH / 2, halfW - t / 2 + e],
+        rotation: [0, 0, 0],
+      };
+    }
     case 'back':
       return {
         position: [0, legH + wallH / 2, -halfW + t / 2 - e * 0.35],

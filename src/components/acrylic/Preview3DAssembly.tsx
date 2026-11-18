@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Environment, Grid, Lightformer, OrbitControls } from '@react-three/drei';
-import { Cpu, Filter, Layers, Sparkles } from 'lucide-react';
+import { Cpu, DoorClosed, DoorOpen, Filter, Layers, Play, Sparkles } from 'lucide-react';
 import { useCadStore } from '../../store/useCadStore';
 import { AcrylicPanel } from '../../types/cad';
 import { AcrylicPanelMesh } from './AcrylicPanelMesh';
+import { HingedAcrylicDoor } from './HingedAcrylicDoor';
 import { HardwareMockup } from './HardwareMockup';
 
 /**
@@ -165,6 +166,24 @@ const StructuralFrameBrackets: React.FC = () => {
           {renderTBracket([halfL - 3, legH + middleTrayY, -halfW - 1], -Math.PI / 2, -1, 'rt-mid-b')}
         </>
       )}
+
+      {/* Center Magnetic Door Catch Latch mounted at Top-Front of Divider */}
+      {dividerEnabled && (
+        <group position={[divX, legH + H - 28, halfW - 11]}>
+          <mesh>
+            <boxGeometry args={[32, 12, 14]} />
+            {bracketMat}
+          </mesh>
+          <mesh position={[-9, 0, 7.2]}>
+            <boxGeometry args={[10, 8, 1.5]} />
+            {screwMat}
+          </mesh>
+          <mesh position={[9, 0, 7.2]}>
+            <boxGeometry args={[10, 8, 1.5]} />
+            {screwMat}
+          </mesh>
+        </group>
+      )}
     </group>
   );
 };
@@ -278,6 +297,8 @@ export const Preview3DAssembly: React.FC = () => {
   const activePanelId = useCadStore((s) => s.activePanelId);
   const explodeAmount = useCadStore((s) => s.explodeAmount);
   const dustFilterSlide = useCadStore((s) => s.dustFilterSlide);
+  const doorLeftAngle = useCadStore((s) => s.doorLeftAngle);
+  const doorRightAngle = useCadStore((s) => s.doorRightAngle);
   const ledEnabled = useCadStore((s) => s.ledEnabled);
   const ledColor = useCadStore((s) => s.ledColor);
   const showBrackets = useCadStore((s) => s.showBrackets);
@@ -287,11 +308,21 @@ export const Preview3DAssembly: React.FC = () => {
   const setActivePanelId = useCadStore((s) => s.setActivePanelId);
   const setExplodeAmount = useCadStore((s) => s.setExplodeAmount);
   const setDustFilterSlide = useCadStore((s) => s.setDustFilterSlide);
+  const setDoorLeftAngle = useCadStore((s) => s.setDoorLeftAngle);
+  const setDoorRightAngle = useCadStore((s) => s.setDoorRightAngle);
+  const toggleAllDoors = useCadStore((s) => s.toggleAllDoors);
+  const toggleDemoMaintenance = useCadStore((s) => s.toggleDemoMaintenance);
   const setLedEnabled = useCadStore((s) => s.setLedEnabled);
   const setShowHardwareMockup = useCadStore((s) => s.setShowHardwareMockup);
 
-  const enabledPanels = useMemo(
-    () => (Object.values(panels) as AcrylicPanel[]).filter((p) => p.enabled),
+  const anyDoorOpen = doorLeftAngle > 10 || doorRightAngle > 10;
+
+  // Separate static panels from smoothly hinged front French doors
+  const staticPanels = useMemo(
+    () =>
+      (Object.values(panels) as AcrylicPanel[]).filter(
+        (p) => p.enabled && p.id !== 'front-left' && p.id !== 'front-right'
+      ),
     [panels]
   );
 
@@ -310,10 +341,40 @@ export const Preview3DAssembly: React.FC = () => {
       </div>
 
       {/* Top-Right Quick 3D Controls */}
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 rounded-lg px-2.5 py-1.5 backdrop-blur-sm">
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/80 rounded-lg px-2 py-1.5 backdrop-blur-sm">
+        {/* Smooth 1-Click Open / Close French Doors */}
+        <button
+          onClick={toggleAllDoors}
+          className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition ${
+            anyDoorOpen
+              ? 'bg-sky-500/25 text-sky-200 border border-sky-400/50'
+              : 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700'
+          }`}
+          title="Buka / Tutup Kedua Pintu Depan (Animasi Halus)"
+        >
+          {anyDoorOpen ? (
+            <DoorOpen className="w-3.5 h-3.5 text-sky-300" />
+          ) : (
+            <DoorClosed className="w-3.5 h-3.5 text-slate-300" />
+          )}
+          <span>{anyDoorOpen ? 'Tutup' : 'Buka'}</span>
+        </button>
+
+        {/* Smooth 1-Click Demo Showcase (Doors + Dust Filter) */}
+        <button
+          onClick={toggleDemoMaintenance}
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30 border border-indigo-400/40 transition"
+          title="Demo Bukaan Pintu + Tarik Dust Filter Bawah"
+        >
+          <Play className="w-3 h-3" />
+          <span>Demo</span>
+        </button>
+
+        <div className="w-px h-4 bg-slate-700" />
+
         {/* Slide Dust Filter Control */}
         <div
-          className="flex items-center gap-1.5 text-xs text-slate-300"
+          className="flex items-center gap-1 text-xs text-slate-300"
           title="Tarik / Masukkan Dust Filter Bawah"
         >
           <Filter className="w-3.5 h-3.5 text-amber-400" />
@@ -324,14 +385,12 @@ export const Preview3DAssembly: React.FC = () => {
             step={5}
             value={dustFilterSlide}
             onChange={(e) => setDustFilterSlide(Number(e.target.value))}
-            className="w-14 cursor-pointer"
+            className="w-12 cursor-pointer"
           />
         </div>
 
-        <div className="w-px h-4 bg-slate-700" />
-
         {/* Explode View Control */}
-        <div className="flex items-center gap-1.5 text-xs text-slate-300" title="Exploded View">
+        <div className="flex items-center gap-1 text-xs text-slate-300" title="Exploded View">
           <Layers className="w-3.5 h-3.5 text-sky-400" />
           <input
             type="range"
@@ -340,7 +399,7 @@ export const Preview3DAssembly: React.FC = () => {
             step={5}
             value={explodeAmount}
             onChange={(e) => setExplodeAmount(Number(e.target.value))}
-            className="w-14 cursor-pointer"
+            className="w-12 cursor-pointer"
           />
         </div>
 
@@ -348,7 +407,7 @@ export const Preview3DAssembly: React.FC = () => {
 
         <button
           onClick={() => setShowHardwareMockup(!showHardwareMockup)}
-          className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition ${
+          className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium transition ${
             showHardwareMockup
               ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
               : 'text-slate-400 hover:text-slate-200'
@@ -356,12 +415,11 @@ export const Preview3DAssembly: React.FC = () => {
           title="Tampilkan/Sembunyikan Mockup Hardware + Dust Filter + Wiring"
         >
           <Cpu className="w-3.5 h-3.5" />
-          <span className="hidden xl:inline">HW</span>
         </button>
 
         <button
           onClick={() => setLedEnabled(!ledEnabled)}
-          className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition ${
+          className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium transition ${
             ledEnabled
               ? 'bg-cyan-400/20 text-cyan-200 border border-cyan-400/40'
               : 'text-slate-400 hover:text-slate-200'
@@ -374,7 +432,7 @@ export const Preview3DAssembly: React.FC = () => {
 
       {/* Bottom Hint */}
       <div className="absolute bottom-3 left-3 z-10 pointer-events-none text-[11px] font-mono text-slate-400 px-2.5 py-1 rounded bg-slate-900/80 border border-slate-800">
-        Putar ke belakang untuk lihat Rear Wiring Chamber & Sisir Kabel • Slider Filter untuk tarik dust filter
+        Klik handle / double-click pintu untuk buka-tutup halus • Tombol Demo untuk buka pintu + filter
       </div>
 
       <Canvas
@@ -434,7 +492,7 @@ export const Preview3DAssembly: React.FC = () => {
         )}
 
         <group>
-          {enabledPanels.map((panel) => (
+          {staticPanels.map((panel) => (
             <AcrylicPanelMesh
               key={panel.id}
               panel={panel}
@@ -446,6 +504,36 @@ export const Preview3DAssembly: React.FC = () => {
               onSelect={() => setActivePanelId(panel.id)}
             />
           ))}
+
+          {/* Smoothly Animated Hinged Front French Doors (PC Bay Left & Laptop Bay Right) */}
+          {panels['front-left'].enabled && (
+            <HingedAcrylicDoor
+              side="left"
+              panel={panels['front-left']}
+              caseDims={caseDims}
+              targetAngleDeg={doorLeftAngle}
+              explodeAmount={explodeAmount}
+              isActive={activePanelId === 'front-left'}
+              ledEnabled={ledEnabled}
+              ledColor={ledColor}
+              onSelect={() => setActivePanelId('front-left')}
+              onToggleDoor={() => setDoorLeftAngle(doorLeftAngle > 10 ? 0 : 120)}
+            />
+          )}
+          {panels['front-right'].enabled && (
+            <HingedAcrylicDoor
+              side="right"
+              panel={panels['front-right']}
+              caseDims={caseDims}
+              targetAngleDeg={doorRightAngle}
+              explodeAmount={explodeAmount}
+              isActive={activePanelId === 'front-right'}
+              ledEnabled={ledEnabled}
+              ledColor={ledColor}
+              onSelect={() => setActivePanelId('front-right')}
+              onToggleDoor={() => setDoorRightAngle(doorRightAngle > 10 ? 0 : 120)}
+            />
+          )}
         </group>
 
         {/* Table / Floor Surface Grid at Y = 0 (Acrylic Feet rest cleanly right on Y = 0!) */}

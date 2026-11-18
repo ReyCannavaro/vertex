@@ -121,6 +121,23 @@ function unionMerged(base: Brush, additions: THREE.BufferGeometry[]): Brush {
   return result;
 }
 
+function getFanSpecs(fanSize: 40 | 80 | 120 | 140): {
+  airDia: number;
+  pitchHalf: number;
+  mountHoleR: number;
+} {
+  switch (fanSize) {
+    case 40:
+      return { airDia: 37, pitchHalf: 16, mountHoleR: 1.65 };
+    case 80:
+      return { airDia: 76, pitchHalf: 35.75, mountHoleR: 2.25 };
+    case 120:
+      return { airDia: 115, pitchHalf: 52.5, mountHoleR: 2.25 };
+    case 140:
+      return { airDia: 135, pitchHalf: 62.25, mountHoleR: 2.25 };
+  }
+}
+
 /**
  * Computes the 4 corner screw X/Y coordinates (centered around 0,0) shared by both
  * the main pod housing bosses and the front faceplate screw holes.
@@ -157,6 +174,9 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
     standoffSpacingX,
     standoffSpacingZ,
     hasSideVents,
+    hasFan40,
+    fanSize,
+    throughAirflow,
     hasUsbCable,
     hasWallMount,
     hasLid,
@@ -297,8 +317,41 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
     );
   }
 
-  // Rear Acrylic-Wall M3 Mounting Holes + Central Wire Pass-Through on Rear Wall (-Z)
-  if (hasWallMount) {
+  // Through-Airflow Rear Wall Cutout (for Slim 120mm / 140mm / 80mm Fan Shroud Housings)
+  if (throughAirflow && hasFan40) {
+    const rearZ = bodyCenterZ - bodyDepth / 2 + t / 2;
+    const cutDepth = t + 8;
+    const { airDia, pitchHalf, mountHoleR } = getFanSpecs(fanSize);
+    const maxAllowedDia = Math.min(innerL, innerH) - 4;
+    const dia = Math.max(24, Math.min(airDia, maxAllowedDia));
+
+    cutters.push(
+      makeTransformedGeo(
+        new THREE.CylinderGeometry(dia / 2, dia / 2, cutDepth, 36),
+        [0, centerY, rearZ],
+        [Math.PI / 2, 0, 0]
+      )
+    );
+
+    if (pitchHalf * 2 < Math.min(L, H) - 10) {
+      const fanMounts: [number, number][] = [
+        [-pitchHalf, -pitchHalf],
+        [pitchHalf, -pitchHalf],
+        [pitchHalf, pitchHalf],
+        [-pitchHalf, pitchHalf],
+      ];
+      for (const [ox, oy] of fanMounts) {
+        cutters.push(
+          makeTransformedGeo(
+            new THREE.CylinderGeometry(mountHoleR, mountHoleR, cutDepth, 14),
+            [ox, centerY + oy, rearZ],
+            [Math.PI / 2, 0, 0]
+          )
+        );
+      }
+    }
+  } else if (hasWallMount) {
+    // Rear Acrylic-Wall M3 Mounting Holes + Central Wire Pass-Through on Rear Wall (-Z)
     const rearZ = bodyCenterZ - bodyDepth / 2 + t / 2;
     const cutDepth = t + 8;
     const mx = Math.min(innerL * 0.34, 42);
@@ -411,24 +464,23 @@ export function buildIoTBoxLidGeometry(params: IoTBoxParams): THREE.BufferGeomet
     }
   }
 
-  // 3. Optional Cooling Fan Cutout on Front Faceplate (40mm or 80mm Fan Pod)
+  // 3. Optional Cooling Fan Cutout on Front Faceplate (40 / 80 / 120 / 140mm)
   if (hasFan40) {
-    const maxAllowedDia = Math.min(L, H) - t * 2 - 14;
-    const targetDia = fanSize === 80 ? 76 : 37;
-    const dia = Math.max(24, Math.min(targetDia, maxAllowedDia));
-    const pitchHalf = fanSize === 80 ? 35.75 : 16; // 71.5mm for 80mm fan, 32mm for 40mm fan
+    const { airDia, pitchHalf, mountHoleR } = getFanSpecs(fanSize);
+    const maxAllowedDia = Math.min(L, H) - t * 2 - 8;
+    const dia = Math.max(24, Math.min(airDia, maxAllowedDia));
 
     // Main circular air opening
     cutters.push(
       makeTransformedGeo(
-        new THREE.CylinderGeometry(dia / 2, dia / 2, cutDepth, 36),
+        new THREE.CylinderGeometry(dia / 2, dia / 2, cutDepth, 40),
         [0, centerY, 0],
         [Math.PI / 2, 0, 0]
       )
     );
 
     // 4x Fan mounting screw holes if they fit cleanly inside the plate
-    if (pitchHalf * 2 < Math.min(L, H) - 16) {
+    if (pitchHalf * 2 < Math.min(L, H) - 10) {
       const fanMounts: [number, number][] = [
         [-pitchHalf, -pitchHalf],
         [pitchHalf, -pitchHalf],
@@ -438,7 +490,7 @@ export function buildIoTBoxLidGeometry(params: IoTBoxParams): THREE.BufferGeomet
       for (const [ox, oy] of fanMounts) {
         cutters.push(
           makeTransformedGeo(
-            new THREE.CylinderGeometry(1.8, 1.8, cutDepth, 14),
+            new THREE.CylinderGeometry(mountHoleR, mountHoleR, cutDepth, 14),
             [ox, centerY + oy, 0],
             [Math.PI / 2, 0, 0]
           )

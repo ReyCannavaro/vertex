@@ -84,8 +84,16 @@ const ParametricIoTBoxMesh: React.FC = () => {
   const lidZ = iotBox.lidExploded ? lidBaseZ + 32 : lidBaseZ;
   const centerY = iotBox.height / 2;
 
-  const fanMaxDia = Math.min(iotBox.length, iotBox.height) - iotBox.wallThickness * 2 - 14;
-  const fanRadius = Math.max(11, Math.min(iotBox.fanSize === 80 ? 36 : 17.5, fanMaxDia / 2 - 1));
+  const fanMaxDia = Math.min(iotBox.length, iotBox.height) - iotBox.wallThickness * 2 - 10;
+  const targetFanR =
+    iotBox.fanSize === 140
+      ? 65
+      : iotBox.fanSize === 120
+        ? 55
+        : iotBox.fanSize === 80
+          ? 36
+          : 17.5;
+  const fanRadius = Math.max(11, Math.min(targetFanR, fanMaxDia / 2 - 1));
 
   return (
     <group>

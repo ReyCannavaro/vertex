@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
+import { Edges } from '@react-three/drei';
 import { CaseDimensions, PanelHole } from '../../types/cad';
 
 /**
@@ -109,40 +110,105 @@ const SpinningFanBlades: React.FC<{ radius: number; ledColor: string }> = ({
   );
 };
 
+/**
+ * Builds a sleek, slim, rounded-corner matte-black 3D-printed fan shroud housing
+ * matching the Midnight IoT Pod aesthetic so top & bottom fans look ultra-tidy inside clear acrylic.
+ */
+function createSlimFanShroudGeo(
+  outerSize: number,
+  holeRadius: number,
+  shroudHeight: number,
+  cornerRadius: number
+): THREE.ExtrudeGeometry {
+  const hw = outerSize / 2;
+  const r = cornerRadius;
+
+  const shape = new THREE.Shape();
+  shape.moveTo(-hw + r, -hw);
+  shape.lineTo(hw - r, -hw);
+  shape.quadraticCurveTo(hw, -hw, hw, -hw + r);
+  shape.lineTo(hw, hw - r);
+  shape.quadraticCurveTo(hw, hw, hw - r, hw);
+  shape.lineTo(-hw + r, hw);
+  shape.quadraticCurveTo(-hw, hw, -hw, hw - r);
+  shape.lineTo(-hw, -hw + r);
+  shape.quadraticCurveTo(-hw, -hw, -hw + r, -hw);
+  shape.closePath();
+
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, holeRadius, 0, Math.PI * 2, false);
+  shape.holes.push(hole);
+
+  const innerDepth = Math.max(4, shroudHeight - 2.4);
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: innerDepth,
+    bevelEnabled: true,
+    bevelThickness: 1.2,
+    bevelSize: 1.1,
+    bevelSegments: 2,
+    curveSegments: 28,
+  });
+  geo.translate(0, 0, -innerDepth / 2);
+  geo.rotateX(-Math.PI / 2);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/**
+ * Slim Rounded Matte-Black Fan Shroud Housing + Spinning Ice-Blue Fan + Finger Guard + Rear PWM Cable.
+ * Used for all Top & Bottom fans (120mm Laptop Bay & 140mm PC Bay) for a clean transparent showcase build.
+ */
 const MountedCaseFan3D: React.FC<{
   size: 120 | 140;
   position: [number, number, number];
+  mountSide: 'bottom' | 'top';
+  rearWallZ: number;
   ledColor: string;
   ledEnabled: boolean;
-}> = ({ size, position, ledColor, ledEnabled }) => {
-  const frameH = 18;
-  const half = size / 2;
-  const barW = 10;
-  const bladeR = size === 140 ? 63 : 53;
+}> = ({ size, position, mountSide, rearWallZ, ledColor, ledEnabled }) => {
+  const outerSize = size + 14; // 134mm for 120mm fan, 154mm for 140mm fan
+  const shroudH = 22; // slim low-profile housing
+  const cornerR = size === 140 ? 12 : 11;
+  const holeR = (size - 5) / 2;
+  const bladeR = holeR - 3;
   const mountPitch = size === 140 ? 62.25 : 52.5;
+  const screwCorner = outerSize / 2 - 9.5;
   const activeColor = ledEnabled ? ledColor : '#38bdf8';
+
+  // Inner-facing side where finger-guard grille & faceplate bolts sit
+  const innerFaceY = mountSide === 'bottom' ? shroudH / 2 + 0.6 : -shroudH / 2 - 0.6;
+
+  const shroudGeo = useMemo(
+    () => createSlimFanShroudGeo(outerSize, holeR, shroudH, cornerR),
+    [outerSize, holeR, shroudH, cornerR]
+  );
+
+  useEffect(() => {
+    return () => shroudGeo.dispose();
+  }, [shroudGeo]);
+
+  // Tidy rear PWM wire routed from back of shroud straight into the Rear Wiring Partition
+  const cableLen = Math.max(12, position[2] - outerSize / 2 - rearWallZ + 6);
 
   return (
     <group position={position}>
-      <mesh position={[0, 0, -half + barW / 2]}>
-        <boxGeometry args={[size, frameH, barW]} />
-        <meshStandardMaterial color="#141820" roughness={0.48} metalness={0.25} />
-      </mesh>
-      <mesh position={[0, 0, half - barW / 2]}>
-        <boxGeometry args={[size, frameH, barW]} />
-        <meshStandardMaterial color="#141820" roughness={0.48} metalness={0.25} />
-      </mesh>
-      <mesh position={[-half + barW / 2, 0, 0]}>
-        <boxGeometry args={[barW, frameH, size - barW * 2]} />
-        <meshStandardMaterial color="#141820" roughness={0.48} metalness={0.25} />
-      </mesh>
-      <mesh position={[half - barW / 2, 0, 0]}>
-        <boxGeometry args={[barW, frameH, size - barW * 2]} />
-        <meshStandardMaterial color="#141820" roughness={0.48} metalness={0.25} />
+      {/* Main Slim Rounded Matte-Black 3D-Printed Fan Housing */}
+      <mesh geometry={shroudGeo} castShadow receiveShadow>
+        <meshStandardMaterial color="#161a22" roughness={0.44} metalness={0.22} />
+        <Edges threshold={26} color="#475569" scale={1.001} opacity={0.45} transparent />
       </mesh>
 
+      {/* Subtle Front-Edge Micro-Louver Accent Grooves (matches side IoT Pod styling) */}
+      {[-28, 0, 28].map((lx, i) => (
+        <mesh key={`accent-${i}`} position={[lx, 0, outerSize / 2 + 1.15]}>
+          <boxGeometry args={[20, 3.2, 0.8]} />
+          <meshStandardMaterial color="#0b0e14" roughness={0.9} />
+        </mesh>
+      ))}
+
+      {/* Recessed Glowing Ice-Blue LED Diffuser Ring inside the shroud tunnel */}
       <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[bladeR + 2.5, 2.2, 10, 36]} />
+        <torusGeometry args={[holeR - 1.2, 2.0, 10, 36]} />
         <meshStandardMaterial
           color={activeColor}
           emissive={activeColor}
@@ -151,21 +217,63 @@ const MountedCaseFan3D: React.FC<{
         />
       </mesh>
 
+      {/* Spinning Fan Rotor neatly recessed inside the slim shroud */}
       <group rotation={[-Math.PI / 2, 0, 0]}>
         <SpinningFanBlades radius={bladeR} ledColor={activeColor} />
       </group>
 
+      {/* Slim Protective Concentric Fan Grille Ring + 4 Cross Struts on Interior Face */}
+      <group position={[0, innerFaceY, 0]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[holeR * 0.62, 1.3, 8, 32]} />
+          <meshStandardMaterial color="#1f2633" roughness={0.45} metalness={0.4} />
+        </mesh>
+        <mesh rotation={[0, Math.PI / 4, 0]}>
+          <boxGeometry args={[holeR * 2, 1.8, 2.4]} />
+          <meshStandardMaterial color="#1f2633" roughness={0.45} metalness={0.4} />
+        </mesh>
+        <mesh rotation={[0, -Math.PI / 4, 0]}>
+          <boxGeometry args={[holeR * 2, 1.8, 2.4]} />
+          <meshStandardMaterial color="#1f2633" roughness={0.45} metalness={0.4} />
+        </mesh>
+      </group>
+
+      {/* 4 Flush Silver M4 Shroud Corner Bolts (matching IoT Pod faceplate screws) */}
+      {[
+        [-screwCorner, -screwCorner],
+        [screwCorner, -screwCorner],
+        [screwCorner, screwCorner],
+        [-screwCorner, screwCorner],
+      ].map(([sx, sz], i) => (
+        <mesh key={`sc-${i}`} position={[sx, innerFaceY, sz]}>
+          <cylinderGeometry args={[2.3, 2.3, 1.6, 12]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.22} />
+        </mesh>
+      ))}
+
+      {/* 4 Internal Fan Mount Pins */}
       {[
         [-mountPitch, -mountPitch],
         [mountPitch, -mountPitch],
         [mountPitch, mountPitch],
         [-mountPitch, mountPitch],
       ].map(([sx, sz], i) => (
-        <mesh key={i} position={[sx, 0, sz]}>
-          <cylinderGeometry args={[2.3, 2.3, frameH + 2.5, 10]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.25} />
+        <mesh key={`mp-${i}`} position={[sx, 0, sz]}>
+          <cylinderGeometry args={[1.9, 1.9, shroudH + 1, 10]} />
+          <meshStandardMaterial color="#334155" metalness={0.7} roughness={0.35} />
         </mesh>
       ))}
+
+      {/* Tidy Black Sleeved PWM Wire Tail routed straight back into the Rear Wiring Chamber */}
+      {cableLen > 6 && (
+        <mesh
+          position={[0, 0, -outerSize / 2 - cableLen / 2]}
+          rotation={[Math.PI / 2, 0, 0]}
+        >
+          <cylinderGeometry args={[2.0, 2.0, cableLen, 8]} />
+          <meshStandardMaterial color="#11141c" roughness={0.75} />
+        </mesh>
+      )}
     </group>
   );
 };
@@ -177,6 +285,9 @@ const DustFilterTray3D: React.FC<{
   dims: CaseDimensions;
   slideOut: number;
 }> = ({ dims, slideOut }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const currentSlideRef = useRef(slideOut);
+
   const { length: L, width: W, thickness: t, legHeight: legH } = dims;
   const trayW = Math.max(80, L - t * 2 - 42);
   const trayD = Math.max(80, W - t * 2 - 22);
@@ -188,8 +299,20 @@ const DustFilterTray3D: React.FC<{
     return () => meshTex.dispose();
   }, [meshTex]);
 
+  useFrame((_, delta) => {
+    currentSlideRef.current = THREE.MathUtils.damp(
+      currentSlideRef.current,
+      slideOut,
+      6.5,
+      Math.min(delta, 0.05)
+    );
+    if (groupRef.current) {
+      groupRef.current.position.z = 10 + currentSlideRef.current;
+    }
+  });
+
   return (
-    <group position={[0, legH - t / 2, 10 + slideOut]}>
+    <group ref={groupRef} position={[0, legH - t / 2, 10]}>
       {/* Fine perforated charcoal filter mesh */}
       <mesh position={[0, 0, 0]}>
         <boxGeometry args={[trayW - frameBar * 2, 1.4, trayD - frameBar * 2]} />
@@ -593,25 +716,29 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
         </group>
       </group>
 
-      {/* ================= TOP & BOTTOM SYNCED CASE FANS (1x 140mm PC + 2x 120mm LAPTOP) ================= */}
+      {/* ================= TOP & BOTTOM SLIM-SHROUDED CASE FANS (1x 140mm PC + 2x 120mm LAPTOP) ================= */}
       <group>
-        {/* Bottom Intake Fans (bottom panel size = innerL x innerW, centered at X=0, Z=0) */}
+        {/* Bottom Intake Fans enclosed in Slim Matte-Black Rounded Shrouds */}
         {bottomFans.map((hole) => (
           <MountedCaseFan3D
             key={`bot-fan-${hole.id}`}
             size={hole.type === 'fan140' ? 140 : 120}
-            position={[hole.x - innerL / 2, legH + t + 9.5, hole.y - innerW / 2]}
+            position={[hole.x - innerL / 2, legH + t + 11.5, hole.y - innerW / 2]}
+            mountSide="bottom"
+            rearWallZ={-halfW + t}
             ledColor={ledColor}
             ledEnabled={ledEnabled}
           />
         ))}
 
-        {/* Top Exhaust Fans (top panel size = L x (W + wiringDepth), centered at X=0, Z=-wiringDepth/2) */}
+        {/* Top Exhaust Fans enclosed in Slim Matte-Black Rounded Shrouds */}
         {topFans.map((hole) => (
           <MountedCaseFan3D
             key={`top-fan-${hole.id}`}
             size={hole.type === 'fan140' ? 140 : 120}
-            position={[hole.x - halfL, legH + H - t - 9.5, hole.y - halfW - wiringDepth]}
+            position={[hole.x - halfL, legH + H - t - 11.5, hole.y - halfW - wiringDepth]}
+            mountSide="top"
+            rearWallZ={-halfW + t}
             ledColor={ledColor}
             ledEnabled={ledEnabled}
           />
@@ -621,7 +748,7 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
       {/* ================= RIGHT BAY: DUAL-TIER LAPTOP SERVERS ================= */}
       <group>
         <LaptopUnit
-          position={[lapBayCenterX, legH + t + 21, 6]}
+          position={[lapBayCenterX, legH + t + 25, 6]}
           maxWidth={lapBayWidth}
           maxDepth={W - t * 2}
         />
