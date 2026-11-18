@@ -360,7 +360,7 @@ export const IoTBoxSidebar: React.FC = () => {
                 <Fan className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Shroud 120mm</span>
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">Tipis 28mm (Laptop)</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Pas 120×25mm (32mm)</div>
             </button>
 
             <button
@@ -375,7 +375,7 @@ export const IoTBoxSidebar: React.FC = () => {
                 <Fan className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Shroud 140mm</span>
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">Tipis 28mm (PC Bay)</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Pas 140×25mm (32mm)</div>
             </button>
           </div>
         </div>

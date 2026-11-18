@@ -230,27 +230,31 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
 
   const backWallInnerZ = bodyCenterZ - bodyDepth / 2 + t;
   const frontRimZ = bodyCenterZ + bodyDepth / 2;
+  const isThroughShroud = throughAirflow && hasFan40 && fanPlacement === 'front';
 
-  // 4 Corner Screw Bosses connecting back wall to front faceplate
-  const screwOffsets = getFaceplateScrewOffsets(params);
-  const bossLen = Math.max(6, bodyDepth - t - 0.6);
-  for (const [bx, by] of screwOffsets) {
-    additions.push(
-      makeTransformedGeo(
-        new THREE.CylinderGeometry(3.4, 3.8, bossLen + 0.8, 16),
-        [bx, centerY + by, backWallInnerZ + bossLen / 2 - 0.4],
-        [Math.PI / 2, 0, 0]
-      )
-    );
-    // M3 self-tapping pilot hole from front rim inward
-    const pilotDepth = Math.min(12, bossLen - 1);
-    pilotCutters.push(
-      makeTransformedGeo(
-        new THREE.CylinderGeometry(1.4, 1.4, pilotDepth + 3, 14),
-        [bx, centerY + by, frontRimZ - pilotDepth / 2 + 1.5],
-        [Math.PI / 2, 0, 0]
-      )
-    );
+  // 4 Corner M3 Screw Bosses (omitted for Through-Airflow Fan Shrouds so 120/140mm square fan corners drop in cleanly
+  // and clamp directly via the 4x long M4x40mm fan bolts through faceplate + fan + shroud + acrylic!)
+  if (!isThroughShroud) {
+    const screwOffsets = getFaceplateScrewOffsets(params);
+    const bossLen = Math.max(6, bodyDepth - t - 0.6);
+    for (const [bx, by] of screwOffsets) {
+      additions.push(
+        makeTransformedGeo(
+          new THREE.CylinderGeometry(3.4, 3.8, bossLen + 0.8, 16),
+          [bx, centerY + by, backWallInnerZ + bossLen / 2 - 0.4],
+          [Math.PI / 2, 0, 0]
+        )
+      );
+      // M3 self-tapping pilot hole from front rim inward
+      const pilotDepth = Math.min(12, bossLen - 1);
+      pilotCutters.push(
+        makeTransformedGeo(
+          new THREE.CylinderGeometry(1.4, 1.4, pilotDepth + 3, 14),
+          [bx, centerY + by, frontRimZ - pilotDepth / 2 + 1.5],
+          [Math.PI / 2, 0, 0]
+        )
+      );
+    }
   }
 
   // Optional 4x ESP32 Screw Terminal Standoffs protruding from rear wall inside
@@ -506,6 +510,7 @@ export function buildIoTBoxLidGeometry(params: IoTBoxParams): THREE.BufferGeomet
     hasFan40,
     fanPlacement,
     fanSize,
+    throughAirflow,
   } = params;
 
   const centerY = H / 2;
@@ -519,22 +524,25 @@ export function buildIoTBoxLidGeometry(params: IoTBoxParams): THREE.BufferGeomet
 
   const cutters: THREE.BufferGeometry[] = [];
   const cutDepth = t + 8;
+  const isThroughShroud = throughAirflow && hasFan40 && fanPlacement === 'front';
 
-  // 1. 4x Corner M3 Countersunk Through-Holes + Flush Bolt-Head Pockets on Front Face (+Z)
-  const screwOffsets = getFaceplateScrewOffsets(params);
-  for (const [sx, sy] of screwOffsets) {
-    cutters.push(
-      makeTransformedGeo(
-        new THREE.CylinderGeometry(1.7, 1.7, cutDepth, 14),
-        [sx, centerY + sy, 0],
-        [Math.PI / 2, 0, 0]
-      ),
-      makeTransformedGeo(
-        new THREE.CylinderGeometry(3.1, 3.1, 2.0, 16),
-        [sx, centerY + sy, t / 2 - 0.2],
-        [Math.PI / 2, 0, 0]
-      )
-    );
+  // 1. 4x Corner M3 Countersunk Through-Holes (skipped for Through-Airflow Fan Shrouds which clamp via 4x M4 fan bolts)
+  if (!isThroughShroud) {
+    const screwOffsets = getFaceplateScrewOffsets(params);
+    for (const [sx, sy] of screwOffsets) {
+      cutters.push(
+        makeTransformedGeo(
+          new THREE.CylinderGeometry(1.7, 1.7, cutDepth, 14),
+          [sx, centerY + sy, 0],
+          [Math.PI / 2, 0, 0]
+        ),
+        makeTransformedGeo(
+          new THREE.CylinderGeometry(3.1, 3.1, 2.0, 16),
+          [sx, centerY + sy, t / 2 - 0.2],
+          [Math.PI / 2, 0, 0]
+        )
+      );
+    }
   }
 
   // 2. Optional 0.96" I2C OLED Cutout Window (26mm x 14mm) + 4x M2 Mount Holes

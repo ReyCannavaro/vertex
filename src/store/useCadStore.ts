@@ -752,11 +752,13 @@ export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
     showVisualHardware: true,
   },
   'fan-shroud-120': {
-    length: 134,
-    width: 28,
-    height: 134,
-    wallThickness: 2.6,
-    cornerRadius: 11,
+    // Exact snug fit for standard 120x120x25mm fans (e.g., Deepcool XFAN 120 / Thermalright TL-C12C):
+    // Inner cavity = 122.4 x 122.4 x 26.4mm (1.2mm side clearance + rubber pad room), clamped via 4x M4x40mm bolts!
+    length: 128,
+    width: 32,
+    height: 128,
+    wallThickness: 2.8,
+    cornerRadius: 8,
     hasOled: false,
     hasStandoffs: false,
     standoffSpacingX: 90,
@@ -773,11 +775,13 @@ export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
     showVisualHardware: true,
   },
   'fan-shroud-140': {
-    length: 154,
-    width: 28,
-    height: 154,
+    // Exact snug fit for standard 140x140x25mm fans (e.g., Thermalright TL-C14C):
+    // Inner cavity = 142.4 x 142.4 x 26.4mm (1.2mm side clearance + rubber pad room), clamped via 4x M4x40mm bolts!
+    length: 148,
+    width: 32,
+    height: 148,
     wallThickness: 2.8,
-    cornerRadius: 12,
+    cornerRadius: 9,
     hasOled: false,
     hasStandoffs: false,
     standoffSpacingX: 105,

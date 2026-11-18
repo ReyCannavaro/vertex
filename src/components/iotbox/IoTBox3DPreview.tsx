@@ -135,8 +135,9 @@ const ParametricIoTBoxMesh: React.FC = () => {
             <Edges threshold={28} color="#64748b" scale={1.001} opacity={0.5} transparent />
           </mesh>
 
-          {/* Visual-Only Metallic Corner M3 Screws (not exported in STL) */}
+          {/* Visual-Only Metallic Corner M3 Screws (hidden on through-airflow shrouds which clamp via M4 fan bolts) */}
           {iotBox.showVisualHardware &&
+            !(iotBox.throughAirflow && iotBox.hasFan40 && iotBox.fanPlacement === 'front') &&
             screwOffsets.map(([sx, sy], i) => (
               <mesh
                 key={`screw-${i}`}
