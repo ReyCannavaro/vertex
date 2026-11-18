@@ -206,13 +206,13 @@ const InternalElectronicsScene: React.FC<{
   const backWallInnerZ = bodyCenterZ - bodyDepth / 2 + t;
   const standoffTopZ = backWallInnerZ + Math.min(8, bodyDepth - t - 10);
 
-  // True 1:1 mm component coordinates inside 196×126×64mm roomy IoT Box (zero overlap, wide cable lanes!)
-  const espPos: [number, number, number] = [-46, centerY + 19, standoffTopZ + 1.2];
-  const relayPos: [number, number, number] = [40, centerY + 19, standoffTopZ + 1.2];
-  const buckPos: [number, number, number] = [-56, 25, backWallInnerZ + 3];
-  const buzzerPos: [number, number, number] = [-4, 24, backWallInnerZ + 3];
-  const levelPos: [number, number, number] = [28, 24, backWallInnerZ + 2.5];
-  const wagoPos: [number, number, number] = [62, 25, backWallInnerZ + 7];
+  // True 1:1 mm component coordinates inside 196×126×64mm roomy IoT Box (zero overlap, clear of rear cable slot at Y=42!)
+  const espPos: [number, number, number] = [-46, centerY + 24, standoffTopZ + 1.2];
+  const relayPos: [number, number, number] = [40, centerY + 24, standoffTopZ + 1.2];
+  const buckPos: [number, number, number] = [-56, 21, backWallInnerZ + 3];
+  const buzzerPos: [number, number, number] = [-4, 20, backWallInnerZ + 3];
+  const levelPos: [number, number, number] = [28, 20, backWallInnerZ + 2.5];
+  const wagoPos: [number, number, number] = [62, 21, backWallInnerZ + 7];
 
   // Internal 3D jumper harnesses connecting Buck -> ESP32 -> Level Shifter -> 4-Ch Relay -> OLED -> 5V Fan
   const jumpers = useMemo(() => {

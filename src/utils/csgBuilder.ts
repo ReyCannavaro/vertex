@@ -268,7 +268,7 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
       const sy = Math.min(standoffSpacingZ, maxSY) / 2;
 
       const espCenterX = isRoomyUnified ? -46 : 0;
-      const espCenterY = isRoomyUnified ? centerY + 19 : centerY;
+      const espCenterY = isRoomyUnified ? centerY + 24 : centerY;
 
       const standoffPts: [number, number][] = [
         [espCenterX - sx, espCenterY - sy],
@@ -280,7 +280,7 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
       // Add 4x dedicated standoffs for 4-Channel 5V Optocoupler Relay (66×43mm pitch) in Top-Right zone
       if (isRoomyUnified) {
         const relCX = 40;
-        const relCY = centerY + 19;
+        const relCY = centerY + 24;
         const rx = 33;
         const ry = 21.5;
         standoffPts.push(
@@ -492,13 +492,15 @@ export function buildIoTBoxGeometry(params: IoTBoxParams): THREE.BufferGeometry 
         )
       );
     }
-    // Generous cable pass-through slot matching Right Wall acrylic cutout (for fan + sensor + LED bundle)
-    const slotW = Math.min(36, innerL * 0.28);
-    const slotH = Math.min(22, innerH * 0.24);
+    // Generous cable pass-through slot positioned cleanly in the open lane between Top & Bottom PCB rows (zero standoff clash!)
+    const isRoomyUnified = L >= 165 && H >= 105;
+    const slotW = isRoomyUnified ? 38 : Math.min(30, innerL * 0.28);
+    const slotH = isRoomyUnified ? 18 : Math.min(20, innerH * 0.24);
+    const slotY = isRoomyUnified ? centerY - 21 : centerY;
     cutters.push(
       makeTransformedGeo(
         createRoundedBlockGeo(slotW, slotH, cutDepth, 5, 0),
-        [0, centerY, rearZ]
+        [0, slotY, rearZ]
       )
     );
   }
