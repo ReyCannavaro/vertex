@@ -48,8 +48,8 @@ const SmoothOffsetGroup: React.FC<{
  */
 const StructuralFrameBrackets: React.FC = () => {
   const dims = useCadStore((s) => s.caseDims);
-  const middleEnabled = useCadStore((s) => s.panels.middle.enabled);
-  const dividerEnabled = useCadStore((s) => s.panels.divider.enabled);
+  const middleEnabled = useCadStore((s) => s.panels.middle?.enabled ?? true);
+  const middle2Enabled = useCadStore((s) => s.panels['middle-2']?.enabled ?? true);
   const explodeAmount = useCadStore((s) => s.explodeAmount);
   const explodeMode = useCadStore((s) => s.explodeMode);
   const be = explodeMode === 'all' ? explodeAmount : 0;
@@ -59,15 +59,14 @@ const StructuralFrameBrackets: React.FC = () => {
     width: W,
     height: H,
     thickness: t,
-    dividerX,
-    middleTrayY,
+    shelf1Y = 140,
+    shelf2Y = 280,
     legHeight: legH,
     wiringDepth: wDepth,
   } = dims;
   const halfL = L / 2;
   const halfW = W / 2;
   const rearZ = -halfW - wDepth;
-  const divX = -halfL + dividerX;
 
   const arm = 26;
   const thick = 7;
@@ -130,7 +129,7 @@ const StructuralFrameBrackets: React.FC = () => {
 
   return (
     <group>
-      {/* 4x Rear Outer Corner 3-Way Brackets (expand outward with Rear Cover + Top/Bottom + Sides!) */}
+      {/* 4x Rear Outer Corner 3-Way Brackets */}
       {[-1, 1].map((sx) =>
         [-1, 1].map((sy) => (
           <SmoothOffsetGroup
@@ -142,7 +141,7 @@ const StructuralFrameBrackets: React.FC = () => {
         ))
       )}
 
-      {/* 4x Recessed Front Interior Corner L-Brackets (expand outward cleanly with Front Corners!) */}
+      {/* 4x Recessed Front Interior Corner L-Brackets */}
       {[-1, 1].map((sx) =>
         [-1, 1].map((sy) => (
           <SmoothOffsetGroup
@@ -153,7 +152,7 @@ const StructuralFrameBrackets: React.FC = () => {
               [
                 sx * (halfL - t - 10),
                 sy > 0 ? legH + H - t - 10 : legH + t + 10,
-                halfW - 34, // recessed 34mm back from front door plane!
+                halfW - 34,
               ],
               [18, 18, 16],
               `front-int-l-${sx}-${sy}`
@@ -162,75 +161,67 @@ const StructuralFrameBrackets: React.FC = () => {
         ))
       )}
 
-      {/* 4x Recessed Interior L-Brackets anchoring Divider to Top & Bottom (2 Top + 2 Bottom) */}
-      {dividerEnabled && (
-        <>
-          {[halfW - 36, -halfW + 32].map((dz, idx) => (
-            <React.Fragment key={`div-l-${idx}`}>
-              {/* Top Divider L-Bracket */}
-              <SmoothOffsetGroup target={[0, be * 0.78, 0]}>
-                {renderInternalL(
-                  [divX + 11, legH + H - t - 10, dz],
-                  [16, 16, 18],
-                  `div-top-l-${idx}`
-                )}
-              </SmoothOffsetGroup>
-              {/* Bottom Divider L-Bracket */}
-              <SmoothOffsetGroup target={[0, -be * 0.3, 0]}>
-                {renderInternalL(
-                  [divX + 11, legH + t + 10, dz],
-                  [16, 16, 18],
-                  `div-bot-l-${idx}`
-                )}
-              </SmoothOffsetGroup>
-            </React.Fragment>
-          ))}
-        </>
-      )}
-
-      {/* 6x Heavy-Duty Underside L-Brackets supporting Middle Laptop Shelf (glide right with Middle Shelf!) */}
+      {/* 6x Heavy-Duty Underside L-Brackets supporting Middle Shelf 1 (Tier 2) */}
       {middleEnabled && (
-        <SmoothOffsetGroup target={[be * 0.35, 0, 0]}>
-          {/* 2x Left-Side Underside L-Brackets bolted to Divider wide face (recessed behind doors!) */}
+        <SmoothOffsetGroup target={[0, 0, 0]}>
+          {/* 2x Left-Side Underside L-Brackets */}
           {[halfW - 32, -halfW + 32].map((bz, idx) =>
             renderInternalL(
-              [divX + 11, legH + middleTrayY - 10, bz],
+              [-halfL + t + 10, legH + shelf1Y - 10, bz],
               [16, 16, 18],
-              `mid-left-l-${idx}`
+              `mid1-left-l-${idx}`
             )
           )}
-
-          {/* 2x Right-Side Underside L-Brackets bolted to Right Wall wide face (recessed behind doors!) */}
+          {/* 2x Right-Side Underside L-Brackets */}
           {[halfW - 32, -halfW + 32].map((bz, idx) =>
             renderInternalL(
-              [halfL - t - 10, legH + middleTrayY - 10, bz],
+              [halfL - t - 10, legH + shelf1Y - 10, bz],
               [16, 16, 18],
-              `mid-right-l-${idx}`
+              `mid1-right-l-${idx}`
             )
           )}
-
-          {/* 2x Rear Anti-Sag Underside L-Brackets bolted to Back Partition wide face */}
-          {[0.32, 0.72].map((ratio, idx) => {
-            const bx = divX + (halfL - divX) * ratio;
-            return renderInternalL(
-              [bx, legH + middleTrayY - 10, -halfW + t + 10],
+          {/* 2x Rear Anti-Sag Underside L-Brackets */}
+          {[-halfL * 0.36, halfL * 0.36].map((bx, idx) =>
+            renderInternalL(
+              [bx, legH + shelf1Y - 10, -halfW + t + 10],
               [20, 16, 16],
-              `mid-rear-l-${idx}`
-            );
-          })}
-        </SmoothOffsetGroup>
-      )}
-
-      {/* 2x Underside L-Brackets anchoring the Center Anti-Sag Foot beneath the E-Track Center Spine */}
-      {legH > 12 && (
-        <SmoothOffsetGroup target={[0, -be * 0.85, 0]}>
-          {[halfW - 36, -halfW + 36].map((fz, i) =>
-            renderInternalL([divX, legH - 11, fz], [16, 10, 18], `cf-clip-${i}`)
+              `mid1-rear-l-${idx}`
+            )
           )}
         </SmoothOffsetGroup>
       )}
 
-      {/* 2x Underside L-Brackets supporting the Rear Chamber Floor (holds Mini PDU & 3x Power Bricks) */}
+      {/* 6x Heavy-Duty Underside L-Brackets supporting Middle Shelf 2 (Tier 3) */}
+      {middle2Enabled && (
+        <SmoothOffsetGroup target={[0, 0, 0]}>
+          {/* 2x Left-Side Underside L-Brackets */}
+          {[halfW - 32, -halfW + 32].map((bz, idx) =>
+            renderInternalL(
+              [-halfL + t + 10, legH + shelf2Y - 10, bz],
+              [16, 16, 18],
+              `mid2-left-l-${idx}`
+            )
+          )}
+          {/* 2x Right-Side Underside L-Brackets */}
+          {[halfW - 32, -halfW + 32].map((bz, idx) =>
+            renderInternalL(
+              [halfL - t - 10, legH + shelf2Y - 10, bz],
+              [16, 16, 18],
+              `mid2-right-l-${idx}`
+            )
+          )}
+          {/* 2x Rear Anti-Sag Underside L-Brackets */}
+          {[-halfL * 0.36, halfL * 0.36].map((bx, idx) =>
+            renderInternalL(
+              [bx, legH + shelf2Y - 10, -halfW + t + 10],
+              [20, 16, 16],
+              `mid2-rear-l-${idx}`
+            )
+          )}
+        </SmoothOffsetGroup>
+      )}
+
+      {/* 2x Underside L-Brackets supporting the Rear Chamber Floor */}
       {[-1, 1].map((sx) => (
         <SmoothOffsetGroup
           key={`rf-sup-g-${sx}`}
@@ -244,45 +235,41 @@ const StructuralFrameBrackets: React.FC = () => {
         </SmoothOffsetGroup>
       ))}
 
-      {/* Center Magnetic Door Catch Latch mounted cleanly at Top-Front of Divider (100% unobstructed!) */}
-      {dividerEnabled && (
-        <SmoothOffsetGroup target={[0, be * 0.45, be * 0.45]}>
-          <group position={[divX, legH + H - 28, halfW - 11]}>
-            <mesh>
-              <boxGeometry args={[28, 12, 14]} />
-              {bracketMat}
-            </mesh>
-            <mesh position={[-8, 0, 7.2]}>
-              <boxGeometry args={[9, 8, 1.5]} />
-              {screwMat}
-            </mesh>
-            <mesh position={[8, 0, 7.2]}>
-              <boxGeometry args={[9, 8, 1.5]} />
-              {screwMat}
-            </mesh>
-          </group>
-        </SmoothOffsetGroup>
-      )}
+      {/* Top-Center Magnetic Door Catch Latch (holds both French doors flush) */}
+      <SmoothOffsetGroup target={[0, be * 0.45, be * 0.45]}>
+        <group position={[0, legH + H - 28, halfW - 11]}>
+          <mesh>
+            <boxGeometry args={[28, 12, 14]} />
+            {bracketMat}
+          </mesh>
+          <mesh position={[-8, 0, 7.2]}>
+            <boxGeometry args={[9, 8, 1.5]} />
+            {screwMat}
+          </mesh>
+          <mesh position={[8, 0, 7.2]}>
+            <boxGeometry args={[9, 8, 1.5]} />
+            {screwMat}
+          </mesh>
+        </group>
+      </SmoothOffsetGroup>
     </group>
   );
 };
 
 /**
  * Continuous diffused WS2812B Ice Blue (#A0E6FF) LED Neon Frame lining the inner perimeter
- * of both PC Bay and Laptop Bay (elevated cleanly above legHeight).
+ * of the dedicated 3-tier laptop chassis.
  */
 const PerimeterWs2812Leds: React.FC<{ activeColor: string }> = ({ activeColor }) => {
   const dims = useCadStore((s) => s.caseDims);
   const ledEnabled = useCadStore((s) => s.ledEnabled);
   const ledColor = activeColor;
-  const dividerEnabled = useCadStore((s) => s.panels.divider.enabled);
 
   if (!ledEnabled) return null;
 
-  const { length: L, width: W, height: H, thickness: t, dividerX, legHeight: legH } = dims;
+  const { length: L, width: W, height: H, thickness: t, shelf1Y = 140, shelf2Y = 280, legHeight: legH } = dims;
   const halfL = L / 2;
   const halfW = W / 2;
-  const divX = -halfL + dividerX;
   const inset = t + 4.5;
   const tubeR = 3.2;
 
@@ -305,33 +292,31 @@ const PerimeterWs2812Leds: React.FC<{ activeColor: string }> = ({ activeColor })
     [halfL - inset, halfW - inset],
     [halfL - inset, -halfW + inset],
   ];
-  if (dividerEnabled) {
-    verticalPosts.push([divX + t / 2 + 3.5, halfW - inset]);
-    verticalPosts.push([divX - t / 2 - 3.5, halfW - inset]);
-    verticalPosts.push([divX + t / 2 + 3.5, -halfW + inset]);
-  }
 
   return (
     <group>
+      {/* Tier 1 PointLight (Bottom) */}
       <pointLight
-        position={[-halfL + dividerX * 0.5, legH + H * 0.65, 20]}
+        position={[0, legH + shelf1Y * 0.5, 30]}
+        color={ledColor}
+        intensity={22000}
+        distance={600}
+        decay={2}
+      />
+      {/* Tier 2 PointLight (Middle) */}
+      <pointLight
+        position={[0, legH + (shelf1Y + shelf2Y) * 0.5, 30]}
+        color={ledColor}
+        intensity={24000}
+        distance={650}
+        decay={2}
+      />
+      {/* Tier 3 PointLight (Top) */}
+      <pointLight
+        position={[0, legH + (shelf2Y + H) * 0.5, 20]}
         color={ledColor}
         intensity={26000}
         distance={680}
-        decay={2}
-      />
-      <pointLight
-        position={[(-halfL + dividerX + halfL) * 0.5, legH + H * 0.72, 20]}
-        color={ledColor}
-        intensity={30000}
-        distance={750}
-        decay={2}
-      />
-      <pointLight
-        position={[(-halfL + dividerX + halfL) * 0.5, legH + H * 0.25, 30]}
-        color={ledColor}
-        intensity={18000}
-        distance={600}
         decay={2}
       />
 
@@ -352,12 +337,6 @@ const PerimeterWs2812Leds: React.FC<{ activeColor: string }> = ({ activeColor })
         <boxGeometry args={[tubeR * 1.4, tubeR * 1.4, innerW]} />
         {ledMat}
       </mesh>
-      {dividerEnabled && (
-        <mesh position={[divX + t / 2 + 3.5, legH + H - inset, 0]}>
-          <boxGeometry args={[tubeR * 1.3, tubeR * 1.3, innerW]} />
-          {ledMat}
-        </mesh>
-      )}
 
       {/* Vertical Frame Diffused LED Tubes */}
       {verticalPosts.map(([px, pz], idx) => (
@@ -420,7 +399,7 @@ export const Preview3DAssembly: React.FC = () => {
       <div className="absolute top-3 left-3 z-10 flex items-center gap-2 pointer-events-none">
         <div className="px-2.5 py-1 rounded-md bg-slate-900/90 border border-slate-700/80 backdrop-blur-sm flex items-center gap-2 text-xs">
           <span className="inline-block w-2 h-2 rounded-full bg-cyan-300 shadow-[0_0_8px_#A0E6FF]" />
-          <span className="font-semibold text-slate-100">Dual-Bay 3D Assembly</span>
+          <span className="font-semibold text-slate-100">3-Tier Laptop 3D Assembly</span>
           <span className="text-slate-400">•</span>
           <span className="text-cyan-300 font-mono">
             {caseDims.length}×{caseDims.width + caseDims.wiringDepth}×{caseDims.height + caseDims.legHeight}mm
@@ -603,16 +582,22 @@ export const Preview3DAssembly: React.FC = () => {
             dims={caseDims}
             ledEnabled={ledEnabled}
             ledColor={liveLedColor}
-            middleEnabled={panels.middle.enabled}
+            middleEnabled={panels.middle?.enabled ?? false}
+            middle2Enabled={panels['middle-2']?.enabled ?? false}
             bottomHoles={panels.bottom.holes}
             topHoles={panels.top.holes}
             dustFilterSlide={dustFilterSlide}
             showWiring={showWiring}
+            relayTier1On={effectiveIot.relayTier1On}
+            relayTier2On={effectiveIot.relayTier2On}
+            relayTier3On={effectiveIot.relayTier3On}
             relayPcOn={effectiveIot.relayPcOn}
             relayLapTopOn={effectiveIot.relayLapTopOn}
             relayLapBotOn={effectiveIot.relayLapBotOn}
             relayIotOn={effectiveIot.relayIotOn}
             smokeAlarm={effectiveIot.smokeAlarm}
+            doorLeftOpen={effectiveIot.doorLeftOpen}
+            doorRightOpen={effectiveIot.doorRightOpen}
             doorPcOpen={effectiveIot.doorPcOpen}
             doorLapOpen={effectiveIot.doorLapOpen}
             explodeAmount={explodeAmount}

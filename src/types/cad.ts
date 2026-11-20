@@ -3,30 +3,38 @@ export type AcrylicViewMode = '2d' | 'split' | '3d';
 export type WireCategory = 'all' | 'power' | 'sensors' | 'relays' | 'ui';
 
 export interface IoTSimState {
-  /** Simulated DHT22 #1 temperature in PC Bay (°C) */
-  tempPc: number;
-  /** Simulated DHT22 #2 temperature in Upper Laptop Bay (°C) */
-  tempLapTop: number;
-  /** Simulated DHT22 #3 temperature in Lower Laptop Bay (°C) */
-  tempLapBot: number;
+  /** Simulated DHT21 #1 temperature in Tier 1 (Lantai Bawah) (°C) */
+  tempTier1: number;
+  /** Simulated DHT21 #2 temperature in Tier 2 (Rak Tengah) (°C) */
+  tempTier2: number;
+  /** Simulated DHT21 #3 temperature in Tier 3 (Rak Atas) (°C) */
+  tempTier3: number;
   /** Simulated ambient humidity (%) */
   humidity: number;
   /** Simulated MQ-2 Smoke/Gas sensor reading (ppm, alarm >= 450) */
   smokePpm: number;
   /** Automatic thermal ON/OFF + fire cut-off mode */
   autoMode: boolean;
-  /** Manual Relay CH1: 12V PC Bay 2x140mm Fans (ON/OFF) */
-  relayPcFans: boolean;
-  /** Manual Relay CH2: 12V Upper Laptop Bay 2x120mm Fans (ON/OFF) */
-  relayLapTopFans: boolean;
-  /** Manual Relay CH3: 12V Lower Laptop Bay 2x120mm Fans (ON/OFF) */
-  relayLapBotFans: boolean;
+  /** Manual Relay CH1: 12V Tier 1 Bottom Intake 2×120mm Fans (ON/OFF) */
+  relayFansTier1: boolean;
+  /** Manual Relay CH2: 12V Tier 2 Middle Assist 2×120mm Airflow (ON/OFF) */
+  relayFansTier2: boolean;
+  /** Manual Relay CH3: 12V Tier 3 Top Exhaust 2×120mm Fans (ON/OFF) */
+  relayFansTier3: boolean;
   /** Manual Relay CH4: 5V IoT Box 40mm Cooling Fan (ON/OFF) */
   relayIotFan: boolean;
   /** Active wire category filter in 2D schematic */
   wireFilter: WireCategory;
   /** Selected component node ID in 2D schematic */
   selectedNodeId: string | null;
+
+  // Backward compatibility aliases
+  tempPc?: number;
+  tempLapTop?: number;
+  tempLapBot?: number;
+  relayPcFans?: boolean;
+  relayLapTopFans?: boolean;
+  relayLapBotFans?: boolean;
 }
 
 export type PanelId =
@@ -37,9 +45,8 @@ export type PanelId =
   | 'back'
   | 'left'
   | 'right'
-  | 'divider'
   | 'middle'
-  | 'center-foot'
+  | 'middle-2'
   | 'filter-rail'
   | 'rear-floor'
   | 'rear-cover'
@@ -85,22 +92,26 @@ export interface AcrylicPanel {
 }
 
 export interface CaseDimensions {
-  /** Total dual-bay case length along X-axis in mm */
+  /** Total case length along X-axis in mm (default 460mm) */
   length: number;
-  /** Main hardware chamber depth/width along Z-axis in mm */
+  /** Main hardware chamber depth/width along Z-axis in mm (default 330mm) */
   width: number;
-  /** Main hardware chamber height along Y-axis in mm (excluding integrated acrylic legs) */
+  /** Main hardware chamber height along Y-axis in mm (default 440mm, excluding legs) */
   height: number;
   /** Acrylic sheet thickness in mm (3mm or 5mm) */
   thickness: 3 | 5;
-  /** Distance from left edge to center vertical divider separating PC Bay & Laptop Bay (mm) */
-  dividerX: number;
-  /** Height of right-bay middle laptop shelf from bottom floor in mm */
-  middleTrayY: number;
+  /** Height of Tier 2 middle laptop shelf from bottom floor in mm (default 140mm) */
+  shelf1Y: number;
+  /** Height of Tier 3 upper laptop shelf from bottom floor in mm (default 280mm) */
+  shelf2Y: number;
   /** Height of integrated acrylic legs extending downward from Left & Right panels (mm) */
   legHeight: number;
   /** Depth of dedicated rear acrylic wiring/cable-management chamber behind Back wall (mm) */
   wiringDepth: number;
+  /** Backward compatibility: dividerX */
+  dividerX?: number;
+  /** Backward compatibility: middleTrayY */
+  middleTrayY?: number;
 }
 
 export type IoTBoxPreset =

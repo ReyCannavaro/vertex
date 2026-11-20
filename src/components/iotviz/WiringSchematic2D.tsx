@@ -108,18 +108,27 @@ export const WiringSchematic2D: React.FC = () => {
   };
 
   const getNodeLiveStatus = (id: string): { text: string; color: string } | null => {
+    const t1 = iotSim.tempTier1 ?? iotSim.tempPc;
+    const t2 = iotSim.tempTier2 ?? iotSim.tempLapTop;
+    const t3 = iotSim.tempTier3 ?? iotSim.tempLapBot;
+    const isDoorL = effective.doorLeftOpen ?? effective.doorPcOpen;
+    const isDoorR = effective.doorRightOpen ?? effective.doorLapOpen;
+    const r1 = effective.relayTier1On ?? effective.relayPcOn;
+    const r2 = effective.relayTier2On ?? effective.relayLapTopOn;
+    const r3 = effective.relayTier3On ?? effective.relayLapBotOn;
+
     switch (id) {
       case 'dht-pc':
-        return { text: `${iotSim.tempPc}°C`, color: iotSim.tempPc >= 55 ? '#f43f5e' : '#10b981' };
+        return { text: `${t1}°C`, color: t1 >= 55 ? '#f43f5e' : '#10b981' };
       case 'dht-lap-top':
         return {
-          text: `${iotSim.tempLapTop}°C`,
-          color: iotSim.tempLapTop >= 55 ? '#f43f5e' : '#10b981',
+          text: `${t2}°C`,
+          color: t2 >= 55 ? '#f43f5e' : '#10b981',
         };
       case 'dht-lap-bot':
         return {
-          text: `${iotSim.tempLapBot}°C`,
-          color: iotSim.tempLapBot >= 55 ? '#f43f5e' : '#10b981',
+          text: `${t3}°C`,
+          color: t3 >= 55 ? '#f43f5e' : '#10b981',
         };
       case 'mq2-smoke':
         return {
@@ -128,20 +137,20 @@ export const WiringSchematic2D: React.FC = () => {
         };
       case 'door-pc':
         return {
-          text: effective.doorPcOpen ? 'OPEN!' : 'CLOSED',
-          color: effective.doorPcOpen ? '#fbbf24' : '#34d399',
+          text: isDoorL ? 'OPEN!' : 'CLOSED',
+          color: isDoorL ? '#fbbf24' : '#34d399',
         };
       case 'door-lap':
         return {
-          text: effective.doorLapOpen ? 'OPEN!' : 'CLOSED',
-          color: effective.doorLapOpen ? '#fbbf24' : '#34d399',
+          text: isDoorR ? 'OPEN!' : 'CLOSED',
+          color: isDoorR ? '#fbbf24' : '#34d399',
         };
       case 'fan-pc':
-        return { text: effective.relayPcOn ? 'ON (12V)' : 'OFF', color: effective.relayPcOn ? '#38bdf8' : '#64748b' };
+        return { text: r1 ? 'ON (12V)' : 'OFF', color: r1 ? '#38bdf8' : '#64748b' };
       case 'fan-lap-top':
-        return { text: effective.relayLapTopOn ? 'ON (12V)' : 'OFF', color: effective.relayLapTopOn ? '#38bdf8' : '#64748b' };
+        return { text: r2 ? 'ON (12V)' : 'OFF', color: r2 ? '#38bdf8' : '#64748b' };
       case 'fan-lap-bot':
-        return { text: effective.relayLapBotOn ? 'ON (12V)' : 'OFF', color: effective.relayLapBotOn ? '#38bdf8' : '#64748b' };
+        return { text: r3 ? 'ON (12V)' : 'OFF', color: r3 ? '#38bdf8' : '#64748b' };
       case 'fan-iot':
         return { text: effective.relayIotOn ? 'ON (5V)' : 'OFF', color: effective.relayIotOn ? '#fb923c' : '#64748b' };
       case 'buzzer-5v':

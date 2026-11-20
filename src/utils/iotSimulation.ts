@@ -12,13 +12,20 @@ export interface EffectiveIoTState {
   overheatAlarm: boolean;
   doorPcOpen: boolean;
   doorLapOpen: boolean;
+  doorLeftOpen: boolean;
+  doorRightOpen: boolean;
   buzzerActive: boolean;
 
   // Effective 4-Channel 5V Relay states (Pure ON/OFF per Zone; Fire Cut-Off kills all 4 fan relays!)
-  relayPcOn: boolean; // CH1: 12V PC Bay 2x140mm
-  relayLapTopOn: boolean; // CH2: 12V Laptop Atas 2x120mm
-  relayLapBotOn: boolean; // CH3: 12V Laptop Bawah 2x120mm
+  relayTier1On: boolean; // CH1: 12V Tier 1 Bottom Intake 2×120mm
+  relayTier2On: boolean; // CH2: 12V Tier 2 Middle Assist 2×120mm
+  relayTier3On: boolean; // CH3: 12V Tier 3 Top Exhaust 2×120mm
   relayIotOn: boolean; // CH4: 5V IoT Box 40mm Fan
+
+  // Backward-compat aliases
+  relayPcOn: boolean;
+  relayLapTopOn: boolean;
+  relayLapBotOn: boolean;
 
   // Dynamic WS2812B status color
   effectiveLedColor: string;
@@ -26,13 +33,13 @@ export interface EffectiveIoTState {
 }
 
 /**
- * Pure deterministic controller logic mirroring ESP32 38-Pin firmware (Skema 2 — Pure 4-Ch Relay ON/OFF):
+ * Pure deterministic controller logic mirroring ESP32 38-Pin firmware (Dedicated 3-Tier Laptop Rack):
  * - MQ-2 Smoke >= 450 ppm -> FIRE SAFETY CUT-OFF (kills Relay CH1–CH4 immediately + sounds Buzzer + Red LED)
- * - Auto Thermal Mode -> independent ON/OFF thresholds per bay:
- *     CH1 (PC 12V 2x140mm): ON when PC >= 36°C
- *     CH2 (Lap Top 12V 2x120mm): ON when LapTop >= 38°C
- *     CH3 (Lap Bot 12V 2x120mm): ON when LapBot >= 36°C
- *     CH4 (IoT Box 5V 40mm): ON when avg temp >= 35°C or any relay active
+ * - Auto Thermal Mode -> independent ON/OFF thresholds per tier:
+ *     CH1 (Tier 1 Bottom Intake 2×120mm): ON when Tier 1 >= 36°C
+ *     CH2 (Tier 2 Middle Assist 2×120mm): ON when Tier 2 >= 38°C
+ *     CH3 (Tier 3 Top Exhaust 2×120mm): ON when Tier 3 >= 36°C
+ *     CH4 (IoT Box 5V 40mm): ON when avg temp >= 35°C or any fan active
  * - Door Reed Switches (2x MC-38) -> real-time dashboard security alert when either door opens > 4°
  */
 export function computeEffectiveIoTState(
@@ -42,36 +49,47 @@ export function computeEffectiveIoTState(
   baseLedColor = '#A0E6FF'
 ): EffectiveIoTState {
   const smokeAlarm = sim.smokePpm >= 450;
-  const maxLapTemp = Math.max(sim.tempLapTop, sim.tempLapBot);
-  const maxCaseTemp = Math.max(sim.tempPc, maxLapTemp);
-  const avgTemp = (sim.tempPc + sim.tempLapTop + sim.tempLapBot) / 3;
+  const t1 = sim.tempTier1 ?? sim.tempPc ?? 34;
+  const t2 = sim.tempTier2 ?? sim.tempLapBot ?? 36;
+  const t3 = sim.tempTier3 ?? sim.tempLapTop ?? 38;
+  const maxCaseTemp = Math.max(t1, t2, t3);
+  const avgTemp = (t1 + t2 + t3) / 3;
   const overheatAlarm = maxCaseTemp >= 65;
 
-  const doorPcOpen = doorLeftAngle > 4;
-  const doorLapOpen = doorRightAngle > 4;
+  const doorLeftOpen = doorLeftAngle > 4;
+  const doorRightOpen = doorRightAngle > 4;
+  const doorPcOpen = doorLeftOpen;
+  const doorLapOpen = doorRightOpen;
 
   // Pure ON/OFF 4-Channel Relay Control (Fire Safety Cut-Off overrides all fan relays to OFF!)
-  const relayPcOn = smokeAlarm ? false : sim.autoMode ? sim.tempPc >= 36 : sim.relayPcFans;
-  const relayLapTopOn = smokeAlarm
+  const relayTier1On = smokeAlarm
     ? false
     : sim.autoMode
-      ? sim.tempLapTop >= 38
-      : sim.relayLapTopFans;
-  const relayLapBotOn = smokeAlarm
+      ? t1 >= 36
+      : (sim.relayFansTier1 ?? sim.relayPcFans ?? false);
+
+  const relayTier2On = smokeAlarm
     ? false
     : sim.autoMode
-      ? sim.tempLapBot >= 36
-      : sim.relayLapBotFans;
+      ? t2 >= 38
+      : (sim.relayFansTier2 ?? sim.relayLapBotFans ?? false);
+
+  const relayTier3On = smokeAlarm
+    ? false
+    : sim.autoMode
+      ? t3 >= 36
+      : (sim.relayFansTier3 ?? sim.relayLapTopFans ?? false);
+
   const relayIotOn = smokeAlarm
     ? false
     : sim.autoMode
-      ? avgTemp >= 35 || relayPcOn || relayLapTopOn || relayLapBotOn
+      ? avgTemp >= 35 || relayTier1On || relayTier2On || relayTier3On
       : sim.relayIotFan;
 
   let effectiveLedColor = baseLedColor;
   if (smokeAlarm || overheatAlarm) {
     effectiveLedColor = '#ef4444'; // Emergency Red
-  } else if (maxCaseTemp >= 52 || doorPcOpen || doorLapOpen) {
+  } else if (maxCaseTemp >= 52 || doorLeftOpen || doorRightOpen) {
     effectiveLedColor = '#fbbf24'; // Warm / Door Open Amber
   }
 
@@ -92,19 +110,19 @@ export function computeEffectiveIoTState(
       detail: `Suhu puncak ${maxCaseTemp.toFixed(1)}°C — Semua Relay kipas ON & Buzzer aktif.`,
     });
   }
-  if (doorPcOpen) {
+  if (doorLeftOpen) {
     alerts.push({
-      id: 'door-pc',
+      id: 'door-left',
       severity: 'warning',
-      title: 'SECURITY: Pintu PC Bay (Kiri) Dibuka!',
+      title: 'SECURITY: Pintu Depan Kiri Dibuka!',
       detail: `Sensor Magnet MC-38 #1 (GPIO32) OPEN (${Math.round(doorLeftAngle)}°) — Notifikasi web realtime.`,
     });
   }
-  if (doorLapOpen) {
+  if (doorRightOpen) {
     alerts.push({
-      id: 'door-lap',
+      id: 'door-right',
       severity: 'warning',
-      title: 'SECURITY: Pintu Laptop Bay (Kanan) Dibuka!',
+      title: 'SECURITY: Pintu Depan Kanan Dibuka!',
       detail: `Sensor Magnet MC-38 #2 (GPIO33) OPEN (${Math.round(doorRightAngle)}°) — Notifikasi web realtime.`,
     });
   }
@@ -113,7 +131,7 @@ export function computeEffectiveIoTState(
       id: 'ok',
       severity: 'info',
       title: 'Semua Sistem Normal & Aman',
-      detail: `PC ${sim.tempPc}°C • Lap ${sim.tempLapTop}°/${sim.tempLapBot}°C • MQ-2 ${sim.smokePpm} ppm`,
+      detail: `Tier 1: ${t1}°C • Tier 2: ${t2}°C • Tier 3: ${t3}°C • MQ-2: ${sim.smokePpm} ppm`,
     });
   }
 
@@ -122,11 +140,16 @@ export function computeEffectiveIoTState(
     overheatAlarm,
     doorPcOpen,
     doorLapOpen,
-    buzzerActive: smokeAlarm || overheatAlarm || doorPcOpen || doorLapOpen,
-    relayPcOn,
-    relayLapTopOn,
-    relayLapBotOn,
+    doorLeftOpen,
+    doorRightOpen,
+    buzzerActive: smokeAlarm || overheatAlarm || doorLeftOpen || doorRightOpen,
+    relayTier1On,
+    relayTier2On,
+    relayTier3On,
     relayIotOn,
+    relayPcOn: relayTier1On,
+    relayLapTopOn: relayTier3On,
+    relayLapBotOn: relayTier2On,
     effectiveLedColor,
     alerts,
   };

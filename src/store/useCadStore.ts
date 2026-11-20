@@ -49,41 +49,15 @@ function makeSideLegOutline(totalW: number, mainH: number, legH: number): Point2
 }
 
 /**
- * Generates an anti-sag chamfered center support foot runner mounted directly under
- * the center spine of filter-rail / divider (Y = 0 to legH - t) to prevent sagging on 70cm spans.
+ * Generates a Single-Bay U-Shaped slide-in dust filter track mounted underneath the Bottom panel.
+ * Features solid left, right, and rear borders with an open front for pulling out the filter tray.
  */
-function makeCenterFootOutline(depthW: number, footH: number): Point2D[] {
-  const h = Math.max(8, footH);
-  const footW = Math.min(58, Math.max(34, Math.round(depthW * 0.16)));
-  const chamfer = Math.min(22, Math.round(h * 0.72));
-  const topBeam = Math.max(8, Math.round(h * 0.34));
-
-  return [
-    { x: 0, y: 0 },
-    { x: depthW, y: 0 },
-    { x: depthW, y: h },
-    { x: depthW - footW, y: h },
-    { x: depthW - footW - chamfer, y: topBeam },
-    { x: footW + chamfer, y: topBeam },
-    { x: footW, y: h },
-    { x: 0, y: h },
-  ];
-}
-
-/**
- * Generates a Dual-Bay E-Shaped slide-in dust filter track mounted underneath the Bottom panel.
- * Features a center spine aligned with Divider & Center Foot, creating 2 independent front pull-out slots:
- * Left Slot (PC Bay Filter) and Right Slot (Laptop Bay Filter).
- */
-function makeDualBayFilterRailOutline(
+function makeSingleBayFilterRailOutline(
   w: number,
   h: number,
-  splitX: number,
   railW = 18
 ): Point2D[] {
   const rw = Math.min(railW, Math.floor(w / 8), Math.floor(h / 6));
-  const cHalf = 10; // 20mm center divider rail directly above Center Foot
-  const sx = Math.min(Math.max(rw + cHalf + 20, splitX), w - rw - cHalf - 20);
 
   return [
     { x: 0, y: 0 },
@@ -91,10 +65,6 @@ function makeDualBayFilterRailOutline(
     { x: w, y: h },
     { x: w - rw, y: h },
     { x: w - rw, y: rw },
-    { x: sx + cHalf, y: rw },
-    { x: sx + cHalf, y: h },
-    { x: sx - cHalf, y: h },
-    { x: sx - cHalf, y: rw },
     { x: rw, y: rw },
     { x: rw, y: h },
     { x: 0, y: h },
@@ -137,46 +107,30 @@ export function getPanelGeometrySpec(
   id: PanelId,
   dims: CaseDimensions
 ): { width: number; height: number; outline: Point2D[] } {
-  const { length: L, width: W, height: H, thickness: t, dividerX, legHeight, wiringDepth } = dims;
+  const { length: L, width: W, height: H, thickness: t, legHeight, wiringDepth } = dims;
   const totalW = W + wiringDepth;
   const innerL = Math.max(80, L - t * 2);
   const innerW = Math.max(60, W - t * 2);
   const wallH = Math.max(80, H - t); // vertical walls span from y=legHeight to y=legHeight+H-t
-  const dividerH = Math.max(60, H - t * 2);
-  const rightBayInnerL = Math.max(80, L - dividerX - t * 1.5);
   const combDepth = Math.max(18, wiringDepth - t - 4);
+  const doorW = Math.max(60, Math.round(L / 2 - t - 1));
+  const doorH = Math.max(80, wallH - 2);
 
   switch (id) {
     case 'top':
       return { width: L, height: totalW, outline: makeRectOutline(L, totalW) };
     case 'bottom':
       return { width: innerL, height: innerW, outline: makeRectOutline(innerL, innerW) };
-    case 'filter-rail': {
-      const splitX = Math.round(dividerX - t);
+    case 'filter-rail':
       return {
         width: innerL,
         height: innerW,
-        outline: makeDualBayFilterRailOutline(innerL, innerW, splitX, 18),
+        outline: makeSingleBayFilterRailOutline(innerL, innerW, 18),
       };
-    }
-    case 'center-foot': {
-      const footH = Math.max(8, legHeight - t);
-      return {
-        width: innerW,
-        height: footH,
-        outline: makeCenterFootOutline(innerW, footH),
-      };
-    }
-    case 'front-left': {
-      const doorW = Math.max(60, Math.round(dividerX - t - 1));
-      const doorH = Math.max(80, wallH - 2);
+    case 'front-left':
       return { width: doorW, height: doorH, outline: makeRectOutline(doorW, doorH) };
-    }
-    case 'front-right': {
-      const doorW = Math.max(80, Math.round(L - dividerX - t - 1));
-      const doorH = Math.max(80, wallH - 2);
+    case 'front-right':
       return { width: doorW, height: doorH, outline: makeRectOutline(doorW, doorH) };
-    }
     case 'back':
     case 'rear-cover':
       return { width: innerL, height: wallH, outline: makeRectOutline(innerL, wallH) };
@@ -187,13 +141,12 @@ export function getPanelGeometrySpec(
         height: wallH + legHeight,
         outline: makeSideLegOutline(totalW, wallH, legHeight),
       };
-    case 'divider':
-      return { width: innerW, height: dividerH, outline: makeRectOutline(innerW, dividerH) };
     case 'middle':
+    case 'middle-2':
       return {
-        width: Math.round(rightBayInnerL),
+        width: innerL,
         height: innerW,
-        outline: makeRectOutline(Math.round(rightBayInnerL), innerW),
+        outline: makeRectOutline(innerL, innerW),
       };
     case 'cable-comb':
       return {
@@ -244,92 +197,86 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
   }> = [
     {
       id: 'bottom',
-      name: 'Bottom (Lantai Dasar)',
-      description: '1× Fan 140mm PC + 2× Fan 120mm Laptop',
+      name: 'Bottom (Lantai Dasar Tier 1)',
+      description: 'Lantai dasar untuk Laptop Server #1 + 2× Fan 120mm Intake',
       enabled: true,
     },
     {
       id: 'filter-rail',
-      name: 'Dust Filter Rail (Dual-Bay E-Track)',
-      description: 'Rel akrilik 2-slot terpisah untuk Filter Bay PC & Bay Laptop',
+      name: 'Dust Filter Rail (Slide-in Track)',
+      description: 'Rel akrilik bawah untuk laci filter debu 2× Fan 120mm',
       enabled: true,
     },
     {
-      id: 'center-foot',
-      name: 'Center Foot (Kaki Penyangga Tengah)',
-      description: 'Kaki akrilik anti-melengkung di bawah Sekat Tengah (70cm span)',
+      id: 'middle',
+      name: 'Middle Shelf 1 (Rak Tier 2)',
+      description: 'Rak tingkat 2 untuk Laptop Server #2 + 2× Ventilasi Airflow 120mm',
+      enabled: true,
+    },
+    {
+      id: 'middle-2',
+      name: 'Middle Shelf 2 (Rak Tier 3)',
+      description: 'Rak tingkat 3 untuk Laptop Server #3 + 2× Ventilasi Airflow 120mm',
       enabled: true,
     },
     {
       id: 'top',
       name: 'Top (Atap Akrilik)',
-      description: '1× Exhaust 140mm PC + 2× Exhaust 120mm Laptop',
-      enabled: true,
-    },
-    {
-      id: 'divider',
-      name: 'Divider (Sekat Tengah)',
-      description: 'Pemisah Bay PC (Kiri) & Bay Laptop (Kanan)',
-      enabled: true,
-    },
-    {
-      id: 'middle',
-      name: 'Middle Shelf (Rak Laptop)',
-      description: 'Rak Tengah Bay Kanan + 2× Airflow 120mm',
+      description: 'Atap akrilik + 2× Exhaust 120mm + Sensor Asap MQ-2',
       enabled: true,
     },
     {
       id: 'left',
       name: 'Left Wall + Kaki Akrilik',
-      description: 'Dinding Kiri dengan kaki chamfer menyatu + ruang wiring',
+      description: 'Dinding kiri chamfer bridge feet + engsel pintu kiri',
       enabled: true,
     },
     {
       id: 'right',
       name: 'Right Wall + Kaki (IoT Box)',
-      description: 'Dinding Kanan + kaki chamfer + mounting 1 unit IoT Box',
+      description: 'Dinding kanan + kaki chamfer + mounting 1 unit IoT Box (196×126×64mm)',
       enabled: true,
     },
     {
       id: 'back',
-      name: 'Back Partition (Slot Kabel)',
-      description: 'Sekat belakang dengan grommet jalur kabel ke ruang wiring',
+      name: 'Back Partition (Partisi Belakang)',
+      description: 'Sekat belakang: 3× grommet kabel laptop + 3× mounting DHT21/AM2301',
       enabled: true,
     },
     {
       id: 'cable-comb',
       name: 'Cable Comb (Sisir Kabel)',
-      description: 'Sisir akrilik 10-slot di ruang belakang untuk rapikan kabel',
+      description: 'Sisir akrilik perapih kabel charger laptop, LAN & sensor di ruang belakang',
       enabled: true,
     },
     {
       id: 'rear-floor',
-      name: 'Rear Floor (Lantai Adaptor)',
-      description: 'Lantai berventilasi ruang belakang untuk dudukan Mini PDU & 3 Adaptor',
+      name: 'Rear Floor (Lantai Ruang Belakang)',
+      description: 'Lantai berventilasi untuk dudukan 3× Charger Laptop 65W + 1× Adaptor IoT',
       enabled: true,
     },
     {
       id: 'rear-cover',
       name: 'Rear Wiring Cover (Tutup Belakang)',
-      description: 'Penutup ruang kabel belakang + jalur keluar AC & LAN',
+      description: 'Penutup ruang kabel belakang + lubang keluar kabel AC & LAN',
       enabled: true,
     },
     {
       id: 'front-left',
-      name: 'Front Door PC (Engsel Kiri)',
-      description: 'Pintu kaca berengsel khusus Bay PC + handle magnet',
+      name: 'Front Door Kiri (Engsel Kupu-kupu)',
+      description: 'Pintu kaca berengsel kiri + handle magnet',
       enabled: true,
     },
     {
       id: 'front-right',
-      name: 'Front Door Laptop (Engsel Kanan)',
-      description: 'Pintu kaca berengsel khusus Bay Laptop + handle magnet',
+      name: 'Front Door Kanan (Engsel Kupu-kupu)',
+      description: 'Pintu kaca berengsel kanan + handle magnet',
       enabled: true,
     },
   ];
 
   const panels = {} as Record<PanelId, AcrylicPanel>;
-  const { length: L, width: W, height: H, thickness: t, dividerX, middleTrayY, legHeight, wiringDepth } = dims;
+  const { length: L, width: W, height: H, thickness: t, shelf1Y, shelf2Y, legHeight, wiringDepth } = dims;
   const m3 = 3.2; // Standard M3 bolt clearance diameter (mm)
 
   for (const spec of specs) {
@@ -337,23 +284,12 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
     let holes: PanelHole[] = [];
 
     if (spec.id === 'filter-rail') {
-      const splitX = Math.round(dividerX - t);
-      // 6x M3 mounting holes aligned 1:1 with Bottom panel through-holes
+      // 4x M3 through-holes matching the bottom panel
       holes = [
         { id: 'fr-m3-1', type: 'm3', label: 'Rail M3 Depan-Kiri', x: 9, y: height - 18, diameter: m3 },
         { id: 'fr-m3-2', type: 'm3', label: 'Rail M3 Depan-Kanan', x: width - 9, y: height - 18, diameter: m3 },
         { id: 'fr-m3-3', type: 'm3', label: 'Rail M3 Belakang-Kiri', x: 9, y: 9, diameter: m3 },
         { id: 'fr-m3-4', type: 'm3', label: 'Rail M3 Belakang-Kanan', x: width - 9, y: 9, diameter: m3 },
-        { id: 'fr-m3-c1', type: 'm3', label: 'Rail Tengah Depan', x: splitX, y: height - 18, diameter: m3 },
-        { id: 'fr-m3-c2', type: 'm3', label: 'Rail Tengah Belakang', x: splitX, y: 9, diameter: m3 },
-      ];
-    } else if (spec.id === 'center-foot') {
-      // M3 L-Bracket mounting holes on front & rear solid feet of center anti-sag runner
-      holes = [
-        { id: 'cf-m3-f1', type: 'm3', label: 'Kaki Tengah Depan #1', x: 18, y: Math.min(10, Math.round(height * 0.3)), diameter: m3 },
-        { id: 'cf-m3-f2', type: 'm3', label: 'Kaki Tengah Depan #2', x: 34, y: Math.min(10, Math.round(height * 0.3)), diameter: m3 },
-        { id: 'cf-m3-b1', type: 'm3', label: 'Kaki Tengah Belakang #1', x: width - 34, y: Math.min(10, Math.round(height * 0.3)), diameter: m3 },
-        { id: 'cf-m3-b2', type: 'm3', label: 'Kaki Tengah Belakang #2', x: width - 18, y: Math.min(10, Math.round(height * 0.3)), diameter: m3 },
       ];
     } else if (spec.id === 'cable-comb') {
       holes = [
@@ -362,7 +298,7 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         { id: 'cc-m3-r', type: 'm3', label: 'Comb L-Bracket Kanan', x: width - 14, y: height - 8, diameter: m3 },
       ];
     } else if (spec.id === 'rear-floor') {
-      // Ventilated Rear Chamber Floor supporting Mini PDU & 3x Power Bricks (IoT 12V + 2x Laptop 65W)
+      // Ventilated Rear Chamber Floor supporting Mini PDU & 4x Power Bricks (IoT 12V + 3x Laptop 65W)
       const midY = Math.round(height / 2);
       const ventH = Math.max(12, Math.min(26, height - 22));
       holes = [
@@ -371,13 +307,13 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         { id: 'rf-m3-fr', type: 'm3', label: 'L-Bracket Kanan Depan', x: width - 14, y: height - 10, diameter: m3 },
         { id: 'rf-m3-br', type: 'm3', label: 'L-Bracket Kanan Belakang', x: width - 14, y: 10, diameter: m3 },
         { id: 'rf-m3-mid', type: 'm3', label: 'L-Bracket Tengah Belakang', x: Math.round(width / 2), y: height - 10, diameter: m3 },
-        // 3x Bottom Cool-Air Intake Slots directly underneath the 3 Charger/Adaptor Bricks
-        { id: 'rf-vent-iot', type: 'vent', label: 'Ventilasi Adaptor 12V IoT', x: Math.round(width * 0.52), y: midY, width: 76, height: ventH, cornerRadius: 5 },
-        { id: 'rf-vent-lap1', type: 'vent', label: 'Ventilasi Charger Laptop #1', x: Math.round(width * 0.71), y: midY, width: 76, height: ventH, cornerRadius: 5 },
-        { id: 'rf-vent-lap2', type: 'vent', label: 'Ventilasi Charger Laptop #2', x: Math.round(width * 0.88), y: midY, width: 76, height: ventH, cornerRadius: 5 },
+        // 4x Bottom Cool-Air Intake Slots directly underneath the 4 Charger/Adaptor Bricks
+        { id: 'rf-vent-iot', type: 'vent', label: 'Ventilasi Adaptor 12V IoT', x: Math.round(width * 0.16), y: midY, width: 72, height: ventH, cornerRadius: 5 },
+        { id: 'rf-vent-lap1', type: 'vent', label: 'Ventilasi Charger Laptop #1', x: Math.round(width * 0.40), y: midY, width: 72, height: ventH, cornerRadius: 5 },
+        { id: 'rf-vent-lap2', type: 'vent', label: 'Ventilasi Charger Laptop #2', x: Math.round(width * 0.64), y: midY, width: 72, height: ventH, cornerRadius: 5 },
+        { id: 'rf-vent-lap3', type: 'vent', label: 'Ventilasi Charger Laptop #3', x: Math.round(width * 0.86), y: midY, width: 72, height: ventH, cornerRadius: 5 },
       ];
     } else if (spec.id === 'front-left' || spec.id === 'front-right') {
-      // Exact M3 screw holes for 2x Butterfly Hinges + Pull Handle + Magnetic Catch + MC-38 Door Magnet
       const isLeft = spec.id === 'front-left';
       const hingeX = isLeft ? 16 : width - 16;
       const handleX = isLeft ? width - 20 : 20;
@@ -395,7 +331,7 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         // Pull Handle (2x M3)
         { id: `${spec.id}-hdl1`, type: 'm3', label: 'Handle Atas (M3)', x: handleX, y: midY - 26, diameter: m3 },
         { id: `${spec.id}-hdl2`, type: 'm3', label: 'Handle Bawah (M3)', x: handleX, y: midY + 26, diameter: m3 },
-        // Magnetic Catch Strike Plate (1x M3 near top inner edge; MC-38 Door Magnet mounts cleanly via pre-applied 3M VHB tape without drilling front door!)
+        // Magnetic Catch Strike Plate (1x M3 near top inner edge)
         { id: `${spec.id}-mag1`, type: 'm3', label: 'Pelat Magnet Catch (M3)', x: handleX, y: 26, diameter: m3 },
       ];
     } else if (spec.id === 'left' || spec.id === 'right') {
@@ -412,12 +348,21 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
       const botHingeY = Math.round(mainH * 0.78);
       const frontHingeX = width - 15;
       const backPartX = wiringDepth + 14;
+      const shelf1KonvaY = Math.round(mainH - shelf1Y);
+      const shelf2KonvaY = Math.round(mainH - shelf2Y);
+
       holes.push(
-        // Stationary Butterfly Hinge Mounts for Front Left PC Door (4x M3)
-        { id: 'left-hinge-t1', type: 'm3', label: 'Engsel Pintu PC Atas #1', x: frontHingeX, y: topHingeY - 11, diameter: m3 },
-        { id: 'left-hinge-t2', type: 'm3', label: 'Engsel Pintu PC Atas #2', x: frontHingeX, y: topHingeY + 11, diameter: m3 },
-        { id: 'left-hinge-b1', type: 'm3', label: 'Engsel Pintu PC Bawah #1', x: frontHingeX, y: botHingeY - 11, diameter: m3 },
-        { id: 'left-hinge-b2', type: 'm3', label: 'Engsel Pintu PC Bawah #2', x: frontHingeX, y: botHingeY + 11, diameter: m3 },
+        // Stationary Butterfly Hinge Mounts for Front Left Door (4x M3)
+        { id: 'left-hinge-t1', type: 'm3', label: 'Engsel Pintu Kiri Atas #1', x: frontHingeX, y: topHingeY - 11, diameter: m3 },
+        { id: 'left-hinge-t2', type: 'm3', label: 'Engsel Pintu Kiri Atas #2', x: frontHingeX, y: topHingeY + 11, diameter: m3 },
+        { id: 'left-hinge-b1', type: 'm3', label: 'Engsel Pintu Kiri Bawah #1', x: frontHingeX, y: botHingeY - 11, diameter: m3 },
+        { id: 'left-hinge-b2', type: 'm3', label: 'Engsel Pintu Kiri Bawah #2', x: frontHingeX, y: botHingeY + 11, diameter: m3 },
+        // Middle Shelf 1 (Tier 2) Underside L-Bracket Mounts (2x M3)
+        { id: 'left-s1-f', type: 'm3', label: 'L-Bracket Rak 1 Depan', x: width - 28, y: shelf1KonvaY + 14, diameter: m3 },
+        { id: 'left-s1-b', type: 'm3', label: 'L-Bracket Rak 1 Belakang', x: wiringDepth + 28, y: shelf1KonvaY + 14, diameter: m3 },
+        // Middle Shelf 2 (Tier 3) Underside L-Bracket Mounts (2x M3)
+        { id: 'left-s2-f', type: 'm3', label: 'L-Bracket Rak 2 Depan', x: width - 28, y: shelf2KonvaY + 14, diameter: m3 },
+        { id: 'left-s2-b', type: 'm3', label: 'L-Bracket Rak 2 Belakang', x: wiringDepth + 28, y: shelf2KonvaY + 14, diameter: m3 },
         // Back Partition L-Bracket Mounts (2x M3)
         { id: 'left-back-m3-t', type: 'm3', label: 'Braket Back Partition Atas', x: backPartX, y: 36, diameter: m3 },
         { id: 'left-back-m3-b', type: 'm3', label: 'Braket Back Partition Bawah', x: backPartX, y: mainH - 36, diameter: m3 },
@@ -431,16 +376,21 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
       const mountY = Math.round(mainH * 0.5);
       const topHingeY = Math.round(mainH * 0.22);
       const botHingeY = Math.round(mainH * 0.78);
-      const shelfY = Math.round(mainH - middleTrayY);
+      const shelf1KonvaY = Math.round(mainH - shelf1Y);
+      const shelf2KonvaY = Math.round(mainH - shelf2Y);
+
       holes.push(
-        // Stationary Butterfly Hinge Mounts for Front Right Laptop Door (4x M3)
-        { id: 'right-hinge-t1', type: 'm3', label: 'Engsel Pintu Laptop Atas #1', x: 15, y: topHingeY - 11, diameter: m3 },
-        { id: 'right-hinge-t2', type: 'm3', label: 'Engsel Pintu Laptop Atas #2', x: 15, y: topHingeY + 11, diameter: m3 },
-        { id: 'right-hinge-b1', type: 'm3', label: 'Engsel Pintu Laptop Bawah #1', x: 15, y: botHingeY - 11, diameter: m3 },
-        { id: 'right-hinge-b2', type: 'm3', label: 'Engsel Pintu Laptop Bawah #2', x: 15, y: botHingeY + 11, diameter: m3 },
-        // Middle Laptop Shelf Underside L-Bracket Mounts (2x M3 matching middle shelf!)
-        { id: 'right-shelf-f', type: 'm3', label: 'L-Bracket Bawah Rak Depan', x: 28, y: shelfY + 14, diameter: m3 },
-        { id: 'right-shelf-b', type: 'm3', label: 'L-Bracket Bawah Rak Belakang', x: W - 28, y: shelfY + 14, diameter: m3 },
+        // Stationary Butterfly Hinge Mounts for Front Right Door (4x M3)
+        { id: 'right-hinge-t1', type: 'm3', label: 'Engsel Pintu Kanan Atas #1', x: 15, y: topHingeY - 11, diameter: m3 },
+        { id: 'right-hinge-t2', type: 'm3', label: 'Engsel Pintu Kanan Atas #2', x: 15, y: topHingeY + 11, diameter: m3 },
+        { id: 'right-hinge-b1', type: 'm3', label: 'Engsel Pintu Kanan Bawah #1', x: 15, y: botHingeY - 11, diameter: m3 },
+        { id: 'right-hinge-b2', type: 'm3', label: 'Engsel Pintu Kanan Bawah #2', x: 15, y: botHingeY + 11, diameter: m3 },
+        // Middle Shelf 1 (Tier 2) Underside L-Bracket Mounts (2x M3)
+        { id: 'right-s1-f', type: 'm3', label: 'L-Bracket Rak 1 Depan', x: 28, y: shelf1KonvaY + 14, diameter: m3 },
+        { id: 'right-s1-b', type: 'm3', label: 'L-Bracket Rak 1 Belakang', x: W - 28, y: shelf1KonvaY + 14, diameter: m3 },
+        // Middle Shelf 2 (Tier 3) Underside L-Bracket Mounts (2x M3)
+        { id: 'right-s2-f', type: 'm3', label: 'L-Bracket Rak 2 Depan', x: 28, y: shelf2KonvaY + 14, diameter: m3 },
+        { id: 'right-s2-b', type: 'm3', label: 'L-Bracket Rak 2 Belakang', x: W - 28, y: shelf2KonvaY + 14, diameter: m3 },
         // Back Partition L-Bracket Mounts (2x M3)
         { id: 'right-back-m3-t', type: 'm3', label: 'Braket Back Partition Atas', x: W - 14, y: 36, diameter: m3 },
         { id: 'right-back-m3-b', type: 'm3', label: 'Braket Back Partition Bawah', x: W - 14, y: mainH - 36, diameter: m3 },
@@ -462,131 +412,76 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         { id: 'right-iot-m3-3', type: 'm3', label: 'IoT Box Mount BR (M3)', x: mainCenterX + 56, y: mountY + 48, diameter: m3 },
         { id: 'right-iot-m3-4', type: 'm3', label: 'IoT Box Mount BL (M3)', x: mainCenterX - 56, y: mountY + 48, diameter: m3 }
       );
-    } else if (spec.id === 'divider') {
-      const shelfY = Math.round(height - middleTrayY + t);
-      holes.push(
-        // Underside L-Bracket Mounts supporting Middle Laptop Shelf (2x M3 matching middle shelf!)
-        { id: 'div-shelf-f', type: 'm3', label: 'L-Bracket Bawah Rak Depan', x: width - 28, y: shelfY + 14, diameter: m3 },
-        { id: 'div-shelf-b', type: 'm3', label: 'L-Bracket Bawah Rak Belakang', x: 28, y: shelfY + 14, diameter: m3 },
-        // Magnetic Door Catch Mounts near top-front edge (2x M3)
-        { id: 'div-catch-1', type: 'm3', label: 'Magnetic Catch Atas', x: width - 14, y: 22, diameter: m3 },
-        { id: 'div-catch-2', type: 'm3', label: 'Magnetic Catch Bawah', x: width - 14, y: 36, diameter: m3 },
-        // Inter-bay cable routing slots
-        {
-          id: 'divider-cable-upper',
-          type: 'vent',
-          label: 'Kabel Laptop Atas -> PC',
-          x: Math.round(width * 0.78),
-          y: Math.round(height * 0.32),
-          width: 36,
-          height: 55,
-          cornerRadius: 8,
-        },
-        {
-          id: 'divider-cable-lower',
-          type: 'vent',
-          label: 'Kabel Power PSU -> Laptop',
-          x: Math.round(width * 0.78),
-          y: Math.round(height * 0.74),
-          width: 36,
-          height: 55,
-          cornerRadius: 8,
-        }
-      );
     } else if (spec.id === 'back') {
-      // Back wall is rotated 180° around Y: Konva left (small X) = Laptop Bay, Konva right (large X) = PC Bay
-      const pcX = Math.round(width - (dividerX - t) * 0.52);
-      const lapSpan = L - dividerX - t;
-      const lapLeftX = Math.round(lapSpan * 0.32);
-      const lapRightX = Math.round(lapSpan * 0.72);
-      const shelfY = Math.round(height - middleTrayY);
+      const s1KonvaY = Math.round(height - shelf1Y);
+      const s2KonvaY = Math.round(height - shelf2Y);
       const combY = Math.round(height * 0.48);
 
       holes.push(
-        // 4x Micro-ATX Motherboard Brass Standoff Mounting Holes (standard 203x215mm span on PC Bay!)
-        { id: 'back-matx-1', type: 'm3', label: 'Standoff mATX TL', x: pcX - 95, y: 65, diameter: m3 },
-        { id: 'back-matx-2', type: 'm3', label: 'Standoff mATX TR', x: pcX + 95, y: 65, diameter: m3 },
-        { id: 'back-matx-3', type: 'm3', label: 'Standoff mATX BR', x: pcX + 95, y: 255, diameter: m3 },
-        { id: 'back-matx-4', type: 'm3', label: 'Standoff mATX BL', x: pcX - 95, y: 255, diameter: m3 },
-        // 2x Rear Anti-Sag L-Bracket Holes supporting Middle Laptop Shelf
-        { id: 'back-shelf-l1', type: 'm3', label: 'L-Bracket Rak Laptop #1', x: lapLeftX, y: shelfY + 12, diameter: m3 },
-        { id: 'back-shelf-l2', type: 'm3', label: 'L-Bracket Rak Laptop #2', x: lapRightX, y: shelfY + 12, diameter: m3 },
+        // L-Bracket Mounts supporting Shelf 1 & Shelf 2 along Back Partition
+        { id: 'back-s1-l1', type: 'm3', label: 'L-Bracket Rak 1 Kiri', x: Math.round(width * 0.32), y: s1KonvaY + 12, diameter: m3 },
+        { id: 'back-s1-l2', type: 'm3', label: 'L-Bracket Rak 1 Kanan', x: Math.round(width * 0.68), y: s1KonvaY + 12, diameter: m3 },
+        { id: 'back-s2-l1', type: 'm3', label: 'L-Bracket Rak 2 Kiri', x: Math.round(width * 0.32), y: s2KonvaY + 12, diameter: m3 },
+        { id: 'back-s2-l2', type: 'm3', label: 'L-Bracket Rak 2 Kanan', x: Math.round(width * 0.68), y: s2KonvaY + 12, diameter: m3 },
         // 3x Cable Comb Rear L-Bracket Mounts
         { id: 'back-comb-1', type: 'm3', label: 'Mount Cable Comb #1', x: 24, y: combY, diameter: m3 },
         { id: 'back-comb-2', type: 'm3', label: 'Mount Cable Comb #2', x: Math.round(width / 2), y: combY, diameter: m3 },
         { id: 'back-comb-3', type: 'm3', label: 'Mount Cable Comb #3', x: width - 24, y: combY, diameter: m3 },
         // 3x DHT21 / AM2301 Sensor Mounting M3 Holes + Ø8mm Wire Pass-Throughs (zero hanging cables!)
-        // PC Bay DHT21 mounted horizontally above Micro-ATX board (clear of motherboard standoffs!)
-        { id: 'back-dht-pc-m3', type: 'm3', label: 'Mount DHT21 PC (M3)', x: pcX + 30, y: 26, diameter: m3 },
-        { id: 'back-dht-pc-wire', type: 'm3', label: 'Kabel DHT21 PC (Ø8mm)', x: pcX - 32, y: 26, diameter: 8 },
-        // Laptop Top & Bottom DHT21 mounted vertically on Back Partition (clear of cable slots & MQ-2)
-        { id: 'back-dht-lt-m3', type: 'm3', label: 'Mount DHT21 Lap Atas (M3)', x: Math.round(lapSpan - 66), y: 32, diameter: m3 },
-        { id: 'back-dht-lt-wire', type: 'm3', label: 'Kabel DHT21 Lap Atas (Ø8mm)', x: Math.round(lapSpan - 66), y: 94, diameter: 8 },
-        { id: 'back-dht-lb-m3', type: 'm3', label: 'Mount DHT21 Lap Bawah (M3)', x: Math.round(lapSpan - 66), y: shelfY + 34, diameter: m3 },
-        { id: 'back-dht-lb-wire', type: 'm3', label: 'Kabel DHT21 Lap Bawah (Ø8mm)', x: Math.round(lapSpan - 66), y: shelfY + 96, diameter: 8 },
-        // 1x MQ-2 Smoke Sensor Cable Pass-Through (directly behind ceiling MQ-2 rear pin header)
-        { id: 'back-mq2-wire', type: 'm3', label: 'Kabel MQ-2 Asap (Ø8mm)', x: Math.round(lapSpan - 27), y: 18, diameter: 8 },
-        // 6x M3 Adaptor Cradle Mounting Holes (for 3x 3D-Printed Power Brick Cradles on Rear Side of Back Partition!)
-        { id: 'back-cradle-1a', type: 'm3', label: 'Cradle Adaptor 12V #1', x: Math.round(width * 0.48 - 36), y: height - 30, diameter: m3 },
-        { id: 'back-cradle-1b', type: 'm3', label: 'Cradle Adaptor 12V #2', x: Math.round(width * 0.48 + 36), y: height - 30, diameter: m3 },
-        { id: 'back-cradle-2a', type: 'm3', label: 'Cradle Charger Lap #1A', x: Math.round(width * 0.29 - 36), y: height - 30, diameter: m3 },
-        { id: 'back-cradle-2b', type: 'm3', label: 'Cradle Charger Lap #1B', x: Math.round(width * 0.29 + 36), y: height - 30, diameter: m3 },
-        { id: 'back-cradle-3a', type: 'm3', label: 'Cradle Charger Lap #2A', x: Math.round(width * 0.12 - 36), y: height - 30, diameter: m3 },
-        { id: 'back-cradle-3b', type: 'm3', label: 'Cradle Charger Lap #2B', x: Math.round(width * 0.12 + 36), y: height - 30, diameter: m3 },
-        // Cable Grommet Cutouts into Rear Wiring Chamber
+        // Tier 3 (Top) DHT21:
+        { id: 'back-dht-t3-m3', type: 'm3', label: 'Mount DHT21 Tier 3 (M3)', x: Math.round(width * 0.2), y: Math.round(s2KonvaY * 0.5) - 16, diameter: m3 },
+        { id: 'back-dht-t3-wire', type: 'm3', label: 'Kabel DHT21 Tier 3 (Ø8mm)', x: Math.round(width * 0.2), y: Math.round(s2KonvaY * 0.5) + 20, diameter: 8 },
+        // Tier 2 (Middle) DHT21:
+        { id: 'back-dht-t2-m3', type: 'm3', label: 'Mount DHT21 Tier 2 (M3)', x: Math.round(width * 0.2), y: Math.round((s1KonvaY + s2KonvaY) * 0.5) - 16, diameter: m3 },
+        { id: 'back-dht-t2-wire', type: 'm3', label: 'Kabel DHT21 Tier 2 (Ø8mm)', x: Math.round(width * 0.2), y: Math.round((s1KonvaY + s2KonvaY) * 0.5) + 20, diameter: 8 },
+        // Tier 1 (Bottom) DHT21:
+        { id: 'back-dht-t1-m3', type: 'm3', label: 'Mount DHT21 Tier 1 (M3)', x: Math.round(width * 0.2), y: Math.round((height + s1KonvaY) * 0.5) - 16, diameter: m3 },
+        { id: 'back-dht-t1-wire', type: 'm3', label: 'Kabel DHT21 Tier 1 (Ø8mm)', x: Math.round(width * 0.2), y: Math.round((height + s1KonvaY) * 0.5) + 20, diameter: 8 },
+        // 1x MQ-2 Smoke Sensor Cable Pass-Through
+        { id: 'back-mq2-wire', type: 'm3', label: 'Kabel MQ-2 Asap (Ø8mm)', x: Math.round(width * 0.5), y: 18, diameter: 8 },
+        // 8x M3 Adaptor Cradle Mounting Holes (for 4x 3D-Printed Power Brick Cradles on Rear Side!)
+        { id: 'back-cradle-iot-a', type: 'm3', label: 'Cradle Adaptor IoT A', x: Math.round(width * 0.16 - 32), y: height - 26, diameter: m3 },
+        { id: 'back-cradle-iot-b', type: 'm3', label: 'Cradle Adaptor IoT B', x: Math.round(width * 0.16 + 32), y: height - 26, diameter: m3 },
+        { id: 'back-cradle-lap1-a', type: 'm3', label: 'Cradle Charger Lap 1A', x: Math.round(width * 0.40 - 32), y: height - 26, diameter: m3 },
+        { id: 'back-cradle-lap1-b', type: 'm3', label: 'Cradle Charger Lap 1B', x: Math.round(width * 0.40 + 32), y: height - 26, diameter: m3 },
+        { id: 'back-cradle-lap2-a', type: 'm3', label: 'Cradle Charger Lap 2A', x: Math.round(width * 0.64 - 32), y: height - 26, diameter: m3 },
+        { id: 'back-cradle-lap2-b', type: 'm3', label: 'Cradle Charger Lap 2B', x: Math.round(width * 0.64 + 32), y: height - 26, diameter: m3 },
+        { id: 'back-cradle-lap3-a', type: 'm3', label: 'Cradle Charger Lap 3A', x: Math.round(width * 0.86 - 32), y: height - 26, diameter: m3 },
+        { id: 'back-cradle-lap3-b', type: 'm3', label: 'Cradle Charger Lap 3B', x: Math.round(width * 0.86 + 32), y: height - 26, diameter: m3 },
+        // 3x Laptop Cable Grommet Cutouts into Rear Wiring Chamber (Tier 1, Tier 2, Tier 3)
         {
-          id: 'back-pc-io',
+          id: 'back-lap-wire-t3',
           type: 'vent',
-          label: 'PC Motherboard & 24-Pin Grommet',
-          x: pcX,
-          y: Math.round(height * 0.32),
-          width: 48,
-          height: 130,
-          cornerRadius: 8,
-        },
-        {
-          id: 'back-psu-wire',
-          type: 'vent',
-          label: 'ATX PSU Cable Grommet',
-          x: pcX,
-          y: Math.round(height * 0.78),
-          width: 110,
-          height: 64,
-          cornerRadius: 8,
-        },
-        {
-          id: 'back-lap-wire-top',
-          type: 'vent',
-          label: 'Slot Kabel Laptop Atas',
-          x: lapLeftX,
-          y: Math.round(height * 0.36),
+          label: 'Slot Kabel Laptop Tier 3 (Atas)',
+          x: Math.round(width * 0.5),
+          y: Math.round(s2KonvaY * 0.5),
           width: 90,
           height: 28,
           cornerRadius: 8,
         },
         {
-          id: 'back-lap-wire-bot',
+          id: 'back-lap-wire-t2',
           type: 'vent',
-          label: 'Slot Kabel Laptop Bawah',
-          x: lapLeftX,
-          y: Math.round(height * 0.76),
+          label: 'Slot Kabel Laptop Tier 2 (Tengah)',
+          x: Math.round(width * 0.5),
+          y: Math.round((s1KonvaY + s2KonvaY) * 0.5),
           width: 90,
           height: 28,
           cornerRadius: 8,
         },
         {
-          id: 'back-iot-wire-slot',
+          id: 'back-lap-wire-t1',
           type: 'vent',
-          label: 'Slot Kabel Fan & IoT Box',
-          x: lapRightX,
-          y: Math.round(height * 0.54),
-          width: 44,
-          height: 74,
+          label: 'Slot Kabel Laptop Tier 1 (Bawah)',
+          x: Math.round(width * 0.5),
+          y: Math.round((height + s1KonvaY) * 0.5),
+          width: 90,
+          height: 28,
           cornerRadius: 8,
         }
       );
     } else if (spec.id === 'rear-cover') {
-      // Rear outer cover: 4 corner Thumb-Screw M3 + Single Main Power/LAN Exit + Top & Bottom Charger Chimney Vents
+      // Rear outer cover: 4 corner Thumb-Screw M3 + Main Power/LAN Exits + Top Charger Chimney Vents
       holes.push(
         {
           id: 'rear-dc-jack-12v',
@@ -599,10 +494,10 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
         {
           id: 'rear-main-exit',
           type: 'vent',
-          label: '1-Cable Main AC & LAN Exit',
+          label: 'Main AC & Triple LAN Exit',
           x: Math.round(width * 0.5),
           y: Math.round(height - 32),
-          width: 120,
+          width: 130,
           height: 28,
           cornerRadius: 8,
         },
@@ -612,7 +507,7 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
           label: 'Charger Bay Intake Vent',
           x: Math.round(width * 0.72),
           y: Math.round(height - 32),
-          width: 180,
+          width: 140,
           height: 20,
           cornerRadius: 8,
         },
@@ -622,123 +517,99 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
           label: 'Rear Chamber Heat Exhaust Vent',
           x: Math.round(width * 0.5),
           y: Math.round(height * 0.18),
-          width: 300,
+          width: 260,
           height: 22,
           cornerRadius: 8,
         }
       );
-    } else if (spec.id === 'middle') {
-      // 6x Underside Heavy-Duty L-Bracket M3 Holes (3-side load-bearing support: 2 Left + 2 Right + 2 Rear!)
+    } else if (spec.id === 'middle' || spec.id === 'middle-2') {
+      const isShelf1 = spec.id === 'middle';
+      const labelPrefix = isShelf1 ? 'Rak 1' : 'Rak 2';
+      // 6x Underside Heavy-Duty L-Bracket M3 Holes (2 Left + 2 Right + 2 Rear!)
       holes.push(
-        { id: 'mid-l-left-f', type: 'm3', label: 'L-Bracket Kiri Depan (Divider)', x: 14, y: height - 28, diameter: m3 },
-        { id: 'mid-l-left-b', type: 'm3', label: 'L-Bracket Kiri Belakang (Divider)', x: 14, y: 28, diameter: m3 },
-        { id: 'mid-l-right-f', type: 'm3', label: 'L-Bracket Kanan Depan (Right Wall)', x: width - 14, y: height - 28, diameter: m3 },
-        { id: 'mid-l-right-b', type: 'm3', label: 'L-Bracket Kanan Belakang (Right Wall)', x: width - 14, y: 28, diameter: m3 },
-        { id: 'mid-rear-l1', type: 'm3', label: 'L-Bracket Belakang #1 (Back)', x: Math.round(width * 0.32), y: 14, diameter: m3 },
-        { id: 'mid-rear-l2', type: 'm3', label: 'L-Bracket Belakang #2 (Back)', x: Math.round(width * 0.72), y: 14, diameter: m3 },
+        { id: `${spec.id}-l-left-f`, type: 'm3', label: `L-Bracket Kiri Depan (${labelPrefix})`, x: 14, y: height - 28, diameter: m3 },
+        { id: `${spec.id}-l-left-b`, type: 'm3', label: `L-Bracket Kiri Belakang (${labelPrefix})`, x: 14, y: 28, diameter: m3 },
+        { id: `${spec.id}-l-right-f`, type: 'm3', label: `L-Bracket Kanan Depan (${labelPrefix})`, x: width - 14, y: height - 28, diameter: m3 },
+        { id: `${spec.id}-l-right-b`, type: 'm3', label: `L-Bracket Kanan Belakang (${labelPrefix})`, x: width - 14, y: 28, diameter: m3 },
+        { id: `${spec.id}-rear-l1`, type: 'm3', label: `L-Bracket Belakang #1 (${labelPrefix})`, x: Math.round(width * 0.32), y: 14, diameter: m3 },
+        { id: `${spec.id}-rear-l2`, type: 'm3', label: `L-Bracket Belakang #2 (${labelPrefix})`, x: Math.round(width * 0.68), y: 14, diameter: m3 },
         // 2x 120mm vertical chimney airflow cutouts
         {
-          id: 'middle-cooling-vent-1',
+          id: `${spec.id}-cooling-vent-1`,
           type: 'fan120',
-          label: 'Laptop Airflow Pass #1 (120mm)',
-          x: Math.round(width * 0.28),
+          label: `${labelPrefix} Airflow Pass #1 (120mm)`,
+          x: Math.round(width * 0.3),
           y: Math.round(height * 0.5),
           diameter: 115,
           includeMountHoles: false,
         },
         {
-          id: 'middle-cooling-vent-2',
+          id: `${spec.id}-cooling-vent-2`,
           type: 'fan120',
-          label: 'Laptop Airflow Pass #2 (120mm)',
-          x: Math.round(width * 0.72),
+          label: `${labelPrefix} Airflow Pass #2 (120mm)`,
+          x: Math.round(width * 0.7),
           y: Math.round(height * 0.5),
           diameter: 115,
           includeMountHoles: false,
         }
       );
     } else if (spec.id === 'bottom') {
-      const pcSpan = dividerX - t;
-      const rightSpan = width - pcSpan;
-      const splitX = Math.round(pcSpan);
       holes.push(
-        // 6x E-Track Dust Filter Rail & Divider Through-Bolt M3 Holes (1:1 aligned with filter-rail!)
+        // 4x E-Track Dust Filter Rail Through-Bolt M3 Holes (1:1 aligned with filter-rail!)
         { id: 'bot-rail-fl', type: 'm3', label: 'Filter Rail M3 FL', x: 9, y: height - 18, diameter: m3 },
         { id: 'bot-rail-fr', type: 'm3', label: 'Filter Rail M3 FR', x: width - 9, y: height - 18, diameter: m3 },
         { id: 'bot-rail-bl', type: 'm3', label: 'Filter Rail M3 BL', x: 9, y: 9, diameter: m3 },
         { id: 'bot-rail-br', type: 'm3', label: 'Filter Rail M3 BR', x: width - 9, y: 9, diameter: m3 },
-        { id: 'bot-div-f', type: 'm3', label: 'Divider & Rail Tengah Depan', x: splitX, y: height - 18, diameter: m3 },
-        { id: 'bot-div-b', type: 'm3', label: 'Divider & Rail Tengah Belakang', x: splitX, y: 9, diameter: m3 },
-        // Bottom Intake Fans (1x 140mm PC + 2x 120mm Laptop)
+        // Bottom Intake Fans (2x 120mm Fans)
         {
-          id: 'bottom-pc-fan140',
-          type: 'fan140',
-          label: 'PC Bay Intake 140mm',
-          x: Math.round(pcSpan * 0.5),
-          y: Math.round(height * 0.62),
-          diameter: 135,
-          includeMountHoles: true,
-        },
-        {
-          id: 'bottom-lap-fan120-1',
+          id: 'bottom-fan120-1',
           type: 'fan120',
           label: 'Laptop Intake 120mm #1',
-          x: Math.round(pcSpan + rightSpan * 0.28),
+          x: Math.round(width * 0.3),
           y: Math.round(height * 0.5),
           diameter: 115,
           includeMountHoles: true,
         },
         {
-          id: 'bottom-lap-fan120-2',
+          id: 'bottom-fan120-2',
           type: 'fan120',
           label: 'Laptop Intake 120mm #2',
-          x: Math.round(pcSpan + rightSpan * 0.72),
+          x: Math.round(width * 0.7),
           y: Math.round(height * 0.5),
           diameter: 115,
           includeMountHoles: true,
         }
       );
     } else if (spec.id === 'top') {
-      // Top spans full depth (W + wiringDepth): Konva y=0 is Rear (-W/2 - wiringDepth), y=height is Front (+W/2)
-      const rightSpan = L - dividerX;
       const mainCenterY = Math.round(wiringDepth + W * 0.5);
       holes.push(
-        // Divider Top T-Bracket M3 Holes (front & rear of main chamber)
-        { id: 'top-div-f', type: 'm3', label: 'Braket T Divider Depan', x: dividerX, y: height - 14, diameter: m3 },
-        { id: 'top-div-b', type: 'm3', label: 'Braket T Divider Belakang', x: dividerX, y: wiringDepth + 14, diameter: m3 },
-        // 2x MC-38 Door Reed Switch Mounting Holes (18mm pitch aligned 1:1 with Door Magnets at dividerX ± 44!)
-        { id: 'top-mc38-pc1', type: 'm3', label: 'MC-38 Pintu PC #1 (M3)', x: dividerX - 53, y: height - 16, diameter: m3 },
-        { id: 'top-mc38-pc2', type: 'm3', label: 'MC-38 Pintu PC #2 (M3)', x: dividerX - 35, y: height - 16, diameter: m3 },
-        { id: 'top-mc38-lap1', type: 'm3', label: 'MC-38 Pintu Lap #1 (M3)', x: dividerX + 35, y: height - 16, diameter: m3 },
-        { id: 'top-mc38-lap2', type: 'm3', label: 'MC-38 Pintu Lap #2 (M3)', x: dividerX + 53, y: height - 16, diameter: m3 },
-        // 1x MQ-2 Smoke Sensor 4-Corner M3 Standoff Mount Holes (exact 14×26mm pitch for 20×32mm blue PCB, thermal air-gap!)
-        { id: 'top-mq2-1', type: 'm3', label: 'Standoff MQ-2 TL (M3)', x: dividerX + 20, y: wiringDepth + 43, diameter: m3 },
-        { id: 'top-mq2-2', type: 'm3', label: 'Standoff MQ-2 TR (M3)', x: dividerX + 34, y: wiringDepth + 43, diameter: m3 },
-        { id: 'top-mq2-3', type: 'm3', label: 'Standoff MQ-2 BR (M3)', x: dividerX + 34, y: wiringDepth + 69, diameter: m3 },
-        { id: 'top-mq2-4', type: 'm3', label: 'Standoff MQ-2 BL (M3)', x: dividerX + 20, y: wiringDepth + 69, diameter: m3 },
-        // Top Exhaust Fans (1x 140mm PC + 2x 120mm Laptop)
+        // Center Magnetic Door Catch Latch M3 Mount (front center)
+        { id: 'top-catch-m3', type: 'm3', label: 'Magnetic Catch Pintu Depan', x: Math.round(width * 0.5), y: height - 14, diameter: m3 },
+        // 2x MC-38 Door Reed Switch Mounting Holes (18mm pitch for Left & Right doors!)
+        { id: 'top-mc38-l1', type: 'm3', label: 'MC-38 Pintu Kiri #1 (M3)', x: Math.round(width * 0.5) - 52, y: height - 16, diameter: m3 },
+        { id: 'top-mc38-l2', type: 'm3', label: 'MC-38 Pintu Kiri #2 (M3)', x: Math.round(width * 0.5) - 34, y: height - 16, diameter: m3 },
+        { id: 'top-mc38-r1', type: 'm3', label: 'MC-38 Pintu Kanan #1 (M3)', x: Math.round(width * 0.5) + 34, y: height - 16, diameter: m3 },
+        { id: 'top-mc38-r2', type: 'm3', label: 'MC-38 Pintu Kanan #2 (M3)', x: Math.round(width * 0.5) + 52, y: height - 16, diameter: m3 },
+        // 1x MQ-2 Smoke Sensor 4-Corner M3 Standoff Mount Holes (10mm thermal air-gap standoffs!)
+        { id: 'top-mq2-1', type: 'm3', label: 'Standoff MQ-2 TL (M3)', x: Math.round(width * 0.5) - 14, y: wiringDepth + 45 - 13, diameter: m3 },
+        { id: 'top-mq2-2', type: 'm3', label: 'Standoff MQ-2 TR (M3)', x: Math.round(width * 0.5) + 14, y: wiringDepth + 45 - 13, diameter: m3 },
+        { id: 'top-mq2-3', type: 'm3', label: 'Standoff MQ-2 BR (M3)', x: Math.round(width * 0.5) + 14, y: wiringDepth + 45 + 13, diameter: m3 },
+        { id: 'top-mq2-4', type: 'm3', label: 'Standoff MQ-2 BL (M3)', x: Math.round(width * 0.5) - 14, y: wiringDepth + 45 + 13, diameter: m3 },
+        // Top Exhaust Fans (2x 120mm Fans)
         {
-          id: 'top-pc-fan140',
-          type: 'fan140',
-          label: 'PC Bay Exhaust 140mm',
-          x: Math.round(dividerX * 0.5),
-          y: mainCenterY,
-          diameter: 135,
-          includeMountHoles: true,
-        },
-        {
-          id: 'top-lap-fan120-1',
+          id: 'top-fan120-1',
           type: 'fan120',
           label: 'Laptop Exhaust 120mm #1',
-          x: Math.round(dividerX + rightSpan * 0.28),
+          x: Math.round(width * 0.3),
           y: mainCenterY,
           diameter: 115,
           includeMountHoles: true,
         },
         {
-          id: 'top-lap-fan120-2',
+          id: 'top-fan120-2',
           type: 'fan120',
           label: 'Laptop Exhaust 120mm #2',
-          x: Math.round(dividerX + rightSpan * 0.72),
+          x: Math.round(width * 0.7),
           y: mainCenterY,
           diameter: 115,
           includeMountHoles: true,
@@ -762,14 +633,16 @@ function createInitialPanels(dims: CaseDimensions): Record<PanelId, AcrylicPanel
 }
 
 const DEFAULT_CASE_DIMS: CaseDimensions = {
-  length: 700, // Opsi 2 Full Showcase (70 cm): 28.5 cm PC Bay (mATX 24.4cm frontal) + 41.5 cm Laptop Bay (15.6" + colokan samping)
-  width: 360,
-  height: 420,
+  length: 460, // 3-Tier Dedicated Laptop Rack (46 cm): 45 cm inner width fits 38 cm 15.6" laptops + 3.5 cm side cable clearance
+  width: 330,  // 33 cm depth (32 cm inner depth)
+  height: 440, // 44 cm height: ~14 cm headroom per laptop tier with active chimney cooling
   thickness: 5,
-  dividerX: 285,
-  middleTrayY: 205,
+  shelf1Y: 140, // Shelf 1 (Tier 2) at Y = 140 mm
+  shelf2Y: 280, // Shelf 2 (Tier 3) at Y = 280 mm
   legHeight: 38,
-  wiringDepth: 62, // 62mm All-in-One Rear Wiring Chamber (fits 2x Laptop Chargers + 12V IoT Adaptor + Mini PDU!)
+  wiringDepth: 62, // 62mm Rear Wiring Chamber for 3x Laptop Chargers + 12V IoT Adaptor + Mini PDU
+  dividerX: 230,
+  middleTrayY: 140,
 };
 
 export const IOT_PRESETS: Record<IoTBoxPreset, IoTBoxParams> = {
@@ -858,18 +731,24 @@ const DEFAULT_BRACKET_PARAMS: BracketParams = {
 };
 
 const DEFAULT_IOT_SIM: IoTSimState = {
-  tempPc: 38,
-  tempLapTop: 42,
-  tempLapBot: 39,
+  tempTier1: 34,
+  tempTier2: 36,
+  tempTier3: 38,
   humidity: 52,
   smokePpm: 115,
   autoMode: true,
-  relayPcFans: true,
-  relayLapTopFans: true,
-  relayLapBotFans: true,
+  relayFansTier1: true,
+  relayFansTier2: true,
+  relayFansTier3: true,
   relayIotFan: true,
   wireFilter: 'all',
   selectedNodeId: 'esp32',
+  tempPc: 34,
+  tempLapBot: 34,
+  tempLapTop: 38,
+  relayPcFans: true,
+  relayLapBotFans: true,
+  relayLapTopFans: true,
 };
 
 interface CadStoreState {
@@ -1024,13 +903,15 @@ export const useCadStore = create<CadStoreState>()(
         ...state.caseDims,
         ...patch,
       };
-      nextDims.dividerX = Math.min(Math.max(120, nextDims.dividerX), nextDims.length - 160);
-      nextDims.middleTrayY = Math.min(
-        Math.max(nextDims.thickness + 60, nextDims.middleTrayY),
-        nextDims.height - nextDims.thickness - 60
-      );
+      nextDims.length = Math.max(380, Math.min(800, nextDims.length));
+      nextDims.width = Math.max(280, Math.min(600, nextDims.width));
+      nextDims.height = Math.max(360, Math.min(700, nextDims.height));
+      nextDims.shelf1Y = Math.max(60, Math.min(nextDims.shelf2Y - 50, nextDims.shelf1Y));
+      nextDims.shelf2Y = Math.max(nextDims.shelf1Y + 50, Math.min(nextDims.height - 60, nextDims.shelf2Y));
       nextDims.legHeight = Math.min(Math.max(0, nextDims.legHeight), 80);
       nextDims.wiringDepth = Math.min(Math.max(24, nextDims.wiringDepth), 90);
+      if (nextDims.dividerX === undefined) nextDims.dividerX = Math.round(nextDims.length / 2);
+      if (nextDims.middleTrayY === undefined) nextDims.middleTrayY = nextDims.shelf1Y;
 
       const nextPanels = { ...state.panels };
       (Object.keys(nextPanels) as PanelId[]).forEach((pid) => {
@@ -1301,8 +1182,8 @@ export const useCadStore = create<CadStoreState>()(
   },
 }),
     {
-      name: 'vertex-cad-project-v6',
-      version: 6,
+      name: 'vertex-cad-project-v7',
+      version: 7,
       partialize: (state) => ({
         caseDims: state.caseDims,
         panels: state.panels,

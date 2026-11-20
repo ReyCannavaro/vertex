@@ -37,12 +37,11 @@ const PANEL_ORDER: PanelId[] = [
   'front-right',
   'left',
   'right',
-  'center-foot',
   'bottom',
   'filter-rail',
-  'top',
-  'divider',
   'middle',
+  'middle-2',
+  'top',
   'back',
   'cable-comb',
   'rear-floor',
@@ -193,41 +192,39 @@ export const AcrylicSidebar: React.FC = () => {
           </div>
         </div>
 
-        {/* Dual-Bay Divider X Slider (PC Bay vs Laptop Bay Split) */}
-        {panels.divider.enabled && (
+        {/* Middle Shelf 1 (Tier 2) Height Slider */}
+        {panels.middle?.enabled && (
           <div className="space-y-1 pt-1">
             <div className="flex justify-between text-[11px]">
-              <span className="text-slate-400">Sekat PC / Laptop (X)</span>
-              <span className="font-mono text-sky-300">
-                PC {caseDims.dividerX}mm | Lap {caseDims.length - caseDims.dividerX}mm
-              </span>
+              <span className="text-slate-400">Tinggi Rak Tengah / Tier 2 (Y)</span>
+              <span className="font-mono text-sky-300">{caseDims.shelf1Y} mm</span>
             </div>
             <input
               type="range"
-              min={150}
-              max={caseDims.length - 200}
+              min={caseDims.thickness + 60}
+              max={caseDims.shelf2Y - 50}
               step={5}
-              value={caseDims.dividerX}
-              onChange={(e) => updateCaseDims({ dividerX: Number(e.target.value) })}
+              value={caseDims.shelf1Y}
+              onChange={(e) => updateCaseDims({ shelf1Y: Number(e.target.value) })}
               className="w-full cursor-pointer"
             />
           </div>
         )}
 
-        {/* Middle Tray Height Slider */}
-        {panels.middle.enabled && (
+        {/* Middle Shelf 2 (Tier 3) Height Slider */}
+        {panels['middle-2']?.enabled && (
           <div className="space-y-1 pt-1">
             <div className="flex justify-between text-[11px]">
-              <span className="text-slate-400">Tinggi Rak Laptop (Y)</span>
-              <span className="font-mono text-sky-300">{caseDims.middleTrayY} mm</span>
+              <span className="text-slate-400">Tinggi Rak Atas / Tier 3 (Y)</span>
+              <span className="font-mono text-sky-300">{caseDims.shelf2Y} mm</span>
             </div>
             <input
               type="range"
-              min={caseDims.thickness + 60}
+              min={caseDims.shelf1Y + 50}
               max={caseDims.height - caseDims.thickness - 60}
               step={5}
-              value={caseDims.middleTrayY}
-              onChange={(e) => updateCaseDims({ middleTrayY: Number(e.target.value) })}
+              value={caseDims.shelf2Y}
+              onChange={(e) => updateCaseDims({ shelf2Y: Number(e.target.value) })}
               className="w-full cursor-pointer"
             />
           </div>
@@ -312,7 +309,7 @@ export const AcrylicSidebar: React.FC = () => {
 
         <div className="space-y-1">
           <div className="flex justify-between text-[11px]">
-            <span className="text-slate-400">Pintu PC (Engsel Kiri)</span>
+            <span className="text-slate-400">Pintu Kiri (Engsel Kiri)</span>
             <span className="font-mono text-sky-300">{doorLeftAngle}°</span>
           </div>
           <input
@@ -328,7 +325,7 @@ export const AcrylicSidebar: React.FC = () => {
 
         <div className="space-y-1">
           <div className="flex justify-between text-[11px]">
-            <span className="text-slate-400">Pintu Laptop (Engsel Kanan)</span>
+            <span className="text-slate-400">Pintu Kanan (Engsel Kanan)</span>
             <span className="font-mono text-sky-300">{doorRightAngle}°</span>
           </div>
           <input

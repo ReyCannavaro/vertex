@@ -179,8 +179,8 @@ export function getPanelAssemblyTransform(
     width: W,
     height: H,
     thickness: t,
-    dividerX,
-    middleTrayY,
+    shelf1Y = 140,
+    shelf2Y = 280,
     legHeight: legH,
     wiringDepth: wDepth,
   } = dims;
@@ -189,11 +189,7 @@ export function getPanelAssemblyTransform(
   const halfW = W / 2;
   const wallH = H - t;
   const e = explodeAmount;
-
-  const divCenterX = -halfL + dividerX;
-  const rightInnerStart = divCenterX + t / 2;
-  const rightInnerEnd = halfL - t;
-  const middleCenterX = (rightInnerStart + rightInnerEnd) / 2;
+  const doorW = Math.max(40, Math.round(L / 2 - t - 1));
 
   switch (panelId) {
     case 'bottom':
@@ -206,37 +202,28 @@ export function getPanelAssemblyTransform(
         position: [0, legH - t / 2 - e * 0.75, 0],
         rotation: [-Math.PI / 2, 0, 0],
       };
-    case 'center-foot': {
-      const footH = Math.max(8, legH - t);
-      return {
-        position: [divCenterX, footH / 2 - e * 1.0, 0],
-        rotation: [0, Math.PI / 2, 0],
-      };
-    }
     case 'top':
       return {
         position: [0, legH + H - t / 2 + e, -wDepth / 2],
         rotation: [-Math.PI / 2, 0, 0],
       };
-    case 'divider':
-      return {
-        position: [divCenterX, legH + H / 2, 0],
-        rotation: [0, Math.PI / 2, 0],
-      };
     case 'middle':
       return {
-        position: [middleCenterX + e * 0.35, legH + middleTrayY, 0],
+        position: [0, legH + shelf1Y, 0],
+        rotation: [-Math.PI / 2, 0, 0],
+      };
+    case 'middle-2':
+      return {
+        position: [0, legH + shelf2Y, 0],
         rotation: [-Math.PI / 2, 0, 0],
       };
     case 'front-left': {
-      const doorW = Math.max(40, dividerX - t - 1);
       return {
         position: [-halfL + t + doorW / 2, legH + wallH / 2, halfW - t / 2 + e],
         rotation: [0, 0, 0],
       };
     }
     case 'front-right': {
-      const doorW = Math.max(40, L - dividerX - t - 1);
       return {
         position: [halfL - t - doorW / 2, legH + wallH / 2, halfW - t / 2 + e],
         rotation: [0, 0, 0],

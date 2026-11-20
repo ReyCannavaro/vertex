@@ -164,35 +164,35 @@ export const IoTVizSidebar: React.FC = () => {
             {/* 2x MC-38 Door Magnetic Reed Switches (synced directly with Module 1 doors!) */}
             <div className="grid grid-cols-2 gap-1.5">
               <button
-                onClick={() => setDoorLeftAngle(eff.doorPcOpen ? 0 : 115)}
+                onClick={() => setDoorLeftAngle(eff.doorLeftOpen ? 0 : 115)}
                 className={`flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border text-[11px] font-medium transition ${
-                  eff.doorPcOpen
+                  eff.doorLeftOpen
                     ? 'bg-amber-500/20 border-amber-400/60 text-amber-200'
                     : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
                 }`}
               >
-                {eff.doorPcOpen ? (
+                {eff.doorLeftOpen ? (
                   <DoorOpen className="w-3.5 h-3.5 text-amber-300" />
                 ) : (
                   <DoorClosed className="w-3.5 h-3.5 text-emerald-400" />
                 )}
-                <span>Pintu PC</span>
+                <span>Pintu Kiri</span>
               </button>
 
               <button
-                onClick={() => setDoorRightAngle(eff.doorLapOpen ? 0 : 115)}
+                onClick={() => setDoorRightAngle(eff.doorRightOpen ? 0 : 115)}
                 className={`flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border text-[11px] font-medium transition ${
-                  eff.doorLapOpen
+                  eff.doorRightOpen
                     ? 'bg-amber-500/20 border-amber-400/60 text-amber-200'
                     : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
                 }`}
               >
-                {eff.doorLapOpen ? (
+                {eff.doorRightOpen ? (
                   <DoorOpen className="w-3.5 h-3.5 text-amber-300" />
                 ) : (
                   <DoorClosed className="w-3.5 h-3.5 text-emerald-400" />
                 )}
-                <span>Pintu Laptop</span>
+                <span>Pintu Kanan</span>
               </button>
             </div>
 
@@ -216,21 +216,23 @@ export const IoTVizSidebar: React.FC = () => {
 
           <div className="border-t border-slate-800" />
 
-          {/* 3x DHT22 Temperature Simulators */}
+          {/* 3x DHT21 Temperature Simulators */}
           <section className="space-y-2.5">
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                 <Thermometer className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Simulasi 3× DHT22</span>
+                <span>Simulasi 3× DHT21 (3-Tier)</span>
               </h3>
               <button
                 onClick={() => {
-                  const isHigh =
-                    iotSim.tempPc >= 65 || iotSim.tempLapTop >= 65 || iotSim.tempLapBot >= 65;
+                  const t1 = iotSim.tempTier1 ?? iotSim.tempPc;
+                  const t2 = iotSim.tempTier2 ?? iotSim.tempLapTop;
+                  const t3 = iotSim.tempTier3 ?? iotSim.tempLapBot;
+                  const isHigh = t1 >= 65 || t2 >= 65 || t3 >= 65;
                   updateIoTSim(
                     isHigh
-                      ? { autoMode: true, tempPc: 32, tempLapTop: 33, tempLapBot: 31 }
-                      : { autoMode: true, tempPc: 68, tempLapTop: 66, tempLapBot: 62 }
+                      ? { autoMode: true, tempTier1: 32, tempTier2: 33, tempTier3: 31, tempPc: 32, tempLapTop: 33, tempLapBot: 31 }
+                      : { autoMode: true, tempTier1: 68, tempTier2: 66, tempTier3: 62, tempPc: 68, tempLapTop: 66, tempLapBot: 62 }
                   );
                 }}
                 className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition ${
@@ -246,19 +248,19 @@ export const IoTVizSidebar: React.FC = () => {
 
             {[
               {
-                label: 'DHT22 #1 • PC Bay (GPIO4)',
-                val: iotSim.tempPc,
-                onChange: (v: number) => updateIoTSim({ tempPc: v }),
+                label: 'DHT21 #1 • Tier 1 Bawah (GPIO4)',
+                val: iotSim.tempTier1 ?? iotSim.tempPc,
+                onChange: (v: number) => updateIoTSim({ tempTier1: v, tempPc: v }),
               },
               {
-                label: 'DHT22 #2 • Laptop Atas (GPIO16)',
-                val: iotSim.tempLapTop,
-                onChange: (v: number) => updateIoTSim({ tempLapTop: v }),
+                label: 'DHT21 #2 • Tier 2 Tengah (GPIO16)',
+                val: iotSim.tempTier2 ?? iotSim.tempLapTop,
+                onChange: (v: number) => updateIoTSim({ tempTier2: v, tempLapTop: v }),
               },
               {
-                label: 'DHT22 #3 • Laptop Bawah (GPIO17)',
-                val: iotSim.tempLapBot,
-                onChange: (v: number) => updateIoTSim({ tempLapBot: v }),
+                label: 'DHT21 #3 • Tier 3 Atas (GPIO17)',
+                val: iotSim.tempTier3 ?? iotSim.tempLapBot,
+                onChange: (v: number) => updateIoTSim({ tempTier3: v, tempLapBot: v }),
               },
             ].map((s) => (
               <div key={s.label} className="space-y-0.5">
@@ -312,26 +314,26 @@ export const IoTVizSidebar: React.FC = () => {
               {
                 ch: 'CH1',
                 gpio: 'GPIO25',
-                name: 'PC Bay (2× 140mm • 12V)',
-                active: eff.relayPcOn,
+                name: 'Intake Lantai (2× 120mm • 12V)',
+                active: eff.relayTier1On,
                 toggle: () =>
-                  updateIoTSim({ autoMode: false, relayPcFans: !eff.relayPcOn }),
+                  updateIoTSim({ autoMode: false, relayFansTier1: !eff.relayTier1On, relayPcFans: !eff.relayTier1On }),
               },
               {
                 ch: 'CH2',
                 gpio: 'GPIO26',
-                name: 'Laptop Atas (2× 120mm • 12V)',
-                active: eff.relayLapTopOn,
+                name: 'Assist Tengah (2× 120mm • 12V)',
+                active: eff.relayTier2On,
                 toggle: () =>
-                  updateIoTSim({ autoMode: false, relayLapTopFans: !eff.relayLapTopOn }),
+                  updateIoTSim({ autoMode: false, relayFansTier2: !eff.relayTier2On, relayLapTopFans: !eff.relayTier2On }),
               },
               {
                 ch: 'CH3',
                 gpio: 'GPIO27',
-                name: 'Laptop Bawah (2× 120mm • 12V)',
-                active: eff.relayLapBotOn,
+                name: 'Exhaust Atas (2× 120mm • 12V)',
+                active: eff.relayTier3On,
                 toggle: () =>
-                  updateIoTSim({ autoMode: false, relayLapBotFans: !eff.relayLapBotOn }),
+                  updateIoTSim({ autoMode: false, relayFansTier3: !eff.relayTier3On, relayLapBotFans: !eff.relayTier3On }),
               },
               {
                 ch: 'CH4',

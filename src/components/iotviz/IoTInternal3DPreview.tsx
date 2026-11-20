@@ -24,17 +24,18 @@ function createDynamicOledTexture(
     ctx.fillStyle = eff.smokeAlarm ? '#2a0408' : '#030812';
     ctx.fillRect(0, 0, 256, 128);
 
+    const isDoorOpen = eff.doorLeftOpen || eff.doorRightOpen || eff.doorPcOpen || eff.doorLapOpen;
     ctx.fillStyle = eff.smokeAlarm
       ? '#f87171'
-      : eff.doorPcOpen || eff.doorLapOpen
+      : isDoorOpen
         ? '#fbbf24'
         : '#38bdf8';
     ctx.font = 'bold 17px monospace';
     const headerText = eff.smokeAlarm
       ? '!! FIRE CUT-OFF !!'
-      : eff.doorPcOpen || eff.doorLapOpen
+      : isDoorOpen
         ? 'ALERT: DOOR OPEN!'
-        : 'VERTEX MINI-DC OK';
+        : 'VERTEX 3-TIER OK';
     ctx.fillText(headerText, 12, 24);
 
     ctx.strokeStyle = '#0ea5e9';
@@ -44,15 +45,19 @@ function createDynamicOledTexture(
     ctx.lineTo(246, 32);
     ctx.stroke();
 
+    const t1 = sim.tempTier1 ?? sim.tempPc;
+    const t2 = sim.tempTier2 ?? sim.tempLapTop;
+    const t3 = sim.tempTier3 ?? sim.tempLapBot;
+
     ctx.fillStyle = '#A0E6FF';
     ctx.font = 'bold 16px monospace';
-    ctx.fillText(`PC:${sim.tempPc}C  LT:${sim.tempLapTop}C  LB:${sim.tempLapBot}C`, 10, 56);
+    ctx.fillText(`T1:${t1}C  T2:${t2}C  T3:${t3}C`, 10, 56);
     ctx.fillText(`MQ2:${sim.smokePpm}ppm  H:${sim.humidity}%`, 10, 82);
 
     const r = (on: boolean) => (on ? '1' : '0');
     ctx.fillStyle = '#7dd3fc';
     ctx.fillText(
-      `RLY:[${r(eff.relayPcOn)} ${r(eff.relayLapTopOn)} ${r(eff.relayLapBotOn)} ${r(eff.relayIotOn)}] WiFi`,
+      `RLY:[${r(eff.relayTier1On)} ${r(eff.relayTier2On)} ${r(eff.relayTier3On)} ${r(eff.relayIotOn)}] WiFi`,
       10,
       110
     );
