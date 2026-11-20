@@ -19,7 +19,7 @@ import {
   FileCode2,
 } from 'lucide-react';
 import { useCadStore } from '../../store/useCadStore';
-import { PanelId } from '../../types/cad';
+import { PanelId, CableFilterCategory } from '../../types/cad';
 import {
   downloadSvgFile,
   generateAllPanelsSvg,
@@ -60,6 +60,7 @@ export const AcrylicSidebar: React.FC = () => {
   const showBrackets = useCadStore((s) => s.showBrackets);
   const showHardwareMockup = useCadStore((s) => s.showHardwareMockup);
   const showWiring = useCadStore((s) => s.showWiring);
+  const cableFilter = useCadStore((s) => s.cableFilter);
   const ledEnabled = useCadStore((s) => s.ledEnabled);
 
   const setActivePanelId = useCadStore((s) => s.setActivePanelId);
@@ -72,6 +73,7 @@ export const AcrylicSidebar: React.FC = () => {
   const setShowBrackets = useCadStore((s) => s.setShowBrackets);
   const setShowHardwareMockup = useCadStore((s) => s.setShowHardwareMockup);
   const setShowWiring = useCadStore((s) => s.setShowWiring);
+  const setCableFilter = useCadStore((s) => s.setCableFilter);
   const setLedEnabled = useCadStore((s) => s.setLedEnabled);
   const updateCaseDims = useCadStore((s) => s.updateCaseDims);
   const togglePanelEnabled = useCadStore((s) => s.togglePanelEnabled);
@@ -615,7 +617,7 @@ export const AcrylicSidebar: React.FC = () => {
         <label className="flex items-center justify-between cursor-pointer py-0.5">
           <span className="flex items-center gap-1.5 text-slate-300">
             <Cpu className="w-3.5 h-3.5 text-emerald-400" />
-            Mockup Hardware (PC + 2 Laptop)
+            Mockup Hardware (3 Laptop + Fans + IoT)
           </span>
           <input
             type="checkbox"
@@ -625,18 +627,56 @@ export const AcrylicSidebar: React.FC = () => {
           />
         </label>
 
-        <label className="flex items-center justify-between cursor-pointer py-0.5">
-          <span className="flex items-center gap-1.5 text-slate-300">
-            <Cable className="w-3.5 h-3.5 text-blue-400" />
-            Visualisasi Kabel Wiring Belakang
-          </span>
-          <input
-            type="checkbox"
-            checked={showWiring}
-            onChange={(e) => setShowWiring(e.target.checked)}
-            className="rounded accent-blue-400"
-          />
-        </label>
+        <div className="space-y-1.5 pt-1 border-t border-slate-800/80">
+          <label className="flex items-center justify-between cursor-pointer py-0.5">
+            <span className="flex items-center gap-1.5 text-slate-200 font-medium">
+              <Cable className="w-3.5 h-3.5 text-blue-400" />
+              Visualisasi Alur Kabel 3D (Routing)
+            </span>
+            <input
+              type="checkbox"
+              checked={showWiring}
+              onChange={(e) => setShowWiring(e.target.checked)}
+              className="rounded accent-blue-400"
+            />
+          </label>
+
+          {showWiring && (
+            <div className="pl-5 space-y-1.5 text-[11px]">
+              <div className="text-[10px] text-slate-400">Filter Kategori Kabel:</div>
+              <div className="grid grid-cols-2 gap-1">
+                {(
+                  [
+                    { id: 'all', label: 'Semua Kabel', color: 'text-slate-200' },
+                    { id: 'lan', label: 'LAN Cat6 (3×)', color: 'text-blue-300' },
+                    { id: 'charger', label: 'Charger & PDU', color: 'text-amber-300' },
+                    { id: 'iot', label: 'IoT Box & Sensor', color: 'text-emerald-300' },
+                  ] as const
+                ).map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setCableFilter(cat.id)}
+                    className={`px-2 py-1 rounded text-left flex items-center justify-between border transition ${
+                      cableFilter === cat.id
+                        ? 'bg-blue-500/20 border-blue-400/50 text-white shadow-[0_0_8px_rgba(59,130,246,0.2)]'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className={cat.color}>{cat.label}</span>
+                    {cableFilter === cat.id && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                    )}
+                  </button>
+                ))}
+              </div>
+              <div className="p-1.5 rounded bg-slate-950/80 border border-slate-800 text-[10px] text-slate-400 space-y-0.5 font-mono">
+                <div>• LAN: Port kanan ➔ back-lap-wire-t1..3 ➔ rear-main-exit</div>
+                <div>• Charger: 3× Adaptor floor ➔ slot kiri ➔ port laptop</div>
+                <div>• IoT: 12V + 3× DHT21 + MQ-2 + reed ➔ right-iot-cable</div>
+              </div>
+            </div>
+          )}
+        </div>
 
         <label className="flex items-center justify-between cursor-pointer py-0.5">
           <span className="flex items-center gap-1.5 text-slate-300">

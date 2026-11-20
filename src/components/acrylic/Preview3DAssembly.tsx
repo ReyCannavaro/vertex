@@ -2,9 +2,9 @@ import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, Grid, Lightformer, OrbitControls } from '@react-three/drei';
-import { Cpu, DoorClosed, DoorOpen, Filter, Layers, Play, Sparkles } from 'lucide-react';
+import { Cable, Cpu, DoorClosed, DoorOpen, Filter, Layers, Play, Sparkles } from 'lucide-react';
 import { useCadStore } from '../../store/useCadStore';
-import { AcrylicPanel } from '../../types/cad';
+import { AcrylicPanel, CableFilterCategory } from '../../types/cad';
 import { AcrylicPanelMesh } from './AcrylicPanelMesh';
 import { HingedAcrylicDoor } from './HingedAcrylicDoor';
 import { HardwareMockup } from './HardwareMockup';
@@ -364,6 +364,7 @@ export const Preview3DAssembly: React.FC = () => {
   const showBrackets = useCadStore((s) => s.showBrackets);
   const showHardwareMockup = useCadStore((s) => s.showHardwareMockup);
   const showWiring = useCadStore((s) => s.showWiring);
+  const cableFilter = useCadStore((s) => s.cableFilter);
 
   const effectiveIot = useMemo(
     () => computeEffectiveIoTState(iotSim, doorLeftAngle, doorRightAngle, ledColor),
@@ -381,6 +382,8 @@ export const Preview3DAssembly: React.FC = () => {
   const toggleDemoMaintenance = useCadStore((s) => s.toggleDemoMaintenance);
   const setLedEnabled = useCadStore((s) => s.setLedEnabled);
   const setShowHardwareMockup = useCadStore((s) => s.setShowHardwareMockup);
+  const setShowWiring = useCadStore((s) => s.setShowWiring);
+  const setCableFilter = useCadStore((s) => s.setCableFilter);
 
   const anyDoorOpen = doorLeftAngle > 10 || doorRightAngle > 10;
 
@@ -504,6 +507,47 @@ export const Preview3DAssembly: React.FC = () => {
 
         <div className="w-px h-4 bg-slate-700" />
 
+        {/* Mode Alur Kabel 3D Toolbar Pill */}
+        <div className="flex items-center gap-1 bg-slate-950/90 border border-slate-700/80 rounded px-1.5 py-0.5">
+          <button
+            onClick={() => setShowWiring(!showWiring)}
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium transition ${
+              showWiring
+                ? 'bg-blue-500/25 text-blue-200 border border-blue-400/50 shadow-[0_0_8px_rgba(59,130,246,0.35)]'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Toggle Visualisasi 3D Alur Kabel (LAN, Charger & IoT Box)"
+          >
+            <Cable className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden sm:inline">Alur Kabel</span>
+          </button>
+
+          {showWiring && (
+            <div className="flex items-center gap-0.5 pl-1 border-l border-slate-700 text-[10px]">
+              {(
+                [
+                  { id: 'all', label: 'Semua' },
+                  { id: 'lan', label: 'LAN' },
+                  { id: 'charger', label: 'Charger' },
+                  { id: 'iot', label: 'IoT' },
+                ] as const
+              ).map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setCableFilter(cat.id)}
+                  className={`px-1.5 py-0.5 rounded font-medium transition ${
+                    cableFilter === cat.id
+                      ? 'bg-cyan-500/30 text-cyan-200 border border-cyan-400/50'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <button
           onClick={() => setShowHardwareMockup(!showHardwareMockup)}
           className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium transition ${
@@ -528,6 +572,78 @@ export const Preview3DAssembly: React.FC = () => {
           <Sparkles className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      {/* Floating HUD: Mode Alur Kabel Legend */}
+      {showWiring && (
+        <div className="absolute bottom-3 right-3 z-10 p-3 rounded-xl bg-slate-900/90 border border-slate-700/80 backdrop-blur-md shadow-2xl text-xs max-w-sm space-y-2 pointer-events-auto">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+            <span className="flex items-center gap-1.5 font-semibold text-slate-100">
+              <Cable className="w-4 h-4 text-blue-400 animate-pulse" />
+              <span>Visualisasi Alur Kabel 3D</span>
+            </span>
+            <div className="flex items-center gap-1 text-[10px]">
+              {(
+                [
+                  { id: 'all', label: 'Semua' },
+                  { id: 'lan', label: 'LAN' },
+                  { id: 'charger', label: 'Charger' },
+                  { id: 'iot', label: 'IoT' },
+                ] as const
+              ).map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setCableFilter(cat.id)}
+                  className={`px-1.5 py-0.5 rounded uppercase font-mono transition ${
+                    cableFilter === cat.id
+                      ? 'bg-blue-500/30 text-blue-200 border border-blue-400/50'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5 text-[11px]">
+            {(cableFilter === 'all' || cableFilter === 'lan') && (
+              <div className="flex items-start gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mt-1 shrink-0 shadow-[0_0_8px_#3b82f6]" />
+                <div>
+                  <span className="font-semibold text-blue-300">Alur Kabel LAN Cat6 (3×):</span>
+                  <p className="text-[10px] text-slate-300 leading-tight">
+                    Port RJ45 sisi kanan laptop ➔ Slot partisi tengah <code className="text-cyan-300 font-mono">back-lap-wire-t1..3</code> (90×28mm) ➔ Cable Comb belakang ➔ Exit bawah luar <code className="text-cyan-300 font-mono">rear-main-exit</code>.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {(cableFilter === 'all' || cableFilter === 'charger') && (
+              <div className="flex items-start gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 mt-1 shrink-0 shadow-[0_0_8px_#f59e0b]" />
+                <div>
+                  <span className="font-semibold text-amber-300">Alur Kabel Charger Laptop & PDU:</span>
+                  <p className="text-[10px] text-slate-300 leading-tight">
+                    3× Adaptor di U-cradle lantai belakang ➔ Slot partisi kiri ➔ Port DC barrel laptop (kiri) + 4× kabel AC PDU & kabel utama 220V AC.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {(cableFilter === 'all' || cableFilter === 'iot') && (
+              <div className="flex items-start gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 mt-1 shrink-0 shadow-[0_0_8px_#10b981]" />
+                <div>
+                  <span className="font-semibold text-emerald-300">Alur Kabel ke Box IoT (Midnight Pod):</span>
+                  <p className="text-[10px] text-slate-300 leading-tight">
+                    12V 5A power, 3× DHT21 (lubang partisi Ø8mm), MQ-2 asap (plafon), 2× MC-38 reed pintu & kipas konvergen masuk slot <code className="text-cyan-300 font-mono">right-iot-cable</code> (40×20mm) ke box ESP32.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Bottom Hint */}
       <div className="absolute bottom-3 left-3 z-10 pointer-events-none text-[11px] font-mono text-slate-400 px-2.5 py-1 rounded bg-slate-900/80 border border-slate-800">
@@ -588,6 +704,7 @@ export const Preview3DAssembly: React.FC = () => {
             topHoles={panels.top.holes}
             dustFilterSlide={dustFilterSlide}
             showWiring={showWiring}
+            cableFilter={cableFilter}
             relayTier1On={effectiveIot.relayTier1On}
             relayTier2On={effectiveIot.relayTier2On}
             relayTier3On={effectiveIot.relayTier3On}

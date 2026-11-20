@@ -1,6 +1,7 @@
 export type ActiveModule = 'acrylic' | 'iot-box' | 'iot-visualizer';
 export type AcrylicViewMode = '2d' | 'split' | '3d';
 export type WireCategory = 'all' | 'power' | 'sensors' | 'relays' | 'ui';
+export type CableFilterCategory = 'all' | 'lan' | 'charger' | 'iot';
 
 export interface IoTSimState {
   /** Simulated DHT21 #1 temperature in Tier 1 (Lantai Bawah) (°C) */

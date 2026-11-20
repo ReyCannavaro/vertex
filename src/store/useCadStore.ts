@@ -6,6 +6,7 @@ import {
   ActiveModule,
   BracketParams,
   BracketType,
+  CableFilterCategory,
   CaseDimensions,
   HoleType,
   IoTBoxParams,
@@ -773,6 +774,7 @@ interface CadStoreState {
   showBrackets: boolean;
   showHardwareMockup: boolean;
   showWiring: boolean;
+  cableFilter: CableFilterCategory;
 
   // Module 2: Parametric IoT Box & 3D-Printed Hardware Builder
   printPartCategory: PrintPartCategory;
@@ -802,6 +804,7 @@ interface CadStoreState {
   setShowBrackets: (show: boolean) => void;
   setShowHardwareMockup: (show: boolean) => void;
   setShowWiring: (show: boolean) => void;
+  setCableFilter: (filter: CableFilterCategory) => void;
 
   updateCaseDims: (patch: Partial<CaseDimensions>) => void;
   togglePanelEnabled: (id: PanelId) => void;
@@ -851,6 +854,7 @@ export const useCadStore = create<CadStoreState>()(
   showBrackets: true,
   showHardwareMockup: true,
   showWiring: true,
+  cableFilter: 'all',
 
   printPartCategory: 'enclosure',
   iotBox: IOT_PRESETS['controller-pod'],
@@ -896,6 +900,7 @@ export const useCadStore = create<CadStoreState>()(
   setShowBrackets: (showBrackets) => set({ showBrackets }),
   setShowHardwareMockup: (showHardwareMockup) => set({ showHardwareMockup }),
   setShowWiring: (showWiring) => set({ showWiring }),
+  setCableFilter: (cableFilter) => set({ cableFilter }),
 
   updateCaseDims: (patch) =>
     set((state) => {
@@ -1182,8 +1187,8 @@ export const useCadStore = create<CadStoreState>()(
   },
 }),
     {
-      name: 'vertex-cad-project-v7',
-      version: 7,
+      name: 'vertex-cad-project-v8',
+      version: 8,
       partialize: (state) => ({
         caseDims: state.caseDims,
         panels: state.panels,
@@ -1195,6 +1200,7 @@ export const useCadStore = create<CadStoreState>()(
         showBrackets: state.showBrackets,
         showHardwareMockup: state.showHardwareMockup,
         showWiring: state.showWiring,
+        cableFilter: state.cableFilter,
       }),
     }
   )

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { Edges } from '@react-three/drei';
-import { CaseDimensions, PanelHole } from '../../types/cad';
+import { CaseDimensions, PanelHole, CableFilterCategory } from '../../types/cad';
 
 /**
  * Generates a crisp procedural CanvasTexture simulating a live 0.96" Ice Blue OLED readout.
@@ -394,138 +394,364 @@ const DustFilterTray3D: React.FC<{
 };
 
 /**
- * Visualizes neatly combed cables inside the Rear Acrylic Wiring Chamber:
- * - 3x Laptop DC Power cables (Tier 1, Tier 2, Tier 3)
- * - 3x Cobalt-Blue Cat6 Server LAN cables (Tier 1, Tier 2, Tier 3)
- * - Cyan WS2812B LED & PWM Fan Control cables
+ * FullCableRoutingHarness3D:
+ * Realistic, continuous 3D curved cable routing for:
+ * 1. LAN Cat6 Network Cables (from laptop right-side RJ45 ports -> back partition slots -> comb -> rear exit)
+ * 2. Laptop Charger & Power Distribution (from rear floor PDU & power bricks -> back partition slots -> laptop left-side DC ports)
+ * 3. IoT Box & Sensor Wiring Harness (converging through right-wall pass-through slot 'right-iot-cable' into Midnight Pod)
  */
-const RearWiringHarness3D: React.FC<{ dims: CaseDimensions }> = ({ dims }) => {
-  const { length: L, width: W, height: H, thickness: t, legHeight: legH, wiringDepth } =
-    dims;
+interface FullCableRoutingHarness3DProps {
+  dims: CaseDimensions;
+  cableFilter?: CableFilterCategory;
+  middleEnabled?: boolean;
+  middle2Enabled?: boolean;
+}
+
+const FullCableRoutingHarness3D: React.FC<FullCableRoutingHarness3DProps> = ({
+  dims,
+  cableFilter = 'all',
+  middleEnabled = true,
+  middle2Enabled = true,
+}) => {
+  const { length: L, width: W, height: H, thickness: t, legHeight: legH, wiringDepth } = dims;
   const shelf1Y = dims.shelf1Y ?? 140;
   const shelf2Y = dims.shelf2Y ?? 280;
   const halfL = L / 2;
   const halfW = W / 2;
-  const zChamber = -halfW - wiringDepth * 0.52;
-  const zInside = -halfW + 18;
-  const zExit = -halfW - wiringDepth - 14;
-  const combY = legH + H * 0.52;
-  const rightPodX = halfL - 38;
+  const innerL = L - t * 2;
+  const innerW = W - t * 2;
+  const lapW = Math.min(360, innerL - 38);
+  const lapD = Math.min(242, innerW - 48);
 
   const cables = useMemo(() => {
-    const specs: Array<{ pts: [number, number, number][]; radius: number; color: string }> = [
-      // 1. Tier 3 (Top) Laptop DC Power Cable
-      {
-        pts: [
-          [-60, legH + shelf2Y + 45, zInside],
-          [-60, legH + shelf2Y + 45, zChamber],
-          [-60, combY, zChamber - 4],
-          [-60, legH + 62, zChamber],
-          [10, legH + 38, zChamber],
-          [10, legH + 34, zExit],
-        ],
-        radius: 3.2,
-        color: '#1e2430',
-      },
-      // 2. Tier 2 (Middle) Laptop DC Power Cable
-      {
-        pts: [
-          [-30, legH + shelf1Y + 45, zInside],
-          [-30, legH + shelf1Y + 45, zChamber],
-          [-30, legH + 58, zChamber],
-          [24, legH + 38, zChamber],
-          [24, legH + 34, zExit],
-        ],
-        radius: 3.2,
-        color: '#1e2430',
-      },
-      // 3. Tier 1 (Bottom) Laptop DC Power Cable
-      {
-        pts: [
-          [0, legH + t + 45, zInside],
-          [0, legH + t + 45, zChamber],
-          [38, legH + 38, zChamber],
-          [38, legH + 34, zExit],
-        ],
-        radius: 3.2,
-        color: '#1e2430',
-      },
-      // 4. Cat6 Uplink Ethernet Tier 3 (Top)
-      {
-        pts: [
-          [60, legH + shelf2Y + 45, zInside],
-          [60, legH + shelf2Y + 45, zChamber],
-          [60, combY, zChamber - 4],
-          [60, legH + 68, zChamber],
-          [-10, legH + 38, zChamber],
-          [-10, legH + 34, zExit],
-        ],
-        radius: 2.8,
-        color: '#2563eb',
-      },
-      // 5. Cat6 Uplink Ethernet Tier 2 (Middle)
-      {
-        pts: [
-          [85, legH + shelf1Y + 45, zInside],
-          [85, legH + shelf1Y + 45, zChamber],
-          [85, legH + 62, zChamber],
-          [-24, legH + 38, zChamber],
-          [-24, legH + 34, zExit],
-        ],
-        radius: 2.8,
-        color: '#3b82f6',
-      },
-      // 6. Cat6 Uplink Ethernet Tier 1 (Bottom)
-      {
-        pts: [
-          [110, legH + t + 45, zInside],
-          [110, legH + t + 45, zChamber],
-          [-38, legH + 38, zChamber],
-          [-38, legH + 34, zExit],
-        ],
-        radius: 2.8,
-        color: '#60a5fa',
-      },
-      // 7. Cyan WS2812B & Top Fan PWM Harness (Right IoT Pod -> Top Fans)
-      {
-        pts: [
-          [rightPodX, legH + H * 0.28, zInside],
-          [rightPodX, legH + H * 0.28, zChamber],
-          [rightPodX, combY, zChamber - 4],
-          [rightPodX, legH + H - t - 22, zChamber],
-          [0, legH + H - t - 22, zChamber],
-          [-halfL + 60, legH + H - t - 22, zChamber],
-        ],
-        radius: 2.4,
-        color: '#38bdf8',
-      },
-      // 8. Cyan Sensor & Bottom Fan PWM Harness
-      {
-        pts: [
-          [rightPodX - 18, legH + H * 0.28, zInside],
-          [rightPodX - 18, legH + H * 0.24, zChamber],
-          [rightPodX - 18, legH + 26, zChamber],
-          [0, legH + 26, zChamber],
-          [-halfL + 60, legH + 26, zChamber],
-        ],
-        radius: 2.2,
-        color: '#0ea5e9',
-      },
-    ];
+    type CableItem = {
+      id: string;
+      category: 'lan' | 'charger' | 'iot';
+      pts: [number, number, number][];
+      radius: number;
+      color: string;
+    };
 
-    return specs.map((s) => {
+    const list: CableItem[] = [];
+
+    // =========================================================================
+    // 1. LAN CAT6 NETWORK CABLES (Right laptop side -> back slots -> rear exit)
+    // =========================================================================
+    if (cableFilter === 'all' || cableFilter === 'lan') {
+      // Tier 1 LAN (Cat6 Cyan-Blue)
+      list.push({
+        id: 'lan-tier1',
+        category: 'lan',
+        radius: 2.6,
+        color: '#38bdf8',
+        pts: [
+          [lapW / 2 + 13, legH + t + 25 + 27, 4 - lapD * 0.28],
+          [halfL - 24, legH + t + 32, -lapD * 0.12],
+          [32, legH + t + 35, -halfW + 16],
+          [28, legH + t + 35, -halfW - 8],
+          [22, legH + 60, -halfW - wiringDepth * 0.44],
+          [16, legH + 38, -halfW - wiringDepth * 0.48],
+          [14, legH + 24, -halfW - wiringDepth - 22],
+        ],
+      });
+
+      // Tier 2 LAN (Cat6 Royal Blue)
+      if (middleEnabled) {
+        list.push({
+          id: 'lan-tier2',
+          category: 'lan',
+          radius: 2.6,
+          color: '#2563eb',
+          pts: [
+            [lapW / 2 + 13, legH + shelf1Y + t / 2 + 27, 4 - lapD * 0.28],
+            [halfL - 24, legH + shelf1Y + 32, -lapD * 0.12],
+            [34, legH + shelf1Y + 35, -halfW + 16],
+            [30, legH + shelf1Y + 35, -halfW - 8],
+            [24, legH + H * 0.52, -halfW - wiringDepth * 0.44],
+            [18, legH + 40, -halfW - wiringDepth * 0.48],
+            [0, legH + 24, -halfW - wiringDepth - 22],
+          ],
+        });
+      }
+
+      // Tier 3 LAN (Cat6 Deep Blue)
+      if (middle2Enabled) {
+        list.push({
+          id: 'lan-tier3',
+          category: 'lan',
+          radius: 2.6,
+          color: '#1d4ed8',
+          pts: [
+            [lapW / 2 + 13, legH + shelf2Y + t / 2 + 27, 4 - lapD * 0.28],
+            [halfL - 24, legH + shelf2Y + 32, -lapD * 0.12],
+            [36, legH + shelf2Y + 35, -halfW + 16],
+            [32, legH + shelf2Y + 35, -halfW - 8],
+            [26, legH + H * 0.52, -halfW - wiringDepth * 0.44],
+            [20, legH + 42, -halfW - wiringDepth * 0.48],
+            [-14, legH + 24, -halfW - wiringDepth - 22],
+          ],
+        });
+      }
+    }
+
+    // =========================================================================
+    // 2. LAPTOP CHARGER & POWER HARNESS (Rear bricks/PDU -> back slots -> left laptop ports)
+    // =========================================================================
+    if (cableFilter === 'all' || cableFilter === 'charger') {
+      const pduX = -halfL + 120;
+      const pduZ = -halfW - Math.min(22, wiringDepth * 0.38);
+
+      // Main heavy 220V AC wall cable entering rear-main-exit into PDU
+      list.push({
+        id: 'ac-main-inlet',
+        category: 'charger',
+        radius: 4.2,
+        color: '#0f172a',
+        pts: [
+          [-halfL + 70, legH + 24, -halfW - wiringDepth - 26],
+          [-halfL + 70, legH + 24, -halfW - wiringDepth * 0.65],
+          [pduX - 82, legH + t + 24, pduZ],
+        ],
+      });
+
+      // 4x Short AC leads from PDU sockets to bricks
+      const bricks = [
+        { id: 'ac-iot', sockX: pduX - 54, targetX: -20 },
+        { id: 'ac-lap1', sockX: pduX - 18, targetX: 50 },
+        { id: 'ac-lap2', sockX: pduX + 18, targetX: 115 },
+        { id: 'ac-lap3', sockX: pduX + 54, targetX: 175 },
+      ];
+      bricks.forEach((b) => {
+        list.push({
+          id: b.id,
+          category: 'charger',
+          radius: 2.2,
+          color: '#1e293b',
+          pts: [
+            [b.sockX, legH + t + 24, pduZ - 14],
+            [b.sockX, legH + t + 8, pduZ - 10],
+            [b.targetX, legH + t + 8, pduZ - 10],
+            [b.targetX, legH + t + 12, pduZ],
+          ],
+        });
+      });
+
+      // Tier 1 Laptop DC Charger Cable (From Brick 1 -> Slot -> Left Laptop Port)
+      list.push({
+        id: 'dc-charger-t1',
+        category: 'charger',
+        radius: 2.8,
+        color: '#111827',
+        pts: [
+          [50, legH + t + 104, pduZ],
+          [14, legH + t + 65, -halfW - wiringDepth * 0.44],
+          [-28, legH + t + 35, -halfW - 8],
+          [-28, legH + t + 35, -halfW + 16],
+          [-halfL + 24, legH + t + 32, -lapD * 0.12],
+          [-lapW / 2 - 13, legH + t + 25 + 27, 4 - lapD * 0.32],
+        ],
+      });
+
+      // Tier 2 Laptop DC Charger Cable (From Brick 2 -> Slot -> Left Laptop Port)
+      if (middleEnabled) {
+        list.push({
+          id: 'dc-charger-t2',
+          category: 'charger',
+          radius: 2.8,
+          color: '#1e2430',
+          pts: [
+            [115, legH + t + 104, pduZ],
+            [55, legH + shelf1Y * 0.85, -halfW - wiringDepth * 0.44],
+            [-30, legH + shelf1Y + 35, -halfW - 8],
+            [-30, legH + shelf1Y + 35, -halfW + 16],
+            [-halfL + 24, legH + shelf1Y + 32, -lapD * 0.12],
+            [-lapW / 2 - 13, legH + shelf1Y + t / 2 + 27, 4 - lapD * 0.32],
+          ],
+        });
+      }
+
+      // Tier 3 Laptop DC Charger Cable (From Brick 3 -> Slot -> Left Laptop Port)
+      if (middle2Enabled) {
+        list.push({
+          id: 'dc-charger-t3',
+          category: 'charger',
+          radius: 2.8,
+          color: '#0f172a',
+          pts: [
+            [175, legH + t + 104, pduZ],
+            [75, legH + shelf2Y * 0.85, -halfW - wiringDepth * 0.44],
+            [-32, legH + shelf2Y + 35, -halfW - 8],
+            [-32, legH + shelf2Y + 35, -halfW + 16],
+            [-halfL + 24, legH + shelf2Y + 32, -lapD * 0.12],
+            [-lapW / 2 - 13, legH + shelf2Y + t / 2 + 27, 4 - lapD * 0.32],
+          ],
+        });
+      }
+    }
+
+    // =========================================================================
+    // 3. IOT BOX & SENSOR WIRING HARNESS (Converging through 'right-iot-cable' slot)
+    // =========================================================================
+    if (cableFilter === 'all' || cableFilter === 'iot') {
+      const pduZ = -halfW - Math.min(22, wiringDepth * 0.38);
+      const iotY = legH + H * 0.5 - 12;
+
+      // 12V 5A Main DC Cable from IoT Adaptor Brick to IoT Pod
+      list.push({
+        id: 'iot-dc-power',
+        category: 'iot',
+        radius: 2.2,
+        color: '#f59e0b',
+        pts: [
+          [-20, legH + t + 110, pduZ],
+          [halfL - 25, legH + t + 30, -halfW - 8],
+          [halfL - 10, legH + t + 30, -15],
+          [halfL - 10, iotY - 6, -5],
+          [halfL + 20, iotY, 0],
+        ],
+      });
+
+      // Tier 1 DHT21 Lead (Back hole -> Right Wall slot -> IoT Box)
+      list.push({
+        id: 'dht21-lead-t1',
+        category: 'iot',
+        radius: 1.8,
+        color: '#10b981',
+        pts: [
+          [0, legH + t + 25, -halfW + t + 2],
+          [0, legH + t + 25, -halfW - 8],
+          [halfL - 24, legH + t + 32, -halfW - 8],
+          [halfL - 10, legH + t + 38, 0],
+          [halfL + 20, iotY + 4, 6],
+        ],
+      });
+
+      // Tier 2 DHT21 Lead (Back hole -> Right Wall slot -> IoT Box)
+      if (middleEnabled) {
+        list.push({
+          id: 'dht21-lead-t2',
+          category: 'iot',
+          radius: 1.8,
+          color: '#14b8a6',
+          pts: [
+            [0, legH + shelf1Y + 25, -halfW + t + 2],
+            [0, legH + shelf1Y + 25, -halfW - 8],
+            [halfL - 24, legH + shelf1Y + 25, -halfW - 8],
+            [halfL - 10, legH + shelf1Y + 30, 0],
+            [halfL + 20, iotY + 4, 14],
+          ],
+        });
+      }
+
+      // Tier 3 DHT21 Lead (Back hole -> Right Wall slot -> IoT Box)
+      if (middle2Enabled) {
+        list.push({
+          id: 'dht21-lead-t3',
+          category: 'iot',
+          radius: 1.8,
+          color: '#06b6d4',
+          pts: [
+            [0, legH + shelf2Y + 25, -halfW + t + 2],
+            [0, legH + shelf2Y + 25, -halfW - 8],
+            [halfL - 24, legH + shelf2Y + 25, -halfW - 8],
+            [halfL - 10, legH + shelf2Y + 30, 0],
+            [halfL + 20, iotY + 4, 22],
+          ],
+        });
+      }
+
+      // MQ-2 Smoke Sensor Lead (Ceiling -> Back hole -> Right Wall slot -> IoT Box)
+      list.push({
+        id: 'mq2-smoke-lead',
+        category: 'iot',
+        radius: 2.0,
+        color: '#8b5cf6',
+        pts: [
+          [0, legH + H - t - 16, -halfW + 56],
+          [0, legH + H - t - 10, -halfW + 10],
+          [0, legH + H - t - 10, -halfW - 8],
+          [halfL - 24, legH + H - t - 15, -halfW - 8],
+          [halfL - 10, legH + H * 0.65, 0],
+          [halfL + 20, iotY + 6, 28],
+        ],
+      });
+
+      // MC-38 Magnetic Door Reed Switch Harness (Front top -> Right beam -> Right slot -> IoT Box)
+      list.push({
+        id: 'reed-switch-harness',
+        category: 'iot',
+        radius: 1.7,
+        color: '#38bdf8',
+        pts: [
+          [-halfL * 0.45, legH + H - t - 4.5, halfW - 16],
+          [0, legH + H - t - 8, halfW - 16],
+          [halfL * 0.45, legH + H - t - 4.5, halfW - 16],
+          [halfL - 10, legH + H - t - 8, halfW * 0.5],
+          [halfL - 10, iotY - 4, halfW * 0.2],
+          [halfL + 20, iotY - 4, -14],
+        ],
+      });
+
+      // Relay CH1 to Bottom Fans Harness
+      list.push({
+        id: 'relay-fan-bottom',
+        category: 'iot',
+        radius: 2.0,
+        color: '#0284c7',
+        pts: [
+          [halfL + 20, iotY - 8, -22],
+          [halfL - 10, iotY - 8, -8],
+          [halfL - 12, legH + t + 22, -8],
+          [0, legH + t + 22, 0],
+        ],
+      });
+
+      // Relay CH3 to Top Fans Harness
+      list.push({
+        id: 'relay-fan-top',
+        category: 'iot',
+        radius: 2.0,
+        color: '#6366f1',
+        pts: [
+          [halfL + 20, iotY - 8, -30],
+          [halfL - 10, iotY - 8, -8],
+          [halfL - 12, legH + H - t - 22, -8],
+          [0, legH + H - t - 22, 0],
+        ],
+      });
+    }
+
+    return list.map((item) => {
       const curve = new THREE.CatmullRomCurve3(
-        s.pts.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
+        item.pts.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
         false,
         'catmullrom',
-        0.25
+        0.28
       );
       return {
-        geometry: new THREE.TubeGeometry(curve, 32, s.radius, 8, false),
-        color: s.color,
+        id: item.id,
+        category: item.category,
+        geometry: new THREE.TubeGeometry(curve, 36, item.radius, 8, false),
+        color: item.color,
       };
     });
-  }, [L, W, H, t, legH, wiringDepth, shelf1Y, shelf2Y, zChamber, zInside, zExit, combY, rightPodX, halfL]);
+  }, [
+    L,
+    W,
+    H,
+    t,
+    legH,
+    wiringDepth,
+    shelf1Y,
+    shelf2Y,
+    halfL,
+    halfW,
+    lapW,
+    lapD,
+    cableFilter,
+    middleEnabled,
+    middle2Enabled,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -535,9 +761,15 @@ const RearWiringHarness3D: React.FC<{ dims: CaseDimensions }> = ({ dims }) => {
 
   return (
     <group>
-      {cables.map((c, idx) => (
-        <mesh key={`wire-${idx}`} geometry={c.geometry}>
-          <meshStandardMaterial color={c.color} roughness={0.62} metalness={0.2} />
+      {cables.map((c) => (
+        <mesh key={`wire-${c.id}`} geometry={c.geometry}>
+          <meshStandardMaterial
+            color={c.color}
+            emissive={c.color}
+            emissiveIntensity={0.25}
+            roughness={0.52}
+            metalness={0.25}
+          />
         </mesh>
       ))}
     </group>
@@ -548,15 +780,21 @@ const LaptopUnit: React.FC<{
   position: [number, number, number];
   maxWidth: number;
   maxDepth: number;
-}> = ({ position, maxWidth, maxDepth }) => {
+  showWiring?: boolean;
+  cableFilter?: CableFilterCategory;
+}> = ({ position, maxWidth, maxDepth, showWiring = false, cableFilter = 'all' }) => {
   // True 15.6" Laptop (e.g., Acer Aspire 5: ~363 x 242mm) with side cable clearance
   const lapW = Math.min(360, maxWidth - 38);
   const lapD = Math.min(242, maxDepth - 48);
   const padW = lapW + 10;
   const padD = lapD + 12;
 
+  const showLanPort = showWiring && (cableFilter === 'all' || cableFilter === 'lan');
+  const showDCPort = showWiring && (cableFilter === 'all' || cableFilter === 'charger');
+
   return (
     <group position={position}>
+      {/* 3D-Printed Slanted Laptop Tray / Cushion Bed */}
       <mesh position={[0, 9, 0]} rotation={[0.04, 0, 0]}>
         <boxGeometry args={[padW, 18, padD]} />
         <meshStandardMaterial color="#171b22" roughness={0.72} metalness={0.22} />
@@ -566,6 +804,7 @@ const LaptopUnit: React.FC<{
         <meshStandardMaterial color="#0f131a" roughness={0.8} />
       </mesh>
 
+      {/* Closed Laptop Chassis */}
       <group position={[0, 26, -2]} rotation={[0.04, 0, 0]}>
         <mesh position={[0, 0, 0]}>
           <boxGeometry args={[lapW, 11, lapD]} />
@@ -579,6 +818,54 @@ const LaptopUnit: React.FC<{
           <boxGeometry args={[28, 0.8, 6]} />
           <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.2} />
         </mesh>
+
+        {/* Right Side: RJ45 Gigabit Ethernet Port & Molded Boot Plug */}
+        <group position={[lapW / 2 + 0.5, 1, -lapD * 0.28]}>
+          <mesh>
+            <boxGeometry args={[2.5, 7.5, 9]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.8} />
+          </mesh>
+          {showLanPort && (
+            <group position={[7, 0, 0]}>
+              <mesh>
+                <boxGeometry args={[11, 7, 8]} />
+                <meshStandardMaterial color="#2563eb" roughness={0.35} metalness={0.4} />
+              </mesh>
+              {/* Strain relief boot */}
+              <mesh position={[7.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[2.8, 3.8, 6, 12]} />
+                <meshStandardMaterial color="#1d4ed8" roughness={0.6} />
+              </mesh>
+            </group>
+          )}
+        </group>
+
+        {/* Left Side: DC Power Barrel Port & 90-Degree Molded Plug */}
+        <group position={[-lapW / 2 - 0.5, 1.2, -lapD * 0.32]}>
+          <mesh rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[3, 3, 2.5, 12]} />
+            <meshStandardMaterial color="#0b0e14" roughness={0.8} />
+          </mesh>
+          {showDCPort && (
+            <group position={[-6.5, 0, 0]}>
+              {/* Yellow Tip Ring */}
+              <mesh position={[4, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[2.2, 2.2, 2.2, 12]} />
+                <meshStandardMaterial color="#eab308" roughness={0.3} metalness={0.8} />
+              </mesh>
+              {/* Molded 90 deg body */}
+              <mesh>
+                <boxGeometry args={[7, 8, 8]} />
+                <meshStandardMaterial color="#111827" roughness={0.5} />
+              </mesh>
+              {/* Strain relief collar pointing back */}
+              <mesh position={[-0.5, 0, -5]} rotation={[Math.PI / 2, 0, 0]}>
+                <cylinderGeometry args={[2.6, 3.2, 5, 12]} />
+                <meshStandardMaterial color="#111827" roughness={0.6} />
+              </mesh>
+            </group>
+          )}
+        </group>
       </group>
     </group>
   );
@@ -594,6 +881,7 @@ interface HardwareMockupProps {
   topHoles: PanelHole[];
   dustFilterSlide: number;
   showWiring: boolean;
+  cableFilter?: CableFilterCategory;
   relayTier1On?: boolean;
   relayTier2On?: boolean;
   relayTier3On?: boolean;
@@ -654,6 +942,7 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
   topHoles,
   dustFilterSlide,
   showWiring,
+  cableFilter = 'all',
   relayTier1On,
   relayTier2On,
   relayTier3On,
@@ -711,10 +1000,15 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
         <DustFilterTray3D dims={dims} slideOut={dustFilterSlide} />
       </ExplodeGroup>
 
-      {/* ================= REAR WIRING CHAMBER CABLE HARNESS ================= */}
+      {/* ================= REAR & INTERIOR 3D CABLE ROUTING HARNESS ================= */}
       {showWiring && (
         <ExplodeGroup amount={devE} dir={[0, 0, -0.62]}>
-          <RearWiringHarness3D dims={dims} />
+          <FullCableRoutingHarness3D
+            dims={dims}
+            cableFilter={cableFilter}
+            middleEnabled={middleEnabled}
+            middle2Enabled={middle2Enabled}
+          />
         </ExplodeGroup>
       )}
 
@@ -726,6 +1020,8 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
             position={[0, legH + t + 25, 6]}
             maxWidth={innerL}
             maxDepth={innerW}
+            showWiring={showWiring}
+            cableFilter={cableFilter}
           />
         </ExplodeGroup>
 
@@ -736,6 +1032,8 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
               position={[0, legH + shelf1Y + t / 2, 6]}
               maxWidth={innerL}
               maxDepth={innerW}
+              showWiring={showWiring}
+              cableFilter={cableFilter}
             />
           </ExplodeGroup>
         )}
@@ -747,6 +1045,8 @@ export const HardwareMockup: React.FC<HardwareMockupProps> = ({
               position={[0, legH + shelf2Y + t / 2, 6]}
               maxWidth={innerL}
               maxDepth={innerW}
+              showWiring={showWiring}
+              cableFilter={cableFilter}
             />
           </ExplodeGroup>
         )}
